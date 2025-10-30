@@ -7,7 +7,7 @@
 
 <div id="id01" class="modal" style="display:none;">
     <div class="imgcontainer">
-      <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close Modal">&times;</span>
+      <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close">&times;</span>
     </div>
 
     <div class="container">
