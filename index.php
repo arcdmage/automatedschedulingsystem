@@ -1,5 +1,5 @@
 <?php
-
+// index.php
 ?>
 <!DOCTYPE html> <!--this is not yet a php file just an html-->
 <html>
@@ -20,24 +20,19 @@
 
         <div class="tab-content"> <!--displays the content of the created tabs-->
             <div id="home" data-tab-content class="active"> <!--this tab will always be opened when website starts-->
-                <h1>Home</h1>
-                <p>Will show global datas including time&date, current events and upcoming events</p>
+                <?php include 'tabs\home.php' ?>
             </div>
             <div id="faculty_members" data-tab-content>
-                <h1>Faculty</h1>
-                <p>Will show different categories of faculty, teachers, staff, non-teaching personell</p>
+                <?php include 'tabs\faculty_members.php' ?>
             </div>
             <div id="faculty_schedules" data-tab-content>
-                <h1>Global Schedules</h1>
-                <p>Shows all the schedules of faculty which can only be seen and edited by ADMINS</p>
+                <?php include 'tabs\faculty_schedules.php' ?>
             </div>
             <div id="subject_list" data-tab-content>
-                <h1>List of Subjects</h1>
-                <p>Shows the list of subjects, categorized by grade level and STRAND.</p>
+                <?php include 'tabs\subject_list.php' ?>
             </div>
             <div id="schedule" data-tab-content>
-                <h1>Schedule</h1>
-                <p>Create/view schedules.</p>
+                <?php include 'tabs\schedule.php' ?>
             </div>
         </div>
     </body>
