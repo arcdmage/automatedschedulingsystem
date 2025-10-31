@@ -1,5 +1,3 @@
-# Automated Scheduling Sytem
-
 A php web-based scheduling system designed to help faculty and staff manage schedules efficiently.
 
 ## Current Features
@@ -27,3 +25,9 @@ A php web-based scheduling system designed to help faculty and staff manage sche
 1. Clone the repository:
    ```bash
    git clone https://github.com/yourusername/automatedschedulingsystem.git
+
+## Contributors
+
+- **Mark Andrie B. Santos** - Lead Backend Developer
+- **Advent Matthew Domingo** - Lead Frontend Developer
+- **Alxen Roa Bue** - Lead Data Manager
