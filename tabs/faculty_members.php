@@ -1,135 +1,103 @@
+<?php
+require_once('db_connect.php');
+?>
+
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<style>
-body {
-  font-family: Arial, Helvetica, sans-serif;
-  background-color: #f2f2f2;
-  margin: 0;
-  padding: 0;
-}
-
-* { box-sizing: border-box; }
-
-/* Input fields */
-input[type=text], input[type=password], input[type=number] {
-  width: 100%;
-  padding: 12px;
-  margin: 6px 0 14px 0;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  background: #f9f9f9;
-}
-
-input:focus {
-  background-color: #fff;
-  outline: none;
-  border-color: #04AA6D;
-}
-
-/* Buttons */
-button {
-  background-color: #04AA6D;
-  color: white;
-  padding: 12px 18px;
-  margin: 8px 0;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  border-radius: 4px;
-  font-size: 16px;
-}
-
-button:hover {
-  opacity: 0.9;
-}
-
-.cancelbtn {
-  background-color: #f44336;
-}
-
-/* Container */
-.container {
-  padding: 16px;
-}
-
-/* Modal */
-.modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.6);
-  padding-top: 40px;
-}
-
-/* Modal Content */
-.modal-content {
-  background-color: #fefefe;
-  margin: auto;
-  border: 1px solid #888;
-  width: 90%;
-  max-width: 600px;
-  border-radius: 6px;
-  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
-  overflow: hidden;
-}
-
-/* Header bar */
-.imgcontainer {
-  background: #04AA6D;
-  color: white;
-  padding: 12px 20px;
-  position: relative;
-  text-align: center;
-}
-
-.imgcontainer h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-/* Close button */
-.close {
-  position: absolute;
-  right: 18px;
-  top: 8px;
-  font-size: 28px;
-  font-weight: bold;
-  color: #fff;
-  cursor: pointer;
-}
-
-.close:hover {
-  color: #ffdddd;
-}
-
-/* Responsive */
-@media screen and (max-width: 420px) {
-  .modal-content { width: 95%; }
-  .cancelbtn, .signupbtn {
-     width: 100%;
-  }
-}
-</style>
+<link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_table.css">
+<link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_modal.css">
 </head>
+
 <body>
 
 <h1>Faculty</h1>
 <p>Will show different categories of faculty, teachers, staff, and non-teaching personnel.</p>
 
-<button onclick="document.getElementById('id01').style.display='block'" style="width:auto;">Add Faculty</button>
+<!-- Faculty Table Section -->
+<div class="faculty-table-container">
+  <div class="table-wrapper">
+    <table class="faculty-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>First Name</th>
+          <th>Middle Name</th>
+          <th>Last Name</th>
+          <th>Gender</th>
+          <th>Phone Number</th>
+          <th>Address</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php
+          // Set limit and current page
+          $limit = 10;
+          $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+          $offset = ($page - 1) * $limit;
+
+          // Count total rows for pagination
+          $total_query = "SELECT COUNT(*) as total FROM faculty";
+          $total_result = $conn->query($total_query);
+          $total_row = $total_result->fetch_assoc();
+          $total_records = $total_row['total'];
+          $total_pages = ceil($total_records / $limit);
+
+          // Now get the limited faculty records
+          $sql = "SELECT * FROM faculty ORDER BY id ASC LIMIT $limit OFFSET $offset";
+          $result = $conn->query($sql);
+
+        if ($result->num_rows > 0) {
+while($row = $result->fetch_assoc()) {
+           echo '<tr>'
+               . '<td>' . htmlspecialchars($row['id']) . '</td>'
+               . '<td>' . htmlspecialchars($row['fname']) . '</td>'
+               . '<td>' . htmlspecialchars($row['mname']) . '</td>'
+               . '<td>' . htmlspecialchars($row['lname']) . '</td>'
+               . '<td>' . htmlspecialchars($row['gender']) . '</td>'
+               . '<td>' . htmlspecialchars($row['pnumber']) . '</td>'
+               . '<td>' . htmlspecialchars($row['address']) . '</td>'
+               . '<td>' . htmlspecialchars($row['status']) . '</td>'
+               . '</tr>';
+          }
+        } else {
+          echo "<tr><td colspan='8' style='text-align:center;'>No faculty found.</td></tr>";
+        }
+        $conn->close();
+        ?>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Section -->
+<div class="pagination">
+  <?php if ($page > 1): ?>
+    <a href="?tab=faculty_members&page=<?php echo $page - 1; ?>">&laquo; Prev</a>
+  <?php endif; ?>
+
+  <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+    <a href="?tab=faculty_members&page=<?php echo $i; ?>" class="<?php echo $i == $page ? 'active' : ''; ?>">
+      <?php echo $i; ?>
+    </a>
+  <?php endfor; ?>
+
+  <?php if ($page < $total_pages): ?>
+    <a href="?tab=faculty_members&page=<?php echo $page + 1; ?>">Next &raquo;</a>
+  <?php endif; ?>
+</div>
+
+
+<!-- Add Faculty Button -->
+<button onclick="document.getElementById('id01').style.display='block'" class="add-faculty-btn">Add Faculty</button>
 
 <!-- Modal -->
 <div id="id01" class="modal">
-  <form class="modal-content animate" action="/mainscheduler/tabs/actions/faculty_create.php" method="post">
+  <form class="modal-content animate" action="actions/faculty_create.php" method="post">
     <div class="imgcontainer">
       <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close">&times;</span>
+      <h2>Add Faculty</h2>
     </div>
 
     <div class="container">
@@ -167,7 +135,6 @@ button:hover {
 </div>
 
 <script>
-// Close modal if user clicks outside it
 window.onclick = function(event) {
   const modal = document.getElementById('id01');
   if (event.target == modal) {
