@@ -127,10 +127,9 @@ button:hover {
 
 <!-- Modal -->
 <div id="id01" class="modal">
-  <form class="modal-content animate" action="/action_page.php" method="post">
+  <form class="modal-content animate" action="/mainscheduler/tabs/actions/faculty_create.php" method="post">
     <div class="imgcontainer">
       <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close">&times;</span>
-      <h2>Create Faculty</h2>
     </div>
 
     <div class="container">
