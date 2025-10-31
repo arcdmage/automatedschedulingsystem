@@ -1,5 +1,5 @@
 <?php
-require_once('db_connect.php');
+require_once(__DIR__ . '/../db_connect.php');
 ?>
 
 <!DOCTYPE html>
@@ -17,82 +17,15 @@ require_once('db_connect.php');
 
 <!-- Faculty Table Section -->
 <div class="faculty-table-container">
-  <div class="table-wrapper">
-    <table class="faculty-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          <th>First Name</th>
-          <th>Middle Name</th>
-          <th>Last Name</th>
-          <th>Gender</th>
-          <th>Phone Number</th>
-          <th>Address</th>
-          <th>Status</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php
-          // Set limit and current page
-          $limit = 10;
-          $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-          $offset = ($page - 1) * $limit;
-
-          // Count total rows for pagination
-          $total_query = "SELECT COUNT(*) as total FROM faculty";
-          $total_result = $conn->query($total_query);
-          $total_row = $total_result->fetch_assoc();
-          $total_records = $total_row['total'];
-          $total_pages = ceil($total_records / $limit);
-
-          // Now get the limited faculty records
-          $sql = "SELECT * FROM faculty ORDER BY id ASC LIMIT $limit OFFSET $offset";
-          $result = $conn->query($sql);
-
-        if ($result->num_rows > 0) {
-while($row = $result->fetch_assoc()) {
-           echo '<tr>'
-               . '<td>' . htmlspecialchars($row['id']) . '</td>'
-               . '<td>' . htmlspecialchars($row['fname']) . '</td>'
-               . '<td>' . htmlspecialchars($row['mname']) . '</td>'
-               . '<td>' . htmlspecialchars($row['lname']) . '</td>'
-               . '<td>' . htmlspecialchars($row['gender']) . '</td>'
-               . '<td>' . htmlspecialchars($row['pnumber']) . '</td>'
-               . '<td>' . htmlspecialchars($row['address']) . '</td>'
-               . '<td>' . htmlspecialchars($row['status']) . '</td>'
-               . '</tr>';
-          }
-        } else {
-          echo "<tr><td colspan='8' style='text-align:center;'>No faculty found.</td></tr>";
-        }
-        $conn->close();
-        ?>
-      </tbody>
-    </table>
+  <div id="faculty-table-content">
+    <!-- Table will load here via AJAX -->
   </div>
-
-  <!-- page selector (idk how this works thanks stackoverflow) -->
-<div class="pagination">
-  <?php if ($page > 1): ?>
-    <a href="?tab=faculty_members&page=<?php echo $page - 1; ?>">&laquo; Prev</a>
-  <?php endif; ?>
-
-  <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-    <a href="?tab=faculty_members&page=<?php echo $i; ?>" class="<?php echo $i == $page ? 'active' : ''; ?>">
-      <?php echo $i; ?>
-    </a>
-  <?php endfor; ?>
-
-  <?php if ($page < $total_pages): ?>
-    <a href="?tab=faculty_members&page=<?php echo $page + 1; ?>">Next &raquo;</a>
-  <?php endif; ?>
 </div>
-
 
 <!-- Add Faculty Button -->
 <button onclick="document.getElementById('id01').style.display='block'" class="add-faculty-btn">Add Faculty</button>
 
-<!-- Modal/Faculty Creation form popup or something bruh -->
+<!-- Modal -->
 <div id="id01" class="modal">
   <form class="modal-content animate" action="actions/faculty_create.php" method="post">
     <div class="imgcontainer">
@@ -135,6 +68,64 @@ while($row = $result->fetch_assoc()) {
 </div>
 
 <script>
+document.addEventListener("DOMContentLoaded", function() {
+  const tableContent = document.getElementById("faculty-table-content");
+  const defaultLimit = 5;
+
+  /**
+   * Loads faculty data into the table.
+   * @param {number} page - The page number to load.
+   * @param {number} limit - The number of rows per page.
+   */
+  function loadFacultyPage(page = 1, limit = defaultLimit) {
+    // === CHANGE IS HERE ===
+    // Use an absolute path starting with your project's root folder.
+    const url = `/mainscheduler/tabs/faculty_table.php?page=${page}&limit=${limit}`;
+
+    fetch(url) // Use the new URL variable
+      .then(response => {
+        if (!response.ok) {
+          // This will help you debug by showing the HTTP status code (e.g., 404 or 500)
+          throw new Error(`Network response was not ok, status: ${response.status}`);
+        }
+        return response.text();
+      })
+      .then(data => {
+        tableContent.innerHTML = data;
+      })
+      .catch(error => {
+        console.error("Error loading data:", error);
+        tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading faculty data. Please try again later.</p>";
+      });
+  }
+
+  // --- The rest of your JavaScript remains the same ---
+
+  // Use event delegation to handle clicks on pagination buttons
+  tableContent.addEventListener('click', function(event) {
+    if (event.target.matches('.page-btn')) {
+      const pageNum = event.target.getAttribute("data-page");
+      const limit = document.getElementById('rows-per-page').value;
+      if (pageNum) {
+        loadFacultyPage(pageNum, limit);
+      }
+    }
+  });
+
+  // Use event delegation to handle changes on the rows-per-page dropdown
+  tableContent.addEventListener('change', function(event) {
+    if (event.target.matches('#rows-per-page')) {
+      const newLimit = event.target.value;
+      loadFacultyPage(1, newLimit);
+    }
+  });
+
+  // Initial load when the page is ready
+  loadFacultyPage(1, defaultLimit);
+});
+
+
+// Keep your existing script for closing the modal
 window.onclick = function(event) {
   const modal = document.getElementById('id01');
   if (event.target == modal) {
