@@ -27,7 +27,7 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <!-- Modal -->
 <div id="id01" class="modal">
-  <form class="modal-content animate" action="actions/faculty_create.php" method="post">
+  <form class="modal-content animate" action="/mainscheduler/tabs/actions/faculty_create.php" method="post">
     <div class="imgcontainer">
       <span onclick="document.getElementById('id01').style.display='none'" class="close" title="Close">&times;</span>
       <h2>Add Faculty</h2>
