@@ -28,6 +28,6 @@ A php web-based scheduling system designed to help faculty and staff manage sche
 
 ## Contributors
 
-• **Mark Andrie B. Santos** - Lead Backend Developer
-• **Advent Matthew Domingo** - Lead Frontend Developer
-• **Alxen Roa Bue** - Lead Data Manager
+- **Mark Andrie B. Santos** - Lead Backend Developer
+- **Advent Matthew Domingo** - Lead Frontend Developer
+- **Alxen Roa Bue** - Lead Data Manager
