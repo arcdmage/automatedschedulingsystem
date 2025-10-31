@@ -2,7 +2,7 @@
 require_once(__DIR__ . '/../db_connect.php');
 
 // Define the available options for rows per page
-$limit_options = [5, 10, 25, 50];
+$limit_options = [5, 10, 25, 50, 100];
 // Define a default limit in case none is selected
 $default_limit = 5;
 
