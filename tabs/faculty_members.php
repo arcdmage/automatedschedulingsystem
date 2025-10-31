@@ -71,7 +71,7 @@ while($row = $result->fetch_assoc()) {
     </table>
   </div>
 
-  <!-- Pagination Section -->
+  <!-- page selector (idk how this works thanks stackoverflow) -->
 <div class="pagination">
   <?php if ($page > 1): ?>
     <a href="?tab=faculty_members&page=<?php echo $page - 1; ?>">&laquo; Prev</a>
@@ -92,7 +92,7 @@ while($row = $result->fetch_assoc()) {
 <!-- Add Faculty Button -->
 <button onclick="document.getElementById('id01').style.display='block'" class="add-faculty-btn">Add Faculty</button>
 
-<!-- Modal -->
+<!-- Modal/Faculty Creation form popup or something bruh -->
 <div id="id01" class="modal">
   <form class="modal-content animate" action="actions/faculty_create.php" method="post">
     <div class="imgcontainer">
