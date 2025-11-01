@@ -56,7 +56,7 @@ $total_pages = ceil($total_records / $limit);
           </tr>";
         }
       } else {
-        echo "<tr><td colspan='8' style='text-align:center;'>No faculty found.</td></tr>";
+        echo "<tr><td colspan='8' style='text-align:center;'>No faculty found.</td></tr>"; //if no data
       }
       ?>
     </tbody>
