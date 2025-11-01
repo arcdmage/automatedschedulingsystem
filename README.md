@@ -22,7 +22,8 @@ A php web-based scheduling system designed to help faculty and staff manage sche
 
 ## ⚙️ Installation Guide
 
-1. Download VSCode (any IDE)
+1. Download VSCode (or any Code Editor): 
+   https://code.visualstudio.com/
 2. Download XAMMP: 
    https://www.apachefriends.org/
 3. Go into XAMMP htdocs Directory
