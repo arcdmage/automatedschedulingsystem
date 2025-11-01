@@ -22,9 +22,15 @@ A php web-based scheduling system designed to help faculty and staff manage sche
 
 ## ⚙️ Installation Guide
 
-1. Clone the repository:
+1. Download VSCode (any IDE)
+2. Download XAMMP: 
+   https://www.apachefriends.org/
+3. Go into XAMMP htdocs Directory
+4. Clone the repository in that Directory:
    ```bash
    git clone https://github.com/yourusername/automatedschedulingsystem.git
+5. Open localhost/[name of cloned folder]/index.php in your chosen Browser.
+
 
 ## Contributors
 
