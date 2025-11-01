@@ -72,20 +72,21 @@ document.addEventListener("DOMContentLoaded", function() {
   const tableContent = document.getElementById("faculty-table-content");
   const defaultLimit = 5;
 
-  /**
-   * Loads faculty data into the table.
-   * @param {number} page - The page number to load.
-   * @param {number} limit - The number of rows per page.
-   */
+    /**
+     * Loads faculty data into the table
+     * @param {number} page - The page number to load
+     * @param {number} limit - The number of rows per page
+     */
+  
   function loadFacultyPage(page = 1, limit = defaultLimit) {
-    // === CHANGE IS HERE ===
-    // Use an absolute path starting with your project's root folder.
+
+    // Use an absolute path starting with your project's root folder instead of Relative REMEBER PLEZ.
     const url = `/mainscheduler/tabs/faculty_table.php?page=${page}&limit=${limit}`;
 
     fetch(url) // Use the new URL variable
       .then(response => {
         if (!response.ok) {
-          // This will help you debug by showing the HTTP status code (e.g., 404 or 500)
+          // help with debug by showing the HTTP status code (e.g., 404 or 500)
           throw new Error(`Network response was not ok, status: ${response.status}`);
         }
         return response.text();
@@ -125,7 +126,7 @@ document.addEventListener("DOMContentLoaded", function() {
 });
 
 
-// Keep your existing script for closing the modal
+// closes the
 window.onclick = function(event) {
   const modal = document.getElementById('id01');
   if (event.target == modal) {
