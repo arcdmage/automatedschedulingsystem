@@ -6,7 +6,7 @@ require_once(__DIR__ . '/../db_connect.php');
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_table.css">
+<link rel="stylesheet" href="/mainscheduler/tabs/css/table.css">
 <link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_modal.css">
 </head>
 
