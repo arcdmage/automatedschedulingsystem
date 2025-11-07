@@ -1,0 +1,101 @@
+/* Modal verlay */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: rgba(0,0,0,0.6);
+  padding-top: 40px;
+}
+
+/* modal Content Box */
+.modal-content {
+  background-color: #fefefe;
+  margin: auto;
+  border: 1px solid #888;
+  width: 90%;
+  max-width: 600px;
+  border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+/* header Bar */
+.imgcontainer {
+  background: #04AA6D;
+  color: white;
+  padding: 12px 20px;
+  position: relative;
+  text-align: center;
+}
+
+.imgcontainer h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+/* close button */
+.close {
+  position: absolute;
+  right: 18px;
+  top: 8px;
+  font-size: 28px;
+  font-weight: bold;
+  color: #fff;
+  cursor: pointer;
+}
+
+.close:hover {
+  color: #ffdddd;
+}
+
+/* Modal form content */
+.container {
+  padding: 16px;
+}
+
+input[type=text],
+input[type=password],
+input[type=number] {
+  width: 100%;
+  padding: 12px;
+  margin: 6px 0 14px 0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #f9f9f9;
+}
+
+input:focus {
+  background-color: #fff;
+  outline: none;
+  border-color: #04AA6D;
+}
+
+/* Buttons */
+button {
+  background-color: #04AA6D;
+  color: white;
+  padding: 12px 18px;
+  margin: 8px 0;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  border-radius: 4px;
+  font-size: 16px;
+}
+
+button:hover {
+  opacity: 0.9;
+}
+
+.cancelbtn {
+  background-color: #f44336;
+}
+
+@media screen and (max-width: 420px) {
+  .modal-content { width: 95%; }
+}
