@@ -6,8 +6,8 @@ require_once(__DIR__ . '/../db_connect.php');
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/table.css">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_modal.css">
+<link rel="stylesheet" href="/mainscheduler/tabs/css/subject_table.css">
+<link rel="stylesheet" href="/mainscheduler/tabs/css/subject_modal.css">
 </head>
 
 <body>
@@ -16,13 +16,13 @@ require_once(__DIR__ . '/../db_connect.php');
 <p>Shows the list of subjects, categorized by grade level and STRAND.</p>
 
 <!-- Subject Table Section -->
-<div class="faculty-table-container">
-  <div id="faculty-table-content">
+<div class="subject-table-container">
+  <div id="subject-table-content">
     <!-- Table will load here via AJAX -->
   </div>
 </div>
 
-<!-- Add Faculty Button -->
+<!-- Add Subject Button -->
 <button onclick="document.getElementById('id02').style.display='block'" class="add-subject-btn">Add Subject</button>
 
 <!-- Modal -->
@@ -34,15 +34,21 @@ require_once(__DIR__ . '/../db_connect.php');
     </div>
 
     <div class="container">
-      <label for="fname"><b>Subject Name</b></label>
-      <input type="text" placeholder="Subject Name" name="sname" required>
+      <label for="subject_name"><b>Subject Name</b></label>
+      <input type="text" placeholder="Subject Name" name="subject_name" required>
 
-      <label for="lname"><b>In Specialization</b></label> <!--Make this a drop down outputting the choices as the list of teachers in the main faculty database.-->
+      <label for="special"><b>In Specialization</b></label> <!--Make this a drop down outputting the choices as the list of teachers in the main faculty database.-->
       <input type="text" placeholder="In Specialization" name="special" required>
 
       <label><b>Grade Level</b></label><br> <!--Output this into database-->
-      <label><input type="radio" name="gradelvl" value="Grade 11"> Grade 11</label>
-      <label><input type="radio" name="gradelvl" value="Grade 12"> Grade 12</label>
+      <label><input type="radio" name="grade_level" value="11"> Grade 11</label>
+      <label><input type="radio" name="grade_level" value="12"> Grade 12</label>
+      <br><br>
+      <label><b>Strand</b></label><br> <!--Output this into database-->
+      <label><input type="radio" name="strand" value="HUMMS"> HUMMS</label>
+      <label><input type="radio" name="strand" value="STEM"> STEM</label>
+      <label><input type="radio" name="strand" value="ABM"> ABM</label>
+      <label><input type="radio" name="strand" value="GAS"> GAS</label>
       <br><br>
 
       <button type="submit">Create</button>
@@ -56,7 +62,7 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-  const tableContent = document.getElementById("faculty-table-content");
+  const tableContent = document.getElementById("subject-table-content");
   const defaultLimit = 5;
 
     /**
@@ -64,7 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
      * @param {number} limit
      */
   
-  function loadFacultyPage(page = 1, limit = defaultLimit) {
+  function loadSubjectPage(page = 1, limit = defaultLimit) {
 
     // Use an absolute path starting with your project's root folder instead of Relative REMEBER PLEZ.
     const url = `/mainscheduler/tabs/subject_table.php?page=${page}&limit=${limit}`;
@@ -81,7 +87,7 @@ document.addEventListener("DOMContentLoaded", function() {
       })
       .catch(error => {
         console.error("Error loading data:", error);
-        tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading faculty data. Please try again later.</p>";
+        tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading subject data. Please try again later.</p>";
       });
   }
   tableContent.addEventListener('click', function(event) {
@@ -89,7 +95,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const pageNum = event.target.getAttribute("data-page");
       const limit = document.getElementById('rows-per-page').value;
       if (pageNum) {
-        loadFacultyPage(pageNum, limit);
+        loadSubjectPage(pageNum, limit);
       }
     }
   });
@@ -97,11 +103,11 @@ document.addEventListener("DOMContentLoaded", function() {
   tableContent.addEventListener('change', function(event) {
     if (event.target.matches('#rows-per-page')) {
       const newLimit = event.target.value;
-      loadFacultyPage(1, newLimit);
+      loadSubjectPage(1, newLimit);
     }
   });
 
-  loadFacultyPage(1, defaultLimit);
+  loadSubjectPage(1, defaultLimit);
 });
 
 window.onclick = function(event) {
