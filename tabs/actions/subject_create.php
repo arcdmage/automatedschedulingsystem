@@ -1,27 +1,36 @@
 <?php
-// Include database connection
 session_start();
 require_once('../../db_connect.php');
 
-// Check if form was submitted
 if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  
-  // Get form values safely
-  $sname = $_POST['sname'];
-  $special = $_POST['special'];
-  $gradelvl = $_POST['gradelvl'];
+  $subject_name = $_POST['subject_name'] ?? '';
+  $special = $_POST['special'] ?? '';
+  $grade_level = $_POST['grade_level'] ?? '';
+  $strand = $_POST['strand'] ?? '';
 
-  // Prepare and execute SQL insert query
-  $sql = "INSERT INTO faculty (sname, special, gradelvl)
-          VALUES ('$sname', '$special', '$gradelvl')";
-
-  if ($conn->query($sql) === TRUE) {
-    echo "<script>alert('Faculty added successfully!'); window.location.href='../../index.php';</script>";
-  } else {
-    echo "Error: " . $sql . "<br>" . $conn->error;
+  // Validate required fields
+  if (empty($subject_name) || empty($grade_level) || empty($strand)) {
+    die("Error: Missing required fields (subject_name, grade_level, strand)");
   }
 
-  // Close connection
-  $conn->close();
+  // Use prepared statement
+  $stmt = $conn->prepare("INSERT INTO subjects (subject_name, special, grade_level, strand) VALUES (?, ?, ?, ?)");
+  
+  if (!$stmt) {
+    die("Prepare failed: " . $conn->error);
+  }
+
+  $stmt->bind_param('ssss', $subject_name, $special, $grade_level, $strand);
+
+  if ($stmt->execute()) {
+    $stmt->close();
+    $conn->close();
+    header('Location: /mainscheduler/index.php?tab=subject_list');
+    exit;
+  } else {
+    echo "Error: " . htmlspecialchars($stmt->error);
+    $stmt->close();
+    $conn->close();
+  }
 }
 ?>
