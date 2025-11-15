@@ -1,4 +1,4 @@
-/* Modal Overlay */
+/* Modal verlay */
 .modal {
   display: none;
   position: fixed;
@@ -12,7 +12,7 @@
   padding-top: 40px;
 }
 
-/* Modal Content Box */
+/* modal Content Box */
 .modal-content {
   background-color: #fefefe;
   margin: auto;
@@ -24,7 +24,7 @@
   overflow: hidden;
 }
 
-/* Header Bar */
+/* header Bar */
 .imgcontainer {
   background: #04AA6D;
   color: white;
@@ -38,7 +38,7 @@
   font-size: 20px;
 }
 
-/* Close button */
+/* close button */
 .close {
   position: absolute;
   right: 18px;
