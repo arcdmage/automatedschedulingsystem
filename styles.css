@@ -14,7 +14,7 @@
 
 
 body {
-  background-color: #f2f3f2;
+  background-color: #ffffff;
   color: #333;
   display: flex;
   flex-direction: column;
@@ -104,10 +104,11 @@ body::before {
 }
 
 
-
 body {
-  position: relative;
-  background-color: #f3f4f6; 
-  z-index: 1;
-  padding: 30px 0;
+  background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
+  background-size: cover;         /* scale to fill */
+  background-position: center;    /* center the image */
+  background-repeat: no-repeat;
+  background-attachment: fixed;   /* optional: keeps background fixed on scroll */
+  background-color: #f3f4f6;      /* fallback color while image loads */
 }

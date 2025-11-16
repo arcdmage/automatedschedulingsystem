@@ -2,8 +2,7 @@
 // index.php
 ?>
 <!DOCTYPE html> <!--this is not yet a php file just an html-->
-<html>
-<html>
+<html lang="en">
     <head>
         <script src="script.js" defer></script>
         <link href="styles.css" rel="stylesheet">

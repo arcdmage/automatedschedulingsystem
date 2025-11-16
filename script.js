@@ -11,6 +11,10 @@ tabs.forEach(tab => { //if click then tab will be active, if click another tab t
       tab.classList.remove('active')
     })
     tab.classList.add('active')
+    if (!target) {
+      console.error('Tab target not found for selector:', tab.dataset.tabTarget)
+      return
+    }
     target.classList.add('active')
   })
 })
