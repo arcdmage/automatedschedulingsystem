@@ -66,27 +66,17 @@ require_once(__DIR__ . '/../db_connect.php');
     </div>
   </form>
 </div>
-
 <script>
 document.addEventListener("DOMContentLoaded", function() {
   const tableContent = document.getElementById("faculty-table-content");
   const defaultLimit = 5;
 
-    /**
-     * Loads faculty data into the table
-     * @param {number} page - The page number to load
-     * @param {number} limit - The number of rows per page
-     */
-  
   function loadFacultyPage(page = 1, limit = defaultLimit) {
-
-    // Use an absolute path starting with your project's root folder instead of Relative REMEBER PLEZ.
     const url = `/mainscheduler/tabs/faculty_table.php?page=${page}&limit=${limit}`;
 
-    fetch(url) // Use the new URL variable
+    fetch(url)
       .then(response => {
         if (!response.ok) {
-          // help with debug by showing the HTTP status code (e.g., 404 or 500)
           throw new Error(`Network response was not ok, status: ${response.status}`);
         }
         return response.text();
@@ -100,9 +90,32 @@ document.addEventListener("DOMContentLoaded", function() {
       });
   }
 
-  // --- The rest of your JavaScript remains the same ---
+  // Handle form submission with AJAX
+  const form = document.querySelector(".modal-content");
+  if (form) {
+    form.addEventListener("submit", function(e) {
+      e.preventDefault(); // Prevent page reload
+      
+      const formData = new FormData(form);
+      
+      fetch("/mainscheduler/tabs/actions/faculty_create.php", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.text())
+      .then(data => {
+        console.log("Faculty added successfully");
+        document.getElementById('id01').style.display = 'none'; // Close modal
+        form.reset(); // Clear the form
+        loadFacultyPage(1, defaultLimit); // Reload table
+      })
+      .catch(error => {
+        console.error("Error adding faculty:", error);
+        alert("Error adding faculty. Please try again.");
+      });
+    });
+  }
 
-  // Use event delegation to handle clicks on pagination buttons
   tableContent.addEventListener('click', function(event) {
     if (event.target.matches('.page-btn')) {
       const pageNum = event.target.getAttribute("data-page");
@@ -113,7 +126,6 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Use event delegation to handle changes on the rows-per-page dropdown
   tableContent.addEventListener('change', function(event) {
     if (event.target.matches('#rows-per-page')) {
       const newLimit = event.target.value;
@@ -121,12 +133,9 @@ document.addEventListener("DOMContentLoaded", function() {
     }
   });
 
-  // Initial load when the page is ready
   loadFacultyPage(1, defaultLimit);
 });
 
-
-// closes the
 window.onclick = function(event) {
   const modal = document.getElementById('id01');
   if (event.target == modal) {
