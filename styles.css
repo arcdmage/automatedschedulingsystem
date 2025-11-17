@@ -96,22 +96,6 @@ ul.tabs li.active {
   text-decoration: underline;
 }
 
-body::before {
-  content: "";
-  position: fixed; 
-  top:15px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 90%;
-  max-width: 1000px;
-  min-height: 600px;
-  background-color: #24b369;
-  border-radius: 20px;
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
-  z-index: -1;           
-}
-
-
 body {
   background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
   background-size: cover;         /* scale to fill */
