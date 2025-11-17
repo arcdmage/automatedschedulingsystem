@@ -65,14 +65,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const tableContent = document.getElementById("subject-table-content");
   const defaultLimit = 5;
 
-    /**
-     * @param {number} page
-     * @param {number} limit
-     */
-  
   function loadSubjectPage(page = 1, limit = defaultLimit) {
-
-    // Use an absolute path starting with your project's root folder instead of Relative REMEBER PLEZ.
     const url = `/mainscheduler/tabs/subject_table.php?page=${page}&limit=${limit}`;
 
     fetch(url)
@@ -90,6 +83,33 @@ document.addEventListener("DOMContentLoaded", function() {
         tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading subject data. Please try again later.</p>";
       });
   }
+
+  // Handle form submission with AJAX - THIS IS THE NEW PART
+  const form = document.querySelector(".modal-content");
+  if (form) {
+    form.addEventListener("submit", function(e) {
+      e.preventDefault(); // Prevent page reload
+      
+      const formData = new FormData(form);
+      
+      fetch("/mainscheduler/tabs/actions/subject_create.php", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.text())
+      .then(data => {
+        console.log("Subject added successfully");
+        document.getElementById('id02').style.display = 'none'; // Close modal
+        form.reset(); // Clear the form
+        loadSubjectPage(1, defaultLimit); // Reload table
+      })
+      .catch(error => {
+        console.error("Error adding subject:", error);
+        alert("Error adding subject. Please try again.");
+      });
+    });
+  }
+
   tableContent.addEventListener('click', function(event) {
     if (event.target.matches('.page-btn')) {
       const pageNum = event.target.getAttribute("data-page");
