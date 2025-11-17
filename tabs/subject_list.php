@@ -27,7 +27,7 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <!-- Modal -->
 <div id="id02" class="modal">
-  <form class="modal-content animate" action="/mainscheduler/tabs/actions/subject_create.php" method="post">
+  <form id="subject-form" class="modal-content animate" action="/mainscheduler/tabs/actions/subject_create.php" method="post">
     <div class="imgcontainer">
       <span onclick="document.getElementById('id02').style.display='none'" class="close" title="Close">&times;</span>
       <h2>Add Subject</h2>
@@ -40,15 +40,15 @@ require_once(__DIR__ . '/../db_connect.php');
       <label for="special"><b>In Specialization</b></label> <!--Make this a drop down outputting the choices as the list of teachers in the main faculty database.-->
       <input type="text" placeholder="In Specialization" name="special" required>
 
-      <label><b>Grade Level</b></label><br> <!--Output this into database-->
-      <label><input type="radio" name="grade_level" value="11"> Grade 11</label>
+      <label><b>Grade Level</b></label><br>
+      <label><input type="radio" name="grade_level" value="11" required> Grade 11</label>
       <label><input type="radio" name="grade_level" value="12"> Grade 12</label>
       <br><br>
-      <label><b>Strand</b></label><br> <!--Output this into database-->
-      <label><input type="radio" name="strand" value="HUMMS"> HUMMS</label>
+      <label><b>Strand</b></label><br>
+      <label><input type="radio" name="strand" value="HUMMS" required> HUMMS</label>
       <label><input type="radio" name="strand" value="STEM"> STEM</label>
       <label><input type="radio" name="strand" value="ABM"> ABM</label>
-      <label><input type="radio" name="strand" value="GAS"> GAS</label>
+      <label><input type="radio" name="strand" value="GAS"> GAS</label> 
       <br><br>
 
       <button type="submit">Create</button>
@@ -84,11 +84,15 @@ document.addEventListener("DOMContentLoaded", function() {
       });
   }
 
-  // Handle form submission with AJAX - THIS IS THE NEW PART
-  const form = document.querySelector(".modal-content");
+  // Handle form submission with AJAX
+  const form = document.getElementById('subject-form');
+  
   if (form) {
     form.addEventListener("submit", function(e) {
       e.preventDefault(); // Prevent page reload
+      e.stopPropagation(); // Stop event bubbling
+      
+      console.log("Form submitted via AJAX");
       
       const formData = new FormData(form);
       
@@ -98,15 +102,18 @@ document.addEventListener("DOMContentLoaded", function() {
       })
       .then(response => response.text())
       .then(data => {
-        console.log("Subject added successfully");
-        document.getElementById('id02').style.display = 'none'; // Close modal
-        form.reset(); // Clear the form
-        loadSubjectPage(1, defaultLimit); // Reload table
+        console.log("Subject added successfully:", data);
+        alert("Subject added successfully!");
+        document.getElementById('id02').style.display = 'none';
+        form.reset();
+        loadSubjectPage(1, defaultLimit);
       })
       .catch(error => {
         console.error("Error adding subject:", error);
         alert("Error adding subject. Please try again.");
       });
+      
+      return false; // Extra prevention
     });
   }
 
