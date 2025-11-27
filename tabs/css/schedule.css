@@ -1,3 +1,21 @@
+/* Page Layout */
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background-color: #f5f5f5;
+}
+
+h1 {
+  color: #333;
+  margin-bottom: 10px;
+}
+
+p {
+  color: #666;
+  margin-bottom: 20px;
+}
+
 /* Modal Styles */
 .modal {
   display: none;
@@ -139,6 +157,89 @@
   background-color: #da190b;
 }
 
+/* Schedule Header */
+.schedule-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.btn {
+  padding: 12px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: bold;
+  transition: background-color 0.3s;
+  flex: 1;
+}
+
+.btn-primary {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-primary:hover {
+  background-color: #45a049;
+}
+
+.btn-secondary {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.btn-secondary:hover {
+  background-color: #45a049;
+}
+
+/* Filter Section */
+.filter-section {
+  background: white;
+  padding: 15px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-group label {
+  font-weight: bold;
+  color: #333;
+}
+
+.filter-group select,
+.filter-group input[type=month] {
+  padding: 8px 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  min-width: 150px;
+  font-size: 14px;
+}
+
+/* Calendar Container */
+#calendar-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
 /* Responsive Design */
 @media screen and (max-width: 768px) {
   .modal-content {
@@ -160,95 +261,8 @@
     align-items: stretch;
   }
   
-  .filter-group select {
+  .filter-group select,
+  .filter-group input[type=month] {
     width: 100%;
   }
-  
-  .calendar td {
-    font-size: 11px;
-    padding: 2px;
-    height: 80px;
-  }
-  
-  .day-number {
-    font-size: 12px;
-  }
-  
-  .schedule-item,
-  .event-item {
-    font-size: 9px;
-    padding: 2px 3px;
-  }
-  .schedule-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.btn-group {
-  display: flex;
-  gap: 10px;
-}
-
-.btn {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 14px;
-  transition: background-color 0.3s;
-}
-
-.btn-primary {
-  background-color: #4CAF50;
-  color: white;
-}
-
-.btn-primary:hover {
-  background-color: #45a049;
-}
-
-.btn-secondary {
-  background-color: #008CBA;
-  color: white;
-}
-
-.btn-secondary:hover {
-  background-color: #007399;
-}
-
-.filter-section {
-  background: #f9f9f9;
-  padding: 15px;
-  border-radius: 4px;
-  margin-bottom: 20px;
-}
-
-.filter-group {
-  display: flex;
-  gap: 15px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.filter-group label {
-  font-weight: bold;
-}
-
-.filter-group select {
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  min-width: 200px;
-}
-
-#calendar-container {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
 }

@@ -13,7 +13,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $offset = ($page - 1) * $limit;
 
 // Fetch data for this page using the dynamic limit
-$sql = "SELECT * FROM faculty ORDER BY id ASC LIMIT $limit OFFSET $offset";
+$sql = "SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset";
 $result = $conn->query($sql);
 
 // Count total records for pagination
@@ -45,7 +45,7 @@ $total_pages = ceil($total_records / $limit);
         while($row = $result->fetch_assoc()) {
           // Your table row output remains the same
           echo "<tr>
-            <td>{$row['id']}</td>
+            <td>{$row['faculty_id']}</td>
             <td>{$row['fname']}</td>
             <td>{$row['mname']}</td>
             <td>{$row['lname']}</td>
