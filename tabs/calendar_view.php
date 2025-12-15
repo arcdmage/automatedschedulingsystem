@@ -21,25 +21,42 @@ $firstDayOfWeek = date('w', strtotime($firstDay));
 $totalDays = date('t', strtotime($month . '-01'));
 
 // Fetch schedules for the month
+// Check if section_id is provided (for section-specific view)
+$section_id = isset($_GET['section_id']) ? intval($_GET['section_id']) : null;
+
 if ($view === 'specific' && $teacher_id) {
   $schedule_query = "SELECT s.*, f.fname, f.lname, f.mname, sub.subject_name
                      FROM schedules s
                      JOIN faculty f ON s.faculty_id = f.faculty_id
                      JOIN subjects sub ON s.subject_id = sub.subject_id
                      WHERE s.faculty_id = ? 
-                     AND s.schedule_date BETWEEN ? AND ?
-                     ORDER BY s.schedule_date, s.start_time";
+                     AND s.schedule_date BETWEEN ? AND ?";
+  if ($section_id) {
+    $schedule_query .= " AND s.section_id = ?";
+  }
+  $schedule_query .= " ORDER BY s.schedule_date, s.start_time";
   $stmt = $conn->prepare($schedule_query);
-  $stmt->bind_param("iss", $teacher_id, $firstDay, $lastDay);
+  if ($section_id) {
+    $stmt->bind_param("issi", $teacher_id, $firstDay, $lastDay, $section_id);
+  } else {
+    $stmt->bind_param("iss", $teacher_id, $firstDay, $lastDay);
+  }
 } else {
   $schedule_query = "SELECT s.*, f.fname, f.lname, f.mname, sub.subject_name
                      FROM schedules s
                      JOIN faculty f ON s.faculty_id = f.faculty_id
                      JOIN subjects sub ON s.subject_id = sub.subject_id
-                     WHERE s.schedule_date BETWEEN ? AND ?
-                     ORDER BY s.schedule_date, s.start_time";
+                     WHERE s.schedule_date BETWEEN ? AND ?";
+  if ($section_id) {
+    $schedule_query .= " AND s.section_id = ?";
+  }
+  $schedule_query .= " ORDER BY s.schedule_date, s.start_time";
   $stmt = $conn->prepare($schedule_query);
-  $stmt->bind_param("ss", $firstDay, $lastDay);
+  if ($section_id) {
+    $stmt->bind_param("ssi", $firstDay, $lastDay, $section_id);
+  } else {
+    $stmt->bind_param("ss", $firstDay, $lastDay);
+  }
 }
 
 $stmt->execute();
