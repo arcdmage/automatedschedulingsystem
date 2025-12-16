@@ -32,7 +32,7 @@
             </div>
             <div id="schedule" data-tab-content>
                 <?php include 'tabs\schedule.php' ?>
-            </div>\
+            </div>
         </div>
     </body>
     <!--a comment tag-->
