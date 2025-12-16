@@ -14,8 +14,6 @@
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  color : #000000;
-
 }
 
 .faculty-table th, .faculty-table td {
@@ -33,7 +31,7 @@
 }
 
 .faculty-table tr:hover {
-  background-color: #898686;
+  background-color: #f1f1f1;
 }
 
 /* Pagination Styling */
@@ -86,7 +84,6 @@
   align-items: center;
   gap: 8px; /* Space between the label and the dropdown */
   font-size: 14px;
-  color: #000000;
 }
 
 #rows-per-page {

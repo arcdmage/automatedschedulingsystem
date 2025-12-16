@@ -5,7 +5,6 @@
   .active[data-tab-content] {
     display: block;
   }
-
 * {
   margin: 0;
   padding: 0;
@@ -24,6 +23,7 @@
 
 body {
   background-color: #ffffff;
+  color: #333;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -64,21 +64,31 @@ ul.tabs li.active {
 
 
 .tab-content {
+  background-color: rgb(95, 161, 215);
   border-radius: 10px;
-  color: #ece7e7;
   width: 90%;
   max-width: 900px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
   padding: 20px;
-  
 }
+
+
+[data-tab-content] {
+  display: none;
+}
+
+
+.active[data-tab-content] {
+  display: block;
+}
+
 
 .tab-content h1, .tab-content h2, .tab-content p {
   margin-bottom: 15px;
 }
 
 .tab-content a {
-  color: #ece7e7;
+  color: #3b82f6;
   text-decoration: none;
 }
 
@@ -88,18 +98,9 @@ ul.tabs li.active {
 
 body {
   background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
-  background-size: cover;        
-  background-position: center;    
+  background-size: cover;         /* scale to fill */
+  background-position: center;    /* center the image */
   background-repeat: no-repeat;
-  background-attachment: fixed;  
-  background-color: #f3f4f6;      
-}
-.Designboxhome {
-   width: 250px;
-    padding: 16px;
-    border-radius: 12px;
-    background: #1e1e1e;
-    color: white;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-    font-family: sans-serif;
+  background-attachment: fixed;   /* optional: keeps background fixed on scroll */
+  background-color: #f3f4f6;      /* fallback color while image loads */
 }
