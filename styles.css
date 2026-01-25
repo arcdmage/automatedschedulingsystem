@@ -16,7 +16,7 @@
   width : 80%;
   height: 80vh;
   display: flex;
-  align-items:center;
+  align-items: stretch;
   justify-content: center;
   flex-direction: column;
 }
@@ -28,7 +28,7 @@ body {
   flex-direction: column;
   align-items: center;
   min-height: 100vh;
-  padding: 20px;
+  padding: 0px;
 }
 
 
@@ -36,12 +36,31 @@ ul.tabs {
   list-style: none;
   display: flex;
   justify-content: center;
-  background-color: #1e293b;
   border-radius: 10px;
   overflow: hidden;
   margin-bottom: 20px;
+  z-index: 9;
+  position: fixed;
+  top: -10px;
+   overflow: visible;
 }
 
+ul.tabs::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: #1e293b;
+  border-radius: inherit;
+  z-index: 0;
+  transform-origin: top;
+  transform: scaleY(1);
+  transition: transform 0.35s ease;
+  pointer-events: none;
+}
+ul.tabs:hover::before {
+  transform-origin: top;
+  transform: scaleY(1.4);
+}
 
 ul.tabs li {
   padding: 20px 32px;
@@ -49,11 +68,14 @@ ul.tabs li {
   color: #dde2ea;
   transition: background-color 0.3s, color 0.3s;
   font-weight: 500;
+  position: relative;
+  z-index: 1;
 }
 
 
 ul.tabs li:hover {
   background-color: #334155;
+
 }
 
 
@@ -64,14 +86,24 @@ ul.tabs li.active {
 
 
 .tab-content {
-  background-color: rgb(95, 161, 215);
+  margin: 50px;
+  left: 30px;
   border-radius: 10px;
   width: 90%;
   max-width: 900px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-  padding: 20px;
+  box-shadow: 0 16px 15px rgba(0, 0, 0, 0.1);
+  z-index: 7;
+  align-items: center;
+
 }
 
+#home {
+position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 1;
+  justify-content: center;
+}
 
 [data-tab-content] {
   display: none;
@@ -88,7 +120,6 @@ ul.tabs li.active {
 }
 
 .tab-content a {
-  color: #3b82f6;
   text-decoration: none;
 }
 
@@ -98,9 +129,11 @@ ul.tabs li.active {
 
 body {
   background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
-  background-size: cover;         /* scale to fill */
-  background-position: center;    /* center the image */
+  background-size: cover;         
+  background-position: center;    
   background-repeat: no-repeat;
-  background-attachment: fixed;   /* optional: keeps background fixed on scroll */
-  background-color: #f3f4f6;      /* fallback color while image loads */
+  background-attachment: fixed;   
 }
+
+
+
