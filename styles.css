@@ -101,8 +101,25 @@ ul.tabs li.active {
 position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.4);
+  color: white;
   z-index: 1;
   justify-content: center;
+  padding-right: 25%;
+  padding-left: 25%;
+  padding-top: 10%;
+
+}
+
+#faculty_members {
+  background-color: #8A9A5B
+  position: fixed;
+  inset: 0;
+  color: white;
+  z-index: 1;
+  justify-content: center;
+padding-right: 10%;
+  padding-left: 10%;
+  padding-top: 5%;
 }
 
 [data-tab-content] {
