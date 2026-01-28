@@ -37,12 +37,12 @@ ul.tabs {
   display: flex;
   justify-content: center;
   border-radius: 10px;
-  overflow: hidden;
+  overflow: visible;
   margin-bottom: 20px;
   z-index: 9;
   position: fixed;
   top: -10px;
-   overflow: visible;
+  padding-bottom: 0px;
 }
 
 ul.tabs::before {
@@ -59,23 +59,45 @@ ul.tabs::before {
 }
 ul.tabs:hover::before {
   transform-origin: top;
-  transform: scaleY(1.4);
+  transform: scaleY(1);
 }
 
 ul.tabs li {
-  padding: 20px 32px;
+  padding: 20px 32px 10px;
   cursor: pointer;
   color: #dde2ea;
   transition: background-color 0.3s, color 0.3s;
   font-weight: 500;
   position: relative;
   z-index: 1;
+  padding-bottom: 10px;
+  transition:  transform 0.3s ease, background-color 0.3s ease;
+  overflow: visible;
 }
+
+ul.tabs li::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -12px;
+  height: 12px;
+  background-color: #334155;
+  border-radius: 0 0 10px 10px;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
 
 
 ul.tabs li:hover {
   background-color: #334155;
+  transform: translateY(10px);
+   padding-bottom: 30px;
+}
 
+ul.tabs li:hover::after {
+  opacity: 1;
 }
 
 
@@ -107,19 +129,80 @@ position: fixed;
   padding-right: 25%;
   padding-left: 25%;
   padding-top: 10%;
+   top: 0;
+    bottom:0;
+    position:fixed;
+    overflow-y:scroll;
+    overflow-x:hidden;
 
 }
 
 #faculty_members {
-  background-color: #8A9A5B
+  background-color:  rgba(0, 0, 0, 0.4);
   position: fixed;
   inset: 0;
   color: white;
   z-index: 1;
   justify-content: center;
-padding-right: 10%;
+  padding-right: 10%;
   padding-left: 10%;
   padding-top: 5%;
+   top: 0;
+    bottom:0;
+    position:fixed;
+    overflow-y:scroll;
+    overflow-x:hidden;
+}
+
+#faculty_schedules{
+  background-color:  rgba(0, 0, 0, 0.4);
+  position: fixed;
+  inset: 0;
+  color: white;
+  z-index: 1;
+  justify-content: center;
+  padding-right: 10%;
+  padding-left: 10%;
+  padding-top: 5%;
+   top: 0;
+    bottom:0;
+    position:fixed;
+    overflow-y:scroll;
+    overflow-x:hidden;
+}
+
+#subject_list{
+  background-color:  rgba(0, 0, 0, 0.4);
+  position: fixed;
+  inset: 0;
+  color: white;
+  z-index: 1;
+  justify-content: center;
+  padding-right: 10%;
+  padding-left: 10%;
+  padding-top: 5%;
+   top: 0;
+    bottom:0;
+    position:fixed;
+    overflow-y:scroll;
+    overflow-x:hidden;
+}
+
+#schedule {
+  background-color:  rgba(0, 0, 0, 0.4);
+  position: fixed;
+  inset: 0;
+  color: white;
+  z-index: 1;
+  justify-content: center;
+  padding-right: 10%;
+  padding-left: 10%;
+  padding-top: 5%;
+   top: 0;
+    bottom:0;
+    position:fixed;
+    overflow-y:scroll;
+    overflow-x:hidden;
 }
 
 [data-tab-content] {
