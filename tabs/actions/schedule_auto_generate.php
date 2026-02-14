@@ -1,178 +1,283 @@
 <?php
-session_start();
-require_once('../../db_connect.php');
-
+require_once(__DIR__ . '/../../db_connect.php');
+require_once(__DIR__ . '/action_helper.php');
+require_once(__DIR__ . '/../../lib/schedule_helpers.php');
 header('Content-Type: application/json');
 
-// Set timezone to ensure date calculations are consistent
-date_default_timezone_set('Asia/Manila'); 
+// Debug mode - set to true to see detailed conflict information
+$debug_mode = true;
+$debug_log = [];
 
-if ($_SERVER["REQUEST_METHOD"] === "POST") {
+function debug_log($message) {
+    global $debug_log, $debug_mode;
+    if ($debug_mode) {
+        $debug_log[] = $message;
+    }
+}
+
+try {
+    $section_id = intval($_POST['section_id']);
+    $start_date = $_POST['start_date'];
+    $end_date = $_POST['end_date'];
     
-    // this needs actual VALIDATE INPUTS i think
-    $section_id = intval($_POST['section_id'] ?? 0);
-    $start_date_str = $_POST['start_date'] ?? '';
-    $end_date_str = $_POST['end_date'] ?? '';
-
-    if ($section_id <= 0 || empty($start_date_str) || empty($end_date_str)) {
-        echo json_encode(['success' => false, 'message' => 'Invalid inputs provided.']);
-        exit;
+    if (!$section_id || !$start_date || !$end_date) {
+        throw new Exception('Missing required fields');
     }
-
-    $start_ts = strtotime($start_date_str);
-    $end_ts = strtotime($end_date_str);
-
-    if ($start_ts > $end_ts) {
-        echo json_encode(['success' => false, 'message' => 'Start date cannot be after end date.']);
-        exit;
+    
+    // Validate dates
+    $start = new DateTime($start_date);
+    $end = new DateTime($end_date);
+    
+    if ($start > $end) {
+        throw new Exception('Start date must be before end date');
     }
-
-    // Fetch Time Slots
-    $slots_query = "SELECT time_slot_id, start_time, end_time FROM time_slots WHERE is_break = 0 ORDER BY slot_order";
-    $time_slots = $conn->query($slots_query)->fetch_all(MYSQLI_ASSOC);
-    $slots_per_day = count($time_slots);
-
-    if ($slots_per_day === 0) {
-        echo json_encode(['success' => false, 'message' => 'No time slots found. Please configure Time Slots first.']);
-        exit;
-    }
-
-    // Fetch Requirements
-    $req_query = "SELECT requirement_id, subject_id, faculty_id, hours_per_week 
-                  FROM subject_requirements 
-                  WHERE section_id = ?";
-    $stmt = $conn->prepare($req_query);
+    
+    // Fetch subject requirements with patterns and faculty
+    $stmt = $conn->prepare("SELECT requirement_id, subject_id, hours_per_week, faculty_id FROM subject_requirements WHERE section_id = ?");
     $stmt->bind_param("i", $section_id);
     $stmt->execute();
-    $requirements = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    $res = $stmt->get_result();
+    $subjects = [];
+    while ($row = $res->fetch_assoc()) {
+        $subjects[$row['requirement_id']] = [
+            'requirement_id' => (int)$row['requirement_id'],
+            'subject_id' => (int)$row['subject_id'],
+            'remaining'  => (int)$row['hours_per_week'],
+            'faculty_id' => $row['faculty_id'], // Keep as-is (could be string or int)
+        ];
+        debug_log("Loaded requirement {$row['requirement_id']}: subject={$row['subject_id']}, faculty='{$row['faculty_id']}'");
+    }
     $stmt->close();
-
-    if (empty($requirements)) {
-        echo json_encode(['success' => false, 'message' => 'No subjects configured. Go to Subject Setup first.']);
-        exit;
+    
+    // Fetch patterns for each requirement
+    $patterns = [];
+    foreach ($subjects as $req) {
+        $req_id = $req['requirement_id'];
+        
+        $pattern_query = "SELECT sp.*, ts.start_time, ts.end_time, ts.is_break
+                         FROM schedule_patterns sp
+                         JOIN time_slots ts ON sp.time_slot_id = ts.time_slot_id
+                         WHERE sp.requirement_id = ?
+                         ORDER BY sp.day_of_week, ts.slot_order";
+        $stmt = $conn->prepare($pattern_query);
+        $stmt->bind_param("i", $req_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        
+        $patterns[$req_id] = [];
+        while ($row = $result->fetch_assoc()) {
+            $patterns[$req_id][] = $row;
+        }
+        $stmt->close();
     }
     
-    $total_config_hours = 0;
-    foreach($requirements as $req) $total_config_hours += $req['hours_per_week'];
-
-    $force_daily_mode = false;
-    // If configured hours are close to 1 day's capacity (e.g., 7 hours for 7 slots), but we have 5 days...
-    if ($total_config_hours <= ($slots_per_day + 2) && $total_config_hours >= ($slots_per_day - 2)) {
-        $force_daily_mode = true; 
-    }
-
-    $has_ts_column = ($conn->query("SHOW COLUMNS FROM schedules LIKE 'time_slot_id'")->num_rows > 0);
-
-    if ($has_ts_column) {
-        $insert_sql = "INSERT INTO schedules (section_id, subject_id, faculty_id, time_slot_id, schedule_date, start_time, end_time, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())";
-    } else {
-        $insert_sql = "INSERT INTO schedules (section_id, subject_id, faculty_id, schedule_date, start_time, end_time, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())";
+    // Check if all requirements have patterns
+    $missing_patterns = [];
+    foreach ($subjects as $req) {
+        if (empty($patterns[$req['requirement_id']])) {
+            $missing_patterns[] = $req['subject_name'];
+        }
     }
     
-    $conflict_sql = "SELECT schedule_id FROM schedules WHERE faculty_id = ? AND schedule_date = ? AND start_time = ?";
-
-    $insert_stmt = $conn->prepare($insert_sql);
-    $conflict_stmt = $conn->prepare($conflict_sql);
-
-    // GENERATION LOOP
+    if (!empty($missing_patterns)) {
+        throw new Exception('The following subjects are missing schedule patterns: ' . implode(', ', $missing_patterns) . '. Please configure patterns before generating.');
+    }
+    
+    // Start transaction
+    $conn->begin_transaction();
+    
     $schedules_created = 0;
     $conflicts_found = 0;
-    $current_date = $start_ts;
     
-    // Helper to initialize weekly counters
-    $init_counters = function() use ($requirements, $force_daily_mode) {
-        $counts = [];
-        foreach ($requirements as $req) {
-            // If Heuristic detected "Daily" intent, give them 5 hours/week instead of 1
-            $counts[$req['requirement_id']] = $force_daily_mode ? 5 : $req['hours_per_week'];
-        }
-        return $counts;
-    };
+    // Prepare insert statement
+    $insert_stmt = $conn->prepare("
+        INSERT INTO schedules (faculty_id, subject_id, section_id, schedule_date, start_time, end_time, time_slot_id, notes)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'Auto-generated')
+    ");
     
-    $weekly_remaining = $init_counters();
-
-    while ($current_date <= $end_ts) {
-        $day_num = date('N', $current_date); // 1=Mon, 7=Sun
-        $date_db = date('Y-m-d', $current_date);
-
-        // Reset counters every Monday
-        if ($day_num == 1) {
-            $weekly_remaining = $init_counters();
-        }
-
-        // Skip Weekends
-        if ($day_num >= 6) {
-            $current_date = strtotime('+1 day', $current_date);
+    // Debug conflict check - shows what conflicts are found
+    $debug_conflict_stmt = $conn->prepare("
+        SELECT 
+            s.schedule_id,
+            s.faculty_id,
+            s.subject_id,
+            s.section_id,
+            sec.section_name,
+            subj.subject_name,
+            ts.start_time,
+            ts.end_time,
+            CASE 
+                WHEN s.section_id = ? AND s.time_slot_id = ? AND s.subject_id = ? THEN 'Same section/subject/time'
+                WHEN s.faculty_id = ? AND s.faculty_id IS NOT NULL AND s.faculty_id != '' 
+                     AND ts.start_time < ? AND ts.end_time > ? THEN 'Faculty time conflict'
+                ELSE 'Unknown'
+            END as conflict_type
+        FROM schedules s
+        JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
+        JOIN sections sec ON s.section_id = sec.section_id
+        JOIN subjects subj ON s.subject_id = subj.subject_id
+        WHERE s.schedule_date = ?
+          AND (
+              (s.section_id = ? AND s.time_slot_id = ? AND s.subject_id = ?)
+              OR 
+              (s.faculty_id = ? AND s.faculty_id IS NOT NULL AND s.faculty_id != '' AND 
+               ts.start_time < ? AND ts.end_time > ?)
+          )
+    ");
+    
+    // Simple conflict count check
+    $conflict_stmt = $conn->prepare("
+        SELECT COUNT(*) as count
+        FROM schedules s
+        JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
+        WHERE s.schedule_date = ?
+          AND (
+              (s.section_id = ? AND s.time_slot_id = ? AND s.subject_id = ?)
+              OR 
+              (s.faculty_id = ? AND s.faculty_id IS NOT NULL AND s.faculty_id != '' AND 
+               ts.start_time < ? AND ts.end_time > ?)
+          )
+    ");
+    
+    // Generate schedules for each date in range
+    $current = clone $start;
+    
+    while ($current <= $end) {
+        $day_name = $current->format('l');
+        
+        // Skip weekends
+        if ($day_name === 'Saturday' || $day_name === 'Sunday') {
+            $current->modify('+1 day');
             continue;
         }
-
-        $today_subject_ids = [];
-
-        foreach ($time_slots as $slot) {
-            // Shuffle requirements for fair distribution
-            shuffle($requirements);
-
-            foreach ($requirements as $req) {
-                $req_id = $req['requirement_id'];
-                $sub_id = $req['subject_id'];
-                $fac_id = $req['faculty_id'];
-
-                // 1. Check Allowance (Do we have hours left for this subject?)
-                if ($weekly_remaining[$req_id] <= 0) continue;
-
-                // 2. Prevent same subject twice in one day
-                // (Unless total hours > 5, implying double periods are needed)
-                $allowance = $force_daily_mode ? 5 : $req['hours_per_week'];
-                if (in_array($sub_id, $today_subject_ids) && $allowance <= 5) {
-                     continue;
+        
+        $date_str = $current->format('Y-m-d');
+        debug_log("Processing date: $date_str ($day_name)");
+        
+        // For each requirement, create schedules based on patterns
+        foreach ($subjects as $req) {
+            $req_id = $req['requirement_id'];
+            
+            if (empty($patterns[$req_id])) continue;
+            
+            foreach ($patterns[$req_id] as $pattern) {
+                // Check if this pattern is for current day
+                if ($pattern['day_of_week'] !== $day_name) continue;
+                
+                $time_slot_id = $pattern['time_slot_id'];
+                $start_time = $pattern['start_time'];
+                $end_time = $pattern['end_time'];
+                $faculty_id = $req['faculty_id'];
+                
+                debug_log("  Attempting: subject={$req['subject_id']}, time=$start_time-$end_time, faculty='$faculty_id'");
+                
+                // Check for conflicts with debug info
+                if ($debug_mode) {
+                    $debug_conflict_stmt->bind_param(
+                        "iiissssiiiiss",
+                        $section_id, $time_slot_id, $req['subject_id'],
+                        $faculty_id, $end_time, $start_time,
+                        $date_str,
+                        $section_id, $time_slot_id, $req['subject_id'],
+                        $faculty_id, $end_time, $start_time
+                    );
+                    $debug_conflict_stmt->execute();
+                    $debug_result = $debug_conflict_stmt->get_result();
+                    
+                    if ($debug_result->num_rows > 0) {
+                        debug_log("    CONFLICTS FOUND:");
+                        while ($conflict_row = $debug_result->fetch_assoc()) {
+                            debug_log("      - {$conflict_row['section_name']}: {$conflict_row['subject_name']} "
+                                    . "({$conflict_row['start_time']}-{$conflict_row['end_time']}) "
+                                    . "faculty='{$conflict_row['faculty_id']}' "
+                                    . "type={$conflict_row['conflict_type']}");
+                        }
+                        $conflicts_found++;
+                        continue;
+                    }
                 }
-
-                // 3. Check Teacher Conflict
-                $conflict_stmt->bind_param("iss", $fac_id, $date_db, $slot['start_time']);
+                
+                // Regular conflict check
+                $conflict_stmt->bind_param(
+                    "siiisss",
+                    $date_str,
+                    $section_id,
+                    $time_slot_id,
+                    $req['subject_id'],
+                    $faculty_id,
+                    $end_time,
+                    $start_time
+                );
                 $conflict_stmt->execute();
-                if ($conflict_stmt->get_result()->num_rows > 0) {
+                $conflict_result = $conflict_stmt->get_result()->fetch_assoc();
+                
+                if ($conflict_result['count'] > 0 && !$debug_mode) {
                     $conflicts_found++;
                     continue;
                 }
-
-                // 4. Insert Schedule
-                if ($has_ts_column) {
-                    $insert_stmt->bind_param("iiiisss", $section_id, $sub_id, $fac_id, $slot['time_slot_id'], $date_db, $slot['start_time'], $slot['end_time']);
-                } else {
-                    $insert_stmt->bind_param("iiisss", $section_id, $sub_id, $fac_id, $date_db, $slot['start_time'], $slot['end_time']);
-                }
-
+                
+                // Insert schedule
+                $insert_stmt->bind_param(
+                    "siisssi",
+                    $faculty_id,
+                    $req['subject_id'],
+                    $section_id,
+                    $date_str,
+                    $start_time,
+                    $end_time,
+                    $time_slot_id
+                );
+                
                 if ($insert_stmt->execute()) {
                     $schedules_created++;
-                    $weekly_remaining[$req_id]--;
-                    $today_subject_ids[] = $sub_id;
-                    break; // Slot filled, move to next time slot
+                    debug_log("    ✓ Created schedule");
+                } else {
+                    debug_log("    ✗ Failed to insert: " . $insert_stmt->error);
                 }
             }
         }
-        $current_date = strtotime('+1 day', $current_date);
+        
+        $current->modify('+1 day');
     }
-
-    // ---------------------------------------------------------
-    // 6. RETURN RESPONSE
-    // ---------------------------------------------------------
-    $msg = "Generated $schedules_created schedules.";
-    if ($force_daily_mode) {
-        $msg .= " (Note: Automatically applied Daily Schedule mode because subjects were configured with low hours.)";
+    
+    $insert_stmt->close();
+    $conflict_stmt->close();
+    if ($debug_mode) {
+        $debug_conflict_stmt->close();
     }
-
-    echo json_encode([
+    
+    // Commit transaction
+    $conn->commit();
+    
+    $response = [
         'success' => true,
         'schedules_created' => $schedules_created,
         'conflicts_found' => $conflicts_found,
-        'message' => $msg
-    ]);
-
-    $insert_stmt->close();
-    $conflict_stmt->close();
-    $conn->close();
-
-} else {
-    echo json_encode(['success' => false, 'message' => 'Invalid request']);
+        'message' => 'Schedule generation completed'
+    ];
+    
+    if ($debug_mode) {
+        $response['debug_log'] = $debug_log;
+    }
+    
+    echo json_encode($response);
+    
+} catch (Exception $e) {
+    if (isset($conn)) {
+        $conn->rollback();
+    }
+    
+    $response = [
+        'success' => false,
+        'message' => $e->getMessage()
+    ];
+    
+    if ($debug_mode && !empty($debug_log)) {
+        $response['debug_log'] = $debug_log;
+    }
+    
+    echo json_encode($response);
 }
+
+$conn->close();
 ?>

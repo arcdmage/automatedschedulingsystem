@@ -1,6 +1,6 @@
 <?php
 require_once(__DIR__ . '/../db_connect.php');
-
+require_once(__DIR__ . '/../lib/schedule_helpers.php');
 // Fetch all sections
 $sections_query = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.school_year, s.semester,
                    CONCAT(f.lname, ', ', f.fname) AS adviser_name
@@ -240,6 +240,23 @@ document.getElementById('generate-form')?.addEventListener('submit', function(e)
   .then(data => {
     progressFill.style.width = '100%';
     progressFill.textContent = '100%';
+    
+    // Display debug log if available
+    if (data.debug_log && data.debug_log.length > 0) {
+      addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+      addLog('📋 DEBUG LOG (showing conflict details):', 'info');
+      addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+      data.debug_log.forEach(msg => {
+        if (msg.includes('CONFLICTS FOUND')) {
+          addLog(msg, 'error');
+        } else if (msg.includes('✓')) {
+          addLog(msg, 'success');
+        } else {
+          addLog(msg, 'info');
+        }
+      });
+      addLog('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━', 'info');
+    }
     
     if (data.success) {
       addLog('✓ Generation completed successfully!', 'success');
