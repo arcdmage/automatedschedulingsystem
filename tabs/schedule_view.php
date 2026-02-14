@@ -1,5 +1,6 @@
 <?php
 require_once(__DIR__ . '/../db_connect.php');
+require_once(__DIR__ . '/../lib/schedule_helpers.php');
 
 $sections_query = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.school_year, s.semester,
                    CONCAT(f.lname, ', ', f.fname) AS adviser_name
@@ -14,7 +15,7 @@ $selected_week = isset($_GET['week']) ? $_GET['week'] : null;
 // Default to current week if not set
 if (!$selected_week) {
   $now = new DateTime();
-  $selected_week = $now->format('o-\WW'); 
+  $selected_week = $now->format('o-\WW');
 }
 
 // fetch selected section details
@@ -29,13 +30,13 @@ if ($selected_section) {
 
 // calculate date range for the selected week
 try {
-  $selected_week_clean = strtoupper($selected_week); 
+  $selected_week_clean = strtoupper($selected_week);
   if (strpos($selected_week_clean, 'W') !== false) {
       $week_parts = explode('W', $selected_week_clean);
   } else {
       $week_parts = explode('-', $selected_week_clean);
   }
-  
+
   $year = (int)str_replace('-', '', $week_parts[0]);
   $week_num = (int)$week_parts[1];
 
@@ -50,76 +51,89 @@ try {
   $week_end_str = date('Y-m-d', strtotime('friday this week'));
 }
 
-// setup grid - time slots
-$all_time_slots = $conn->query("SELECT * FROM time_slots ORDER BY slot_order")->fetch_all(MYSQLI_ASSOC);
-$schedule_grid = [];
-$days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-
-foreach ($all_time_slots as $time_slot) {
-  if (!$time_slot['is_break']) {
-    $slot_id = (int)$time_slot['time_slot_id'];
-    $schedule_grid[$slot_id] = [];
-    foreach ($days as $day) $schedule_grid[$slot_id][$day] = null;
-  }
+// setup grid - time slots (section-specific)
+$all_time_slots = [];
+if ($selected_section) {
+  $timeslots_query = "SELECT * FROM time_slots WHERE section_id = ? ORDER BY slot_order";
+  $stmt = $conn->prepare($timeslots_query);
+  $stmt->bind_param("i", $selected_section);
+  $stmt->execute();
+  $all_time_slots = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+  $stmt->close();
 }
 
-// 6. FETCH SCHEDULES
+// Build mappings: slot_order <-> time_slot_id and time labels
+$slotOrderByTimeId = [];
+$timeIdBySlotOrder = [];
+$timeLabelBySlotOrder = [];
+foreach ($all_time_slots as $slot) {
+    $so = (int)$slot['slot_order'];
+    $tid = (int)$slot['time_slot_id'];
+    $slotOrderByTimeId[$tid] = $so;
+    $timeIdBySlotOrder[$so] = $tid;
+    $timeLabelBySlotOrder[$so] = $slot['start_time'] . ' - ' . $slot['end_time'];
+}
+
+// Build list of week dates and map DayName => date (Monday..Friday)
+$week_dates = [];
+$dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+$dt = new DateTime($week_start_str);
+foreach ($dayNames as $i => $day) {
+    $week_dates[$day] = $dt->format('Y-m-d');
+    $dt->modify('+1 day');
+}
+
+// Use helper to build weekly grid (patterns + explicit schedules). grid[date][slot_order] => info
+$grid = [];
 if ($selected_section) {
-  $has_ts_id = $conn->query("SHOW COLUMNS FROM schedules LIKE 'time_slot_id'")->num_rows > 0;
-  
-  $sql = "SELECT s.*, sub.subject_name, 
-          CONCAT(f.lname, ', ', f.fname) AS teacher_name
-          FROM schedules s
-          JOIN subjects sub ON s.subject_id = sub.subject_id
-          JOIN faculty f ON s.faculty_id = f.faculty_id
-          WHERE s.section_id = ? 
-          AND s.schedule_date BETWEEN ? AND ?
-          ORDER BY s.schedule_date, s.start_time";
+    $grid = build_weekly_grid($conn, $selected_section, $week_start_str);
+}
 
-  $stmt = $conn->prepare($sql);
-  $stmt->bind_param("iss", $selected_section, $week_start_str, $week_end_str);
-  $stmt->execute();
-  $result = $stmt->get_result();
+// Collect subject IDs used in grid to fetch names
+$subjectIds = [];
+foreach ($grid as $date => $slots) {
+    foreach ($slots as $slotOrder => $info) {
+        if (!empty($info['subject_id'])) $subjectIds[] = (int)$info['subject_id'];
+    }
+}
+$subjectIds = array_values(array_unique($subjectIds));
 
-  while ($row = $result->fetch_assoc()) {
-    $day_name = date('l', strtotime($row['schedule_date']));
-    if (!in_array($day_name, $days)) continue;
+// Fetch subject names
+$subjects = [];
+if (!empty($subjectIds)) {
+    // safe integer list
+    $ids = implode(',', array_map('intval', $subjectIds));
+    $sql = "SELECT subject_id, subject_name FROM subjects WHERE subject_id IN ($ids)";
+    $res = $conn->query($sql);
+    while ($r = $res->fetch_assoc()) $subjects[(int)$r['subject_id']] = $r['subject_name'];
+}
 
-    $matched = false;
-    
-    // Method 1: Match by Time Slot ID
-    if ($has_ts_id && !empty($row['time_slot_id'])) {
-        $tid = (int)$row['time_slot_id'];
-        if (isset($schedule_grid[$tid])) {
-            $schedule_grid[$tid][$day_name] = [
-                'subject' => $row['subject_name'],
-                'teacher' => $row['teacher_name']
-            ];
-            $matched = true;
+// Fetch explicit schedules for week to get teacher names (map by date & slot_order)
+$teachers = []; // teachers[date][slot_order] = "Lastname, Firstname"
+if ($selected_section) {
+    $sql = "SELECT s.schedule_date, s.time_slot_id, f.lname, f.fname
+            FROM schedules s
+            LEFT JOIN faculty f ON s.faculty_id = f.faculty_id
+            WHERE s.section_id = ? AND s.schedule_date BETWEEN ? AND ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("iss", $selected_section, $week_start_str, $week_end_str);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    while ($r = $res->fetch_assoc()) {
+        $date = $r['schedule_date'];
+        $tid = (int)$r['time_slot_id'];
+        $slotOrder = $slotOrderByTimeId[$tid] ?? null;
+        if ($slotOrder !== null) {
+            $teachers[$date][$slotOrder] = trim(($r['lname'] ?? '') . ', ' . ($r['fname'] ?? ''));
         }
     }
+    $stmt->close();
+}
 
-    // Method 2: Match by Time (Fallback)
-    if (!$matched) {
-        $db_time_str = date('H:i', strtotime($row['start_time']));
-        foreach ($all_time_slots as $slot) {
-            if ($slot['is_break']) continue;
-            $slot_time_str = date('H:i', strtotime($slot['start_time']));
-            if ($db_time_str === $slot_time_str) {
-                $tid = (int)$slot['time_slot_id'];
-                if (isset($schedule_grid[$tid])) {
-                    $schedule_grid[$tid][$day_name] = [
-                        'subject' => $row['subject_name'],
-                        'teacher' => $row['teacher_name']
-                    ];
-                    $matched = true;
-                    break;
-                }
-            }
-        }
-    }
-  }
-  $stmt->close();
+// Function to format time in 12-hour format
+function formatTime12Hour($time24) {
+  $timestamp = strtotime($time24);
+  return date('g:i A', $timestamp);
 }
 ?>
 
@@ -127,8 +141,7 @@ if ($selected_section) {
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<!-- LINK TO NEW CSS -->
-<link rel="stylesheet" href="css/schedule.css"> 
+<link rel="stylesheet" href="css/schedule.css">
 </head>
 <body>
 
@@ -187,28 +200,53 @@ if ($selected_section) {
     <thead>
       <tr>
         <th>TIME</th>
-        <?php foreach($days as $day) echo "<th>" . strtoupper($day) . "</th>"; ?>
+        <?php foreach($dayNames as $day) echo "<th>" . strtoupper($day) . "</th>"; ?>
       </tr>
     </thead>
     <tbody>
-      <?php foreach ($all_time_slots as $slot): ?>
+      <?php
+      // Determine max slot_order to iterate in display order
+      $maxSlotOrder = empty($timeLabelBySlotOrder) ? 0 : max(array_keys($timeLabelBySlotOrder));
+      for ($slot = 1; $slot <= $maxSlotOrder; $slot++):
+          $isBreak = false;
+          // find corresponding time slot entry to check is_break and label
+          $timeSlotEntry = null;
+          foreach ($all_time_slots as $ts) {
+              if ((int)$ts['slot_order'] === $slot) { $timeSlotEntry = $ts; break; }
+          }
+          if ($timeSlotEntry && (int)$timeSlotEntry['is_break']) {
+              $isBreak = true;
+          }
+      ?>
         <tr>
           <td class="time-cell">
-            <?php echo date('g:i A', strtotime($slot['start_time'])) . ' - ' . date('g:i A', strtotime($slot['end_time'])); ?>
+            <?php
+              if ($timeSlotEntry) {
+                echo formatTime12Hour($timeSlotEntry['start_time']) . ' - ' . formatTime12Hour($timeSlotEntry['end_time']);
+              } else {
+                echo "Slot $slot";
+              }
+            ?>
           </td>
           
-          <?php if ($slot['is_break']): ?>
-            <td colspan="5" class="break-cell"><?php echo htmlspecialchars($slot['break_label']); ?></td>
+          <?php if ($isBreak): ?>
+            <td colspan="5" class="break-cell"><?php echo htmlspecialchars($timeSlotEntry['break_label'] ?? 'BREAK'); ?></td>
           <?php else: ?>
-            <?php 
-            $tid = (int)$slot['time_slot_id'];
-            foreach ($days as $day): 
-              $cell = $schedule_grid[$tid][$day] ?? null;
+            <?php foreach ($dayNames as $day): 
+                $date = $week_dates[$day];
+                $cell = $grid[$date][$slot] ?? null;
             ?>
-              <?php if ($cell): ?>
+              <?php if ($cell): 
+                  $sname = $subjects[$cell['subject_id']] ?? ("Subject #" . ($cell['subject_id'] ?? ''));
+                  $teacher = ($cell['source'] === 'explicit') ? ($teachers[$date][$slot] ?? '') : '';
+              ?>
                 <td class="subject-cell">
-                  <div class="subject-name"><?php echo htmlspecialchars($cell['subject']); ?></div>
-                  <div class="teacher-name"><?php echo htmlspecialchars($cell['teacher']); ?></div>
+                  <div class="subject-name"><?php echo htmlspecialchars($sname); ?></div>
+                  <?php if ($teacher): ?>
+                    <div class="teacher-name"><?php echo htmlspecialchars($teacher); ?></div>
+                  <?php elseif ($cell['source'] === 'pattern'): ?>
+                    <div class="teacher-name" style="color:#4b5563; font-size:0.9em;">(pattern)</div>
+                  <?php endif; ?>
                 </td>
               <?php else: ?>
                 <td class="empty-cell">-</td>
@@ -216,7 +254,7 @@ if ($selected_section) {
             <?php endforeach; ?>
           <?php endif; ?>
         </tr>
-      <?php endforeach; ?>
+      <?php endfor; ?>
     </tbody>
   </table>
 </div>
@@ -249,21 +287,49 @@ function deleteSchedules() {
   const startDate = '<?php echo $week_start_str; ?>';
   const endDate = '<?php echo $week_end_str; ?>';
 
-  const formData = new FormData();
-  formData.append('section_id', sectionId);
-  formData.append('start_date', startDate);
-  formData.append('end_date', endDate);
+  const runDelete = (force = false) => {
+    const formData = new FormData();
+    formData.append('section_id', sectionId);
+    formData.append('start_date', startDate);
+    formData.append('end_date', endDate);
+    if (force) formData.append('force', '1');
 
-  fetch('/mainscheduler/tabs/actions/schedule_delete_auto.php', {
-    method: 'POST',
-    body: formData
-  })
-  .then(r => r.json())
-  .then(data => {
-    alert(data.message);
-    if(data.success) window.location.reload();
-  })
-  .catch(err => alert("Error: " + err));
+    fetch('/mainscheduler/tabs/actions/schedule_delete_auto.php', {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+      body: formData
+    })
+    .then(async res => {
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error('Server error: ' + txt);
+      }
+      return res.json();
+    })
+    .then(data => {
+      if (!data.success) {
+        alert('Error: ' + (data.message || 'Unknown'));
+        return;
+      }
+      if (data.deleted_schedules === 0 && data.matched_count > 0 && data.auto_count === 0 && !force) {
+        // nothing auto-marked; ask user if they want to force-delete all matched rows
+        const proceed = confirm(`Found ${data.matched_count} schedules in the range but none are marked as auto-generated.\n\nDo you want to FORCE delete all ${data.matched_count} matched schedules?`);
+        if (proceed) runDelete(true);
+        else alert('No schedules were deleted.');
+        return;
+      }
+      alert(data.message || 'Done');
+      if (data.deleted_schedules > 0) window.location.reload();
+    })
+    .catch(err => {
+      console.error(err);
+      alert('Error: ' + err.message);
+    });
+  };
+
+  if (!sectionId) return alert('Select a section first.');
+  if (!confirm('Are you sure you want to delete generated schedules for this week?')) return;
+  runDelete(false);
 }
 </script>
 
