@@ -4,20 +4,9 @@ A php web-based scheduling system designed to help faculty and staff manage sche
 
 - 📢 View Add Faculty Members
 - 👩‍🏫 View and Add Subjects
-- 📅 Create, delete, and edit personal/faculty Schedules. (40% done)
-<<<<<<< HEAD
-- 📊 Real-time schedule conflict detection 
-## Upcoming Features
-
+- 📅 Create, delete, and edit personal/faculty Schedules. (40%)
 - 🌍 View Global Schedules
-=======
-## Upcoming Features
-
-- 🌍 View Global Schedules
-- 🙋 View personal Dynamic calendar. 
-- 📊 Real-time schedule conflict detection 
->>>>>>> origin/developmental
-- 🔒 Secure Login System
+- 📊 Real-time schedule conflict detection (80%)
 
 ## Tech Stack
 
