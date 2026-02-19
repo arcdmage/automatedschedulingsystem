@@ -1,0 +1,68 @@
+.schedule-mode-tabs {
+  display: flex;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  margin-bottom: 20px;
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 15px;
+  text-align: center;
+  cursor: pointer;
+  border: none;
+  background: white;
+  font-weight: bold;
+  color: #666;
+  transition: all 0.3s;
+  border-right: 1px solid #eee;
+}
+
+.mode-tab:last-child {
+  border-right: none;
+}
+
+.mode-tab:hover {
+  background: #f5f5f5;
+}
+
+.mode-tab.active {
+  background: #4CAF50;
+  color: white;
+}
+
+.mode-content {
+  display: none;
+}
+
+.mode-content.active {
+  display: block;
+}
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.stat-card .number {
+  font-size: 32px;
+  font-weight: bold;
+}

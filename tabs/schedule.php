@@ -20,7 +20,7 @@ $sections_result = $conn->query($sections_query);
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
 <style>
-/* Additional styles for integrated view */
+/* shit just doesnt work when I put it in schedule.css */
 .schedule-mode-tabs {
   display: flex;
   background: white;
@@ -99,10 +99,10 @@ $sections_result = $conn->query($sections_query);
 
 <!-- Mode Selection Tabs -->
 <div class="schedule-mode-tabs">
-  <button class="mode-tab active" onclick="switchMode('manual')"> Manual Entry</button>
-  <button class="mode-tab" onclick="switchMode('setup')"> Setup</button>
-  <button class="mode-tab" onclick="switchMode('generate')"> Auto Generate</button>
-  <button class="mode-tab" onclick="switchMode('view')"> View Schedules</button>
+  <button class="mode-tab active" onclick="switchMode('manual', this)"> Manual Entry</button>
+  <button class="mode-tab" onclick="switchMode('setup', this)"> Setup</button>
+  <button class="mode-tab" onclick="switchMode('generate', this)"> Auto Generate</button>
+  <button class="mode-tab" onclick="switchMode('view', this)"> View Schedules</button>
 </div>
 
 <!-- Manual Entry Mode (Updated Layout) -->
@@ -290,7 +290,7 @@ $sections_result = $conn->query($sections_query);
 
 <script>
 // Mode Switching
-function switchMode(mode) {
+function switchMode(mode, el) {
   // Hide all modes
   document.querySelectorAll('.mode-content').forEach(content => {
     content.classList.remove('active');
@@ -301,9 +301,9 @@ function switchMode(mode) {
     tab.classList.remove('active');
   });
   
-  // Show selected mode
+  // Show selected mode and activate clicked tab
   document.getElementById('mode-' + mode).classList.add('active');
-  event.target.classList.add('active');
+  el.classList.add('active');
 }
 
 // Initialize on page load
@@ -441,7 +441,7 @@ document.getElementById('event-form').addEventListener('submit', function(e) {
 window.onclick = function(event) {
   const scheduleModal = document.getElementById('schedule-modal');
   const eventModal = document.getElementById('event-modal');
-  a
+
   if (event.target == scheduleModal) {
     closeScheduleModal();
   }
