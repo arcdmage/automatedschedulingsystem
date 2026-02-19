@@ -100,9 +100,9 @@ $sections_result = $conn->query($sections_query);
 <!-- Mode Selection Tabs -->
 <div class="schedule-mode-tabs">
   <button class="mode-tab active" onclick="switchMode('manual')"> Manual Entry</button>
-  <button class="mode-tab" onclick="switchMode('setup')"> Subject Setup</button>
+  <button class="mode-tab" onclick="switchMode('setup')"> Setup</button>
   <button class="mode-tab" onclick="switchMode('generate')"> Auto Generate</button>
-  <button class="mode-tab" onclick="switchMode('view')"> Weekly View</button>
+  <button class="mode-tab" onclick="switchMode('view')"> View Schedules</button>
 </div>
 
 <!-- Manual Entry Mode (Updated Layout) -->

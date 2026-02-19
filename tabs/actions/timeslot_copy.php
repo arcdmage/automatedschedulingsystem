@@ -24,8 +24,30 @@ try {
     if (count($slots) === 0) {
         throw new Exception('No time slots found in the source section');
     }
-    
-    // Delete existing time slots in destination section
+
+    $conn->begin_transaction();
+
+    // Delete dependent schedule_patterns rows first (foreign key: schedule_patterns.time_slot_id → time_slots.time_slot_id)
+    $del_patterns_stmt = $conn->prepare(
+        "DELETE sp FROM schedule_patterns sp
+         INNER JOIN time_slots ts ON sp.time_slot_id = ts.time_slot_id
+         WHERE ts.section_id = ?"
+    );
+    $del_patterns_stmt->bind_param("i", $to_section_id);
+    $del_patterns_stmt->execute();
+    $del_patterns_stmt->close();
+
+    // Also remove any schedules referencing these time slots
+    $del_schedules_stmt = $conn->prepare(
+        "DELETE s FROM schedules s
+         INNER JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
+         WHERE ts.section_id = ?"
+    );
+    $del_schedules_stmt->bind_param("i", $to_section_id);
+    $del_schedules_stmt->execute();
+    $del_schedules_stmt->close();
+
+    // Now safe to delete existing time slots in destination section
     $delete_stmt = $conn->prepare("DELETE FROM time_slots WHERE section_id = ?");
     $delete_stmt->bind_param("i", $to_section_id);
     $delete_stmt->execute();
@@ -51,7 +73,9 @@ try {
     }
     
     $insert_stmt->close();
-    
+
+    $conn->commit();
+
     echo json_encode([
         'success' => true,
         'message' => 'Time slots copied successfully',
@@ -59,6 +83,9 @@ try {
     ]);
     
 } catch (Exception $e) {
+    if (isset($conn) && $conn->ping()) {
+        $conn->rollback();
+    }
     echo json_encode([
         'success' => false,
         'message' => $e->getMessage()

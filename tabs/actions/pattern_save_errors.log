@@ -219,3 +219,17 @@
 [28-Jan-2026 04:11:15 Europe/Berlin] Pattern Save - Deleted 5 existing patterns
 [28-Jan-2026 04:11:15 Europe/Berlin] Pattern Save - Inserted 4 new patterns
 [28-Jan-2026 04:11:15 Europe/Berlin] Pattern Save - Transaction committed successfully
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":34,"pattern":[{"day_of_week":"Monday","time_slot_id":47},{"day_of_week":"Tuesday","time_slot_id":47},{"day_of_week":"Wednesday","time_slot_id":47},{"day_of_week":"Thursday","time_slot_id":47},{"day_of_week":"Friday","time_slot_id":47}]}
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Processing requirement_id: 34 with 5 slots
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Section ID: 3
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Transaction started
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Deleted 0 existing patterns
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Inserted 5 new patterns
+[19-Feb-2026 07:57:17 Europe/Berlin] Pattern Save - Transaction committed successfully
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":16,"pattern":[{"day_of_week":"Monday","time_slot_id":14},{"day_of_week":"Tuesday","time_slot_id":14},{"day_of_week":"Wednesday","time_slot_id":14},{"day_of_week":"Friday","time_slot_id":14},{"day_of_week":"Thursday","time_slot_id":14}]}
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Processing requirement_id: 16 with 5 slots
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Section ID: 3
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Transaction started
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Deleted 4 existing patterns
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Inserted 5 new patterns
+[19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Transaction committed successfully

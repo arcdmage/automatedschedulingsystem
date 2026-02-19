@@ -11,8 +11,7 @@
     <body>
         <ul class="tabs"> <!--essentially creates the different tabs at barebones level-->
             <li data-tab-target="#home">Home</li> <!--Shows global datas, date, current events, current number of online users-->
-            <li data-tab-target="#faculty_members">Faculty Members</li> <!--Inside will have Teachers, Staff, Non-teaching personell- their status, what subejct they specialize in, etc-->
-            <li data-tab-target="#faculty_schedules">Faculty Schedules</li> <!--[FOR ADMIN] Shows all schedules of each individual and lets them EDIT-->
+            <li data-tab-target="#faculty_members">Faculty Members</li> <!--Inside will have Teachers, Staff, Non-teaching personell- their status, what subejct they specialize in, etc-->d
             <li data-tab-target="#subject_list">Subject List</li> <!--Shows all subjects within Grade 11 and 12 including ALL STRANDS-->
             <li data-tab-target="#schedule">Schedule</li> <!--Can vie and edit currently logged in faculty's schedule-->
         </ul>
@@ -23,9 +22,6 @@
             </div>
             <div id="faculty_members" data-tab-content>
                 <?php include 'tabs\faculty_members.php' ?>
-            </div>
-            <div id="faculty_schedules" data-tab-content>
-                <?php include 'tabs\faculty_schedules.php' ?>
             </div>
             <div id="subject_list" data-tab-content>
                 <?php include 'tabs\subject_list.php' ?>
