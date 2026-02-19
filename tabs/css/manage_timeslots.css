@@ -1,0 +1,266 @@
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f6fa;
+  color: #2d3748;
+  margin: 0;
+  padding: 0 0 48px;
+  font-size: 14px;
+}
+
+/* ── Top bar ── */
+.ts-topbar {
+  background: #fff;
+  border-bottom: 1px solid #e8eaed;
+  padding: 14px 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background .15s, border-color .15s;
+  white-space: nowrap;
+}
+.btn-back:hover { background: #f3f4f6; border-color: #9ca3af; }
+.ts-topbar-title { font-size: 15px; font-weight: 600; color: #111827; margin: 0; }
+.ts-topbar-sub   { font-size: 12px; color: #6b7280; margin: 0; }
+
+/* ── Page wrapper ── */
+.ts-wrap { max-width: 900px; margin: 0 auto; padding: 24px 20px 0; }
+
+/* ── Cards ── */
+.ts-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  padding: 22px 24px;
+  margin-bottom: 18px;
+}
+.ts-card-title {
+  font-size: 11px;
+  font-weight: 700;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: .07em;
+  margin: 0 0 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+/* ── Section selector row ── */
+.ts-section-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.ts-section-row label { font-size: 13px; font-weight: 600; color: #374151; white-space: nowrap; }
+
+/* ── Form controls ── */
+select, input[type="time"], input[type="text"] {
+  padding: 8px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+}
+select:focus, input:focus {
+  border-color: #6b7280;
+  box-shadow: 0 0 0 3px rgba(107,114,128,.1);
+}
+
+/* ── Form grid ── */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 20px; margin-bottom: 18px; }
+@media (max-width: 580px) { .form-grid { grid-template-columns: 1fr; } }
+.form-group { display: flex; flex-direction: column; gap: 5px; }
+.form-group label { font-size: 12px; font-weight: 600; color: #374151; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 8px 16px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s;
+  white-space: nowrap;
+}
+.btn:active { opacity: .85; }
+.btn-primary { background: #22c55e; color: #fff; }
+.btn-primary:hover { background: #16a34a; }
+.btn-success { background: #22c55e; color: #fff; }
+.btn-success:hover { background: #16a34a; }
+.btn-danger  { background: #fff; color: #dc2626; border-color: #fca5a5; }
+.btn-danger:hover  { background: #fef2f2; }
+.btn-ghost   { background: #fff; color: #374151; border-color: #d1d5db; }
+.btn-ghost:hover   { background: #f9fafb; }
+.btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* ── Copy banner ── */
+.ts-copy-banner {
+  background: #fafafa;
+  border: 1px dashed #d1d5db;
+  border-radius: 10px;
+  padding: 18px 24px;
+  margin-bottom: 18px;
+}
+.ts-copy-banner .ts-card-title { margin-bottom: 12px; }
+.ts-copy-row { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.ts-copy-row > .form-group { flex: 1; min-width: 180px; }
+
+/* ── Table ── */
+.ts-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ts-table thead th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #9ca3af;
+  padding: 10px 14px;
+  border-bottom: 1px solid #e5e7eb;
+  text-align: left;
+  background: #fafafa;
+}
+.ts-table tbody tr { border-bottom: 1px solid #f3f4f6; transition: background .12s; }
+.ts-table tbody tr:last-child { border-bottom: none; }
+.ts-table tbody tr:hover { background: #fafafa; }
+.ts-table td { padding: 12px 14px; vertical-align: middle; color: #374151; }
+.ts-table td:first-child { width: 80px; text-align: center; }
+
+/* ── Order controls ── */
+.order-controls { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.order-controls .order-num { font-size: 12px; font-weight: 700; color: #374151; line-height: 1.6; }
+.order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 20px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 10px;
+  color: #6b7280;
+  line-height: 1;
+  transition: background .12s, color .12s;
+}
+.order-btn:hover { background: #e5e7eb; color: #111827; }
+
+/* ── Time cell ── */
+.time-range { font-weight: 600; color: #111827; font-size: 13px; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .03em;
+}
+.badge-break { background: #fef9c3; color: #854d0e; }
+.badge-class { background: #f0fdf4; color: #166534; }
+
+.timeslot-actions { display: flex; gap: 6px; }
+
+/* ── Alerts ── */
+.ts-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+
+/* ── Toggle ── */
+.toggle-wrap { display: flex; align-items: center; gap: 10px; padding-top: 2px; }
+.toggle-switch { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background: #d1d5db;
+  border-radius: 24px;
+  transition: .25s;
+}
+.toggle-slider::before {
+  content: "";
+  position: absolute;
+  height: 16px; width: 16px;
+  left: 4px; bottom: 4px;
+  background: #fff;
+  border-radius: 50%;
+  transition: .25s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15);
+}
+input:checked + .toggle-slider { background: #22c55e; }
+input:checked + .toggle-slider::before { transform: translateX(20px); }
+.toggle-label { font-size: 12px; color: #6b7280; }
+
+/* ── Modal ── */
+.modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.3);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+}
+.modal.open { display: flex; }
+.modal-content {
+  background: #fff;
+  border-radius: 12px;
+  width: 95%;
+  max-width: 520px;
+  box-shadow: 0 20px 50px rgba(0,0,0,.12);
+  animation: tsSlideUp .2s ease;
+  overflow: hidden;
+}
+@keyframes tsSlideUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.modal-header {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.modal-header h2 { margin: 0; font-size: 14px; font-weight: 700; color: #111827; }
+.modal-body { padding: 20px 22px; }
+.modal-footer {
+  padding: 12px 22px;
+  background: #fafafa;
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.btn-close { background: none; border: none; font-size: 20px; line-height: 1; cursor: pointer; color: #9ca3af; padding: 0; transition: color .15s; }
+.btn-close:hover { color: #374151; }
+
+.ts-hint { font-size: 12px; color: #9ca3af; margin: 0 0 14px; }
