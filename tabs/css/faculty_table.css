@@ -1,98 +1,385 @@
-.faculty-table-container {
-  margin-top: 20px;
-  background: #fff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+/* ============================================
+   faculty_table.css
+   Modern, clean table styles for faculty page
+   ============================================ */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f6fa;
+  color: #1e293b;
+  margin: 0;
+  padding: 0 0 48px;
+  font-size: 14px;
 }
 
+h1 {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 24px 24px 4px;
+}
+
+h1 + p {
+  margin: 0 24px 20px;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+/* ── Page wrapper ── */
+.faculty-page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* ── Table card ── */
+.faculty-table-container {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+
+/* ── Toolbar above table ── */
+.table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.table-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toolbar-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+}
+
+.search-input {
+  padding: 7px 12px 7px 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #111827;
+  background: #f9fafb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+  outline: none;
+  width: 200px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.search-input:focus {
+  border-color: #6b7280;
+  box-shadow: 0 0 0 3px rgba(107,114,128,.1);
+  background-color: #fff;
+}
+
+/* ── Table wrapper (horizontal scroll) ── */
 .table-wrapper {
   overflow-x: auto;
 }
 
+/* ── Main table ── */
 .faculty-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: 13px;
+  min-width: 780px;
+}
+
+.faculty-table thead th {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: #9ca3af;
+  padding: 11px 16px;
+  border-bottom: 1px solid #e5e7eb;
   text-align: left;
+  background: #fafafa;
+  white-space: nowrap;
 }
 
-.faculty-table th, .faculty-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
+.faculty-table thead th:last-child {
+  text-align: right;
 }
 
-.faculty-table th {
-  background-color: #4a90e2;
-  color: white;
+.faculty-table tbody tr {
+  border-bottom: 1px solid #f3f4f6;
+  transition: background .1s;
 }
 
-.faculty-table tr:nth-child(even) {
-  background-color: #f9f9f9;
+.faculty-table tbody tr:last-child {
+  border-bottom: none;
 }
 
-.faculty-table tr:hover {
-  background-color: #f1f1f1;
+.faculty-table tbody tr:hover {
+  background: #fafafa;
 }
 
-/* Pagination Styling */
-.pagination {
-  margin-top: 15px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px; /* Space between buttons */
+.faculty-table td {
+  padding: 13px 16px;
+  color: #374151;
+  vertical-align: middle;
 }
 
-.pagination button {
-  /* Adjust padding to make buttons smaller */
-  padding: 6px 12px; /* Vertical and horizontal padding */
+.faculty-table td:last-child {
+  text-align: right;
+  white-space: nowrap;
+}
 
-  /* Reduce font size for a more compact look */
-  font-size: 14px;
-
-  border: 1px solid #ddd; /* A subtle border */
-  background-color: #fff; /* A clean white background */
-  color: #4a90e2; /* Text color */
-  cursor: pointer;
+/* ── ID badge ── */
+.id-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  color: #6b7280;
+  background: #f3f4f6;
   border-radius: 4px;
-  transition: all 0.2s ease;
-  line-height: 1.2; /* Ensures text is vertically centered properly */
+  padding: 2px 7px;
+  font-family: monospace;
 }
 
-.pagination button:hover {
-  background-color: #f1f1f1; /* A slight hover effect */
-  border-color: #ccc;
+/* ── Name cell ── */
+.name-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.pagination .active {
-  background-color: #4a90e2; /* Active page background color */
-  color: white; /* Active page text color */
-  border-color: #4a90e2;
+.name-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
 }
 
+.name-primary {
+  font-weight: 600;
+  color: #111827;
+  font-size: 13px;
+}
+
+.name-secondary {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* ── Gender badge ── */
+.gender-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.gender-female { background: #fdf2f8; color: #9d174d; }
+.gender-male   { background: #eff6ff; color: #1e40af; }
+.gender-other  { background: #f0fdf4; color: #166534; }
+
+/* ── Status badge ── */
+.status-badge {
+  display: inline-block;
+  padding: 3px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.status-badge.empty {
+  background: #f9fafb;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+/* ── Action buttons ── */
+.action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .12s;
+  white-space: nowrap;
+}
+
+.action-btn-edit {
+  background: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+}
+.action-btn-edit:hover { background: #f9fafb; }
+
+.action-btn-save {
+  background: #22c55e;
+  color: #fff;
+}
+.action-btn-save:hover { background: #16a34a; }
+
+.action-btn-cancel {
+  background: #fff;
+  color: #6b7280;
+  border-color: #e5e7eb;
+}
+.action-btn-cancel:hover { background: #f9fafb; }
+
+.action-btn-delete {
+  background: #fff;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+.action-btn-delete:hover { background: #fef2f2; }
+
+.action-group { display: flex; justify-content: flex-end; gap: 6px; }
+
+/* ── Inline edit input ── */
+.edit-input {
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  width: 100%;
+  min-width: 80px;
+  transition: border-color .15s, box-shadow .15s;
+}
+.edit-input:focus {
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34,197,94,.12);
+}
+
+.edit-select {
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 12px;
+  color: #111827;
+  background: #fff;
+  outline: none;
+  transition: border-color .15s;
+}
+.edit-select:focus {
+  border-color: #22c55e;
+}
+
+/* ── Editing row highlight ── */
+.faculty-table tbody tr.editing {
+  background: #f0fdf4;
+}
+
+/* ── Pagination ── */
 .pagination-container {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-top: 20px;
-  flex-wrap: wrap; /* Allows items to wrap on smaller screens */
-  gap: 15px;      /* Adds space between items if they wrap */
+  justify-content: space-between;
+  padding: 12px 20px;
+  border-top: 1px solid #f3f4f6;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .rows-selector {
   display: flex;
   align-items: center;
-  gap: 8px; /* Space between the label and the dropdown */
-  font-size: 14px;
+  gap: 8px;
+  font-size: 12px;
+  color: #6b7280;
 }
 
-#rows-per-page {
-  padding: 5px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
+.rows-selector select {
+  padding: 5px 8px;
+  border: 1px solid #d1d5db;
+  border-radius: 5px;
+  font-size: 12px;
+  background: #fff;
+  color: #374151;
+  outline: none;
 }
 
-/* Adjust the pagination margin since the parent container now has it */
 .pagination {
-  margin-top: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.page-btn {
+  min-width: 32px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: #fff;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+
+.page-btn:hover {
+  background: #f9fafb;
+  border-color: #d1d5db;
+}
+
+.page-btn.active {
+  background: #22c55e;
+  color: #fff;
+  border-color: #22c55e;
+  font-weight: 700;
+}
+
+/* ── Add Faculty button ── */
+.add-faculty-btn {
+  display: block;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto 24px;
+  padding: 11px;
+  background: #22c55e;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .15s;
+}
+.add-faculty-btn:hover { background: #16a34a; }
+
+/* ── Empty state ── */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #9ca3af;
+  font-size: 13px;
 }

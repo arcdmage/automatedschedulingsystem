@@ -1,31 +1,47 @@
 <?php
-// Include database connection
+// ===== faculty_create.php =====
 session_start();
-require_once('../../db_connect.php');
+require_once(__DIR__ . '/../../db_connect.php');
+header('Content-Type: application/json');
 
-// Check if form was submitted
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-  
-  // Get form values safely
-  $fname = $_POST['fname'];
-  $mname = $_POST['mname'];
-  $lname = $_POST['lname'];
-  $gender = $_POST['gender'];
-  $pnumber = $_POST['pnumber'];
-  $address = $_POST['address'];
-  $status = $_POST['status'];
+try {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception('Invalid request method');
+    }
 
-  // Prepare and execute SQL insert query
-  $sql = "INSERT INTO faculty (fname, mname, lname, gender, pnumber, address, status)
-          VALUES ('$fname', '$mname', '$lname', '$gender', '$pnumber', '$address', '$status')";
+    $fname   = trim($_POST['fname']   ?? '');
+    $mname   = trim($_POST['mname']   ?? '');
+    $lname   = trim($_POST['lname']   ?? '');
+    $gender  = trim($_POST['gender']  ?? '');
+    $pnumber = trim($_POST['pnumber'] ?? '');
+    $address = trim($_POST['address'] ?? '');
+    $status  = trim($_POST['status']  ?? '');
 
-  if ($conn->query($sql) === TRUE) {
-    echo "<script>alert('Faculty added successfully!'); window.location.href='../../index.php';</script>";
-  } else {
-    echo "Error: " . $sql . "<br>" . $conn->error;
-  }
+    if (!$fname || !$lname) {
+        throw new Exception('First name and last name are required');
+    }
 
-  // Close connection
-  $conn->close();
+    $stmt = $conn->prepare(
+        "INSERT INTO faculty (fname, mname, lname, gender, pnumber, address, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?)"
+    );
+    $stmt->bind_param("sssssss", $fname, $mname, $lname, $gender, $pnumber, $address, $status);
+
+    if ($stmt->execute()) {
+        echo json_encode([
+            'success'    => true,
+            'message'    => 'Faculty added successfully',
+            'faculty_id' => $conn->insert_id
+        ]);
+    } else {
+        throw new Exception('Failed to add faculty: ' . $stmt->error);
+    }
+
+    $stmt->close();
+
+} catch (Exception $e) {
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
+
+$conn->close();
 ?>

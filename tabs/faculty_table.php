@@ -1,94 +1,153 @@
 <?php
 require_once(__DIR__ . '/../db_connect.php');
 
-// Define the available options for rows per page
 $limit_options = [5, 10, 25, 50, 100];
-// Define a default limit in case none is selected
 $default_limit = 5;
 
-// Get the limit from the URL. If it's not set or not a valid option, use the default.
-$limit = isset($_GET['limit']) && in_array((int)$_GET['limit'], $limit_options) ? (int)$_GET['limit'] : $default_limit;
-
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$limit  = isset($_GET['limit']) && in_array((int)$_GET['limit'], $limit_options) ? (int)$_GET['limit'] : $default_limit;
+$page   = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
 $offset = ($page - 1) * $limit;
 
-// Fetch data for this page using the dynamic limit
-$sql = "SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset";
-$result = $conn->query($sql);
-
-// Count total records for pagination
-$total_query = "SELECT COUNT(*) as total FROM faculty";
-$total_result = $conn->query($total_query);
-$total_row = $total_result->fetch_assoc();
-$total_records = $total_row['total'];
-$total_pages = ceil($total_records / $limit);
+$result        = $conn->query("SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset");
+$total_records = $conn->query("SELECT COUNT(*) as total FROM faculty")->fetch_assoc()['total'];
+$total_pages   = max(1, ceil($total_records / $limit));
 ?>
 
-<!-- Faculty Table -->
+<!-- Toolbar -->
+<div class="table-toolbar">
+  <div class="table-toolbar-left">
+    <span class="toolbar-title">Faculty Members</span>
+    <span style="font-size:12px;color:#9ca3af;"><?= $total_records ?> total</span>
+  </div>
+  <input type="text" class="search-input" placeholder="Search faculty…" oninput="filterTable(this.value)">
+</div>
+
+<!-- Table -->
 <div class="table-wrapper">
-  <table class="faculty-table">
+  <table class="faculty-table" id="faculty-data-table">
     <thead>
       <tr>
         <th>ID</th>
-        <th>First Name</th>
-        <th>Middle Name</th>
-        <th>Last Name</th>
+        <th>Name</th>
         <th>Gender</th>
         <th>Phone</th>
         <th>Address</th>
         <th>Status</th>
+        <th style="text-align:right;">Actions</th>
       </tr>
     </thead>
     <tbody>
-      <?php
-      if ($result->num_rows > 0) {
-        while($row = $result->fetch_assoc()) {
-          // Your table row output remains the same
-          echo "<tr>
-            <td>{$row['faculty_id']}</td>
-            <td>{$row['fname']}</td>
-            <td>{$row['mname']}</td>
-            <td>{$row['lname']}</td>
-            <td>{$row['gender']}</td>
-            <td>{$row['pnumber']}</td>
-            <td>{$row['address']}</td>
-            <td>{$row['status']}</td>
-          </tr>";
-        }
-      } else {
-        echo "<tr><td colspan='8' style='text-align:center;'>No faculty found.</td></tr>"; //if no data
-      }
-      ?>
+      <?php if ($result && $result->num_rows > 0): ?>
+        <?php while($row = $result->fetch_assoc()):
+          $initials    = strtoupper(substr($row['fname'],0,1).substr($row['lname'],0,1));
+          $gClass      = 'gender-'.strtolower($row['gender'] ?? 'other');
+          $statusEmpty = empty(trim($row['status'] ?? ''));
+        ?>
+        <tr data-id="<?= (int)$row['faculty_id'] ?>">
+
+          <!-- ID -->
+          <td><span class="id-badge"><?= (int)$row['faculty_id'] ?></span></td>
+
+          <!-- Name -->
+          <td>
+            <div class="name-cell">
+              <div class="name-avatar"><?= htmlspecialchars($initials) ?></div>
+              <div style="min-width:0;">
+                <!-- View -->
+                <div class="v-name name-primary">
+                  <?= htmlspecialchars($row['fname'].' '.$row['mname'].' '.$row['lname']) ?>
+                </div>
+                <!-- Edit -->
+                <div class="e-name" style="display:none; flex-wrap:wrap; gap:4px;">
+                  <input class="edit-input" name="fname"  value="<?= htmlspecialchars($row['fname'])  ?>" placeholder="First"  style="width:78px;">
+                  <input class="edit-input" name="mname"  value="<?= htmlspecialchars($row['mname'])  ?>" placeholder="Middle" style="width:68px;">
+                  <input class="edit-input" name="lname"  value="<?= htmlspecialchars($row['lname'])  ?>" placeholder="Last"   style="width:78px;">
+                </div>
+              </div>
+            </div>
+          </td>
+
+          <!-- Gender -->
+          <td>
+            <span class="v-field gender-badge <?= $gClass ?>"><?= htmlspecialchars(ucfirst($row['gender'] ?? '')) ?></span>
+            <select class="e-field edit-select" name="gender" style="display:none;">
+              <option value="female" <?= strtolower($row['gender'])==='female'?'selected':''?>>Female</option>
+              <option value="male"   <?= strtolower($row['gender'])==='male'  ?'selected':''?>>Male</option>
+              <option value="other"  <?= strtolower($row['gender'])==='other' ?'selected':''?>>Other</option>
+            </select>
+          </td>
+
+          <!-- Phone -->
+          <td>
+            <span class="v-field"><?= htmlspecialchars($row['pnumber'] ?? '') ?></span>
+            <input class="e-field edit-input" name="pnumber" value="<?= htmlspecialchars($row['pnumber'] ?? '') ?>" placeholder="Phone" style="display:none;width:120px;">
+          </td>
+
+          <!-- Address -->
+          <td>
+            <span class="v-field"><?= htmlspecialchars($row['address'] ?? '') ?></span>
+            <input class="e-field edit-input" name="address" value="<?= htmlspecialchars($row['address'] ?? '') ?>" placeholder="Address" style="display:none;">
+          </td>
+
+          <!-- Status -->
+          <td>
+            <span class="v-field status-badge <?= $statusEmpty?'empty':'' ?>">
+              <?= $statusEmpty ? 'No status' : htmlspecialchars($row['status']) ?>
+            </span>
+            <input class="e-field edit-input" name="status" value="<?= htmlspecialchars($row['status'] ?? '') ?>" placeholder="Status" style="display:none;width:110px;">
+          </td>
+
+          <!-- Actions -->
+          <td>
+            <!-- View mode buttons -->
+            <div class="v-actions action-group">
+              <button class="action-btn action-btn-edit" onclick="startEdit(this)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                Edit
+              </button>
+              <button class="action-btn action-btn-delete" onclick="deleteRow(this)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                Delete
+              </button>
+            </div>
+            <!-- Edit mode buttons -->
+            <div class="e-actions action-group" style="display:none;">
+              <button class="action-btn action-btn-save" onclick="saveRow(this)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Save
+              </button>
+              <button class="action-btn action-btn-cancel" onclick="cancelEdit(this)">Cancel</button>
+            </div>
+          </td>
+
+        </tr>
+        <?php endwhile; ?>
+      <?php else: ?>
+        <tr><td colspan="7"><div class="empty-state">No faculty members found.</div></td></tr>
+      <?php endif; ?>
     </tbody>
   </table>
 </div>
 
-<!-- Container for Pagination and Row Selector -->
+<!-- Pagination -->
 <div class="pagination-container">
-  <!-- Rows Per Page Selector -->
   <div class="rows-selector">
     <label for="rows-per-page">Rows per page:</label>
     <select id="rows-per-page">
-      <?php foreach ($limit_options as $option): ?>
-        <option value="<?= $option ?>" <?= $limit == $option ? 'selected' : '' ?>>
-          <?= $option ?>
-        </option>
+      <?php foreach ($limit_options as $opt): ?>
+        <option value="<?= $opt ?>" <?= $limit==$opt?'selected':''?>><?= $opt ?></option>
       <?php endforeach; ?>
     </select>
   </div>
-
-  <!-- Pagination Buttons -->
   <div class="pagination">
     <?php if ($page > 1): ?>
-      <button class="page-btn" data-page="<?= $page - 1 ?>">&laquo; Prev</button>
+      <button class="page-btn" data-page="<?= $page-1 ?>">&laquo;</button>
     <?php endif; ?>
-
-    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
-      <button class="page-btn <?= $i == $page ? 'active' : '' ?>" data-page="<?= $i ?>"><?= $i ?></button>
+    <?php for ($i=1; $i<=$total_pages; $i++): ?>
+      <button class="page-btn <?= $i==$page?'active':''?>" data-page="<?= $i ?>"><?= $i ?></button>
     <?php endfor; ?>
-
     <?php if ($page < $total_pages): ?>
-      <button class="page-btn" data-page="<?= $page + 1 ?>">Next &raquo;</button>
+      <button class="page-btn" data-page="<?= $page+1 ?>">&raquo;</button>
     <?php endif; ?>
   </div>
 </div>
