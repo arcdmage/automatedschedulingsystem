@@ -107,6 +107,13 @@ ul.tabs li:hover::after {
 ul.tabs li.active {
   background-color: #315da3;
   color: white;
+  transform: translateY(10px);   
+}
+
+ul.tabs li.active::after {
+  opacity: 1;  
+  background-color: #315da3;
+  transition: all 0.3s ease;
 }
 
 ul.tabs li[data-tab-target="#schedule"] {
@@ -156,7 +163,6 @@ position: fixed;
   justify-content: center;
   padding-right: 10%;
   padding-left: 10%;
-  padding-top: 5%;
    top: 0;
     bottom:0;
     position:fixed;
@@ -164,22 +170,6 @@ position: fixed;
     overflow-x:hidden;
 }
 
-#faculty_schedules{
-  background-color:  rgba(0, 0, 0, 0.4);
-  position: fixed;
-  inset: 0;
-  color: white;
-  z-index: 1;
-  justify-content: center;
-  padding-right: 10%;
-  padding-left: 10%;
-  padding-top: 5%;
-   top: 0;
-    bottom:0;
-    position:fixed;
-    overflow-y:scroll;
-    overflow-x:hidden;
-}
 
 #subject_list{
   background-color:  rgba(0, 0, 0, 0.4);
@@ -190,7 +180,6 @@ position: fixed;
   justify-content: center;
   padding-right: 10%;
   padding-left: 10%;
-  padding-top: 5%;
    top: 0;
     bottom:0;
     position:fixed;
@@ -237,7 +226,7 @@ position: fixed;
   text-decoration: underline;
 }
 
-body {
+#home,#faculty_members, #subject_list, #schedule {
   background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
   background-size: cover;         
   background-position: center;    
