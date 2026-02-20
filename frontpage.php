@@ -22,7 +22,7 @@
   <main>
     <nav class="fptabstoenter">
       <ul>
-        <li><a href="index.php">Home</a></li> | <li><a href="frontpage.php">Front Page</a></li>
+        <li><a href="index.php">Enter</a></li> | <li><a href="frontpage.php">Front Page</a></li>
       </ul>
     </nav>
 
