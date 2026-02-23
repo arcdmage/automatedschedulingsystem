@@ -1,8 +1,3 @@
-/* ============================================
-   faculty_table.css
-   Modern, clean table styles for faculty page
-   ============================================ */
-
 *, *::before, *::after { box-sizing: border-box; }
 
 body {
@@ -27,14 +22,12 @@ h1 + p {
   font-size: 13px;
 }
 
-/* ── Page wrapper ── */
 .faculty-page {
   max-width: 1100px;
   margin: 0 auto;
   padding: 0 20px;
 }
 
-/* ── Table card ── */
 .faculty-table-container {
   background: #fff;
   border: 1px solid #e5e7eb;
@@ -43,7 +36,6 @@ h1 + p {
   margin-bottom: 16px;
 }
 
-/* ── Toolbar above table ── */
 .table-toolbar {
   display: flex;
   align-items: center;
@@ -86,12 +78,10 @@ h1 + p {
   background-color: #fff;
 }
 
-/* ── Table wrapper (horizontal scroll) ── */
 .table-wrapper {
   overflow-x: auto;
 }
 
-/* ── Main table ── */
 .faculty-table {
   width: 100%;
   border-collapse: collapse;
@@ -140,7 +130,6 @@ h1 + p {
   white-space: nowrap;
 }
 
-/* ── ID badge ── */
 .id-badge {
   display: inline-block;
   font-size: 11px;
@@ -152,7 +141,6 @@ h1 + p {
   font-family: monospace;
 }
 
-/* ── Name cell ── */
 .name-cell {
   display: flex;
   align-items: center;
@@ -185,7 +173,6 @@ h1 + p {
   color: #9ca3af;
 }
 
-/* ── Gender badge ── */
 .gender-badge {
   display: inline-flex;
   align-items: center;
@@ -200,7 +187,6 @@ h1 + p {
 .gender-male   { background: #eff6ff; color: #1e40af; }
 .gender-other  { background: #f0fdf4; color: #166534; }
 
-/* ── Status badge ── */
 .status-badge {
   display: inline-block;
   padding: 3px 9px;
@@ -217,7 +203,6 @@ h1 + p {
   font-style: italic;
 }
 
-/* ── Action buttons ── */
 .action-btn {
   display: inline-flex;
   align-items: center;
@@ -261,7 +246,6 @@ h1 + p {
 
 .action-group { display: flex; justify-content: flex-end; gap: 6px; }
 
-/* ── Inline edit input ── */
 .edit-input {
   padding: 5px 8px;
   border: 1px solid #d1d5db;
@@ -293,12 +277,10 @@ h1 + p {
   border-color: #22c55e;
 }
 
-/* ── Editing row highlight ── */
 .faculty-table tbody tr.editing {
   background: #f0fdf4;
 }
 
-/* ── Pagination ── */
 .pagination-container {
   display: flex;
   align-items: center;
@@ -359,31 +341,52 @@ h1 + p {
   font-weight: 700;
 }
 
+/*saerch + Add Faculty, always pinned top-right*/
+.faculty-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 20px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.faculty-search-input {
+  flex: 1;
+  padding: 7px 12px 7px 32px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 13px;
+  color: #111827;
+  background: #f9fafb url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E") no-repeat 10px center;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.faculty-search-input:focus {
+  border-color: #6b7280;
+  box-shadow: 0 0 0 3px rgba(107,114,128,.1);
+  background-color: #fff;
+}
+
 /* ── Add Faculty button ── */
 .add-faculty-btn {
-  display: block;
-  width: 100%;
-  max-width: 150px;
-  margin: 0 auto 24px;
-  padding: 11px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 8px 16px;
   background: #22c55e;
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-  transition: background .15s;
-  position: relative;
-  bottom: 90%;
-  left: 42%;
-  transform-origin: center;
-  transition: 1s ease;
+  transition: background .15s, transform .15s;
 }
-.add-faculty-btn:hover { 
-  background:rgb(49, 93, 163); 
-  transform: scale(1.3) 
 
+.add-faculty-btn:hover {
+  background: #16a34a;
+  transform: scale(1.03);
 }
 
 
