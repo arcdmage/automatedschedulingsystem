@@ -1,13 +1,13 @@
 *, *::before, *::after { box-sizing: border-box; }
 
-body {
+/*body {
   font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
   background: #f5f6fa;
   color: #1e293b;
   margin: 0;
   padding: 0 0 48px;
   font-size: 14px;
-}
+}*/
 
 h1 {
   font-size: 1.4rem;
