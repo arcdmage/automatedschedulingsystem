@@ -41,6 +41,7 @@ h1 + p {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
+  position: relative;
 }
 
 /* ── Toolbar above table ── */
@@ -52,7 +53,7 @@ h1 + p {
   border-bottom: 1px solid #f3f4f6;
   gap: 12px;
   flex-wrap: wrap;
- 
+ position: relative;
 }
 
 .table-toolbar-left {
@@ -374,9 +375,9 @@ h1 + p {
   font-weight: 700;
   cursor: pointer;
   transition: background .15s;
-  position: relative;
-  bottom: 90%;
-  left: 42%;
+  position: absolute;
+  top: 0;
+  right: 5px;
   transform-origin: center;
   transition: 1s ease;
 }

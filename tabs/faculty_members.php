@@ -15,13 +15,14 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <!-- Faculty Table Section -->
 <div class="faculty-table-container">
+  <button onclick="openAddModal()" class="add-faculty-btn">+ Add Faculty</button>
   <div id="faculty-table-content">
+    
     <!-- Table loads here via AJAX -->
   </div>
 </div>
 
 <!-- Add Faculty Button -->
-<button onclick="openAddModal()" class="add-faculty-btn">+ Add Faculty</button>
 
 <!-- Add Faculty Modal -->
 <div id="id01" class="modal">
