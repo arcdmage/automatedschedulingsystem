@@ -34,7 +34,6 @@ h1 + p {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
-  position: relative;
 }
 
 .table-toolbar {
@@ -45,7 +44,7 @@ h1 + p {
   border-bottom: 1px solid #f3f4f6;
   gap: 12px;
   flex-wrap: wrap;
- position: relative;
+ 
 }
 
 .table-toolbar-left {
@@ -370,7 +369,7 @@ h1 + p {
   background-color: #fff;
 }
 
-/* ── Add Faculty button ── */
+/* Add Faculty button */
 .add-faculty-btn {
   flex-shrink: 0;
   white-space: nowrap;
@@ -382,16 +381,7 @@ h1 + p {
   font-size: 13px;
   font-weight: 700;
   cursor: pointer;
-<<<<<<< HEAD
   transition: background .15s, transform .15s;
-=======
-  transition: background .15s;
-  position: absolute;
-  top: 0;
-  right: 5px;
-  transform-origin: center;
-  transition: 1s ease;
->>>>>>> c0470c6c7c13d493440196c152450c5b91372db9
 }
 
 .add-faculty-btn:hover {
@@ -399,9 +389,6 @@ h1 + p {
   transform: scale(1.03);
 }
 
-
-
-/* ── Empty state ── */
 .empty-state {
   text-align: center;
   padding: 40px 20px;
