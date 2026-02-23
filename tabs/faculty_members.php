@@ -15,6 +15,7 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <!-- Faculty Table Section -->
 <div class="faculty-table-container">
+<<<<<<< HEAD
   <div class="faculty-toolbar">
     <input
       type="text"
@@ -26,11 +27,19 @@ require_once(__DIR__ . '/../db_connect.php');
     <button onclick="openAddModal()" class="add-faculty-btn">+ Add Faculty</button>
   </div>
 
+=======
+  <button onclick="openAddModal()" class="add-faculty-btn">+ Add Faculty</button>
+>>>>>>> c0470c6c7c13d493440196c152450c5b91372db9
   <div id="faculty-table-content">
+    
     <!-- Table loads here via AJAX -->
   </div>
 
+<<<<<<< HEAD
 </div>
+=======
+<!-- Add Faculty Button -->
+>>>>>>> c0470c6c7c13d493440196c152450c5b91372db9
 
 <!-- Add Faculty Modal -->
 <div id="id01" class="modal">
