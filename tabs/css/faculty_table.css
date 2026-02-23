@@ -34,6 +34,7 @@ h1 + p {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
+  position: relative;
 }
 
 .table-toolbar {
@@ -371,17 +372,24 @@ h1 + p {
 
 /* Add Faculty button */
 .add-faculty-btn {
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: 8px 16px;
+  display: block;
+  width: 100%;
+  max-width: 150px;
+  margin: 0 auto 24px;
+  padding: 11px;
   background: #22c55e;
   color: #fff;
   border: none;
   border-radius: 8px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   cursor: pointer;
-  transition: background .15s, transform .15s;
+  transition: background .15s;
+  position: absolute;
+  top: 0;
+  right: 5px;
+  transform-origin: center;
+  transition: 1s ease;
 }
 
 .add-faculty-btn:hover {
