@@ -20,7 +20,7 @@ require_once(__DIR__ . '/../db_connect.php');
     
     <!-- Table loads here via AJAX -->
   </div>
-
+</div>
 <!-- Add Faculty Modal -->
 <div id="id01" class="modal">
   <form class="modal-content animate" id="add-faculty-form">
