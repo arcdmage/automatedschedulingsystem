@@ -20,7 +20,7 @@ require_once(__DIR__ . '/../db_connect.php');
     
     <!-- Table loads here via AJAX -->
   </div>
-</div>
+
 
 <!-- Add Faculty Button -->
 
