@@ -21,9 +21,11 @@ require_once(__DIR__ . '/../db_connect.php');
     <!-- Table loads here via AJAX -->
   </div>
 
+
+
 <!-- Add Faculty Button -->
 =======
-6b06971b3eb93368649a0dc3ca11ff00acd6eb7f
+
 
 <!-- Add Faculty Modal -->
 <div id="id01" class="modal">
