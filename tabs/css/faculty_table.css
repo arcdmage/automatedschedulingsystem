@@ -34,7 +34,6 @@ h1 + p {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
-  position: relative;
 }
 
 .table-toolbar {
@@ -377,6 +376,8 @@ h1 + p {
   max-width: 150px;
   margin: 0 auto 24px;
   padding: 11px;
+  padding-top: 15px;
+  padding-bottom: 15px;
   background: #22c55e;
   color: #fff;
   border: none;
@@ -385,9 +386,9 @@ h1 + p {
   font-weight: 700;
   cursor: pointer;
   transition: background .15s;
-  position: absolute;
-  top: 0;
-  right: 5px;
+  position: fixed;
+  bottom: 15%   ;
+  right: 12%;
   transform-origin: center;
   transition: 1s ease;
 }

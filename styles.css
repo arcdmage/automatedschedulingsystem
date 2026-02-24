@@ -48,9 +48,6 @@ ul.tabs {
   position: fixed;
   top: -10px;
   padding-bottom: 0px;
-   
-    
-
 }
 
 ul.tabs::before {
@@ -64,10 +61,15 @@ ul.tabs::before {
   transform: scaleY(1);
   transition: transform 0.35s ease;
   pointer-events: none;
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
 }
 ul.tabs:hover::before {
   transform-origin: top;
   transform: scaleY(1);
+}
+ul.tab [data-tab-target="#home"] {
+  border-bottom-left-radius:50% ;
 }
 
 ul.tabs li {
@@ -122,11 +124,11 @@ ul.tabs li.active::after {
 }
 
 ul.tabs li[data-tab-target="#schedule"] {
-  margin-right: 250px;
+  margin-right: 0px;
 }
 
 ul.tabs li[data-tab-target="#home"] {
-  margin-left: 250px;
+ border-bottom-left-radius: 0%;
  
 } 
 .tab-content {
@@ -227,6 +229,7 @@ position: fixed;
   background-position: center;    
   background-repeat: no-repeat;
   background-attachment: fixed;   
+  background-color: rgba(0, 0, 0, 0.4);
 }
 
 
