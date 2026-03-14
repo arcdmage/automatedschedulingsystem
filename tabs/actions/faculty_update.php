@@ -1,5 +1,4 @@
 <?php
-// ===== faculty_update.php =====
 require_once(__DIR__ . '/../../db_connect.php');
 header('Content-Type: application/json');
 
