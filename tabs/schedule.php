@@ -218,9 +218,6 @@ $sections_result = $conn->query($sections_query);
         <?php endwhile; ?>
       </select>
 
-      <label for="schedule_date"><b>Date</b></label>
-      <input type="date" name="schedule_date" id="schedule_date" required>
-
       <label for="start_time"><b>Start Time</b></label>
       <input type="time" name="start_time" id="start_time" required>
 
@@ -368,7 +365,6 @@ function loadCalendar() {
 // Modal Functions
 function openScheduleModal() {
   document.getElementById('schedule-modal').style.display = 'block';
-  document.getElementById('schedule_date').value = new Date().toISOString().split('T')[0];
 }
 
 function closeScheduleModal() {

@@ -90,34 +90,37 @@ if ($selected_section) {
   </div>
   
   <div class="alert alert-info">
-    <strong>ℹ️ How it works:</strong> The system will automatically distribute <?php echo $total_hours; ?> hours 
-    of classes across the week, avoiding conflicts and break times. Each subject will be placed according to 
-    its configured hours per week.
+    <strong>ℹ️ How it works:</strong> The system will build a reusable Monday&ndash;Friday weekly template
+    from your configured subject patterns. No dates needed &mdash; the template covers the full week.
   </div>
-  
-  <!-- Date Range Selection -->
+
+  <div class="alert alert-warning">
+    <strong>⚠️ Note:</strong> Generating a new template will replace any existing auto-generated rows
+    for this section. Manually-entered schedules are not affected.
+  </div>
+
+  <!-- Template Generate Form (no dates needed) -->
   <form id="generate-form">
     <input type="hidden" name="section_id" value="<?php echo $selected_section; ?>">
-    
-    <div class="date-range-group">
-      <div class="form-group">
-        <label for="start_date">Start Date <span style="color:red;">*</span></label>
-        <input type="date" name="start_date" id="start_date" required>
-      </div>
-      
-      <div class="form-group">
-        <label for="end_date">End Date <span style="color:red;">*</span></label>
-        <input type="date" name="end_date" id="end_date" required>
-      </div>
+
+    <!-- Mode toggle -->
+    <div style="background:#f8f9fa; border:1px solid #dee2e6; border-radius:8px; padding:18px; margin-bottom:18px;">
+      <label style="display:flex; align-items:flex-start; gap:12px; cursor:pointer; margin:0;">
+        <input type="checkbox" name="random_mode" id="random-mode-toggle" value="1"
+               style="margin-top:3px; width:18px; height:18px; accent-color:#e67e22; cursor:pointer; flex-shrink:0;">
+        <span>
+          <strong style="font-size:15px;">🎲 Random Schedule Mode</strong><br>
+          <span style="color:#666; font-size:13px; line-height:1.5;">
+            Skip saved patterns and randomly distribute each subject across available
+            Mon&ndash;Fri time slots based on its <em>hours per week</em>. Useful for quickly
+            generating a draft or when patterns haven't been configured yet.
+          </span>
+        </span>
+      </label>
     </div>
-    
-    <div class="alert alert-warning">
-      <strong>⚠️ Note:</strong> This will generate schedules for all weekdays (Monday-Friday) within the selected 
-      date range. Existing schedules for this section in the date range will be preserved unless there are conflicts.
-    </div>
-    
+
     <button type="submit" class="btn-generate" id="generate-btn">
-       Generate Schedules
+      🚀 Generate Weekly Template
     </button>
   </form>
 </div>
@@ -168,40 +171,22 @@ function loadSection() {
   }
 }
 
-// Set default dates (current week)
-document.addEventListener('DOMContentLoaded', function() {
-    const today = new Date();
-    const nextMonth = new Date(today);
-    
-    // Handle the "Next Month" rollover correctly
-    // (e.g., prevent Jan 31 + 1 month becoming March 3)
-    nextMonth.setMonth(today.getMonth() + 1);
-
-    // Helper function to get YYYY-MM-DD in LOCAL time
-    function getLocalDateString(date) {
-        const year = date.getFullYear();
-        // padStart ensures we get '05' instead of just '5'
-        const month = String(date.getMonth() + 1).padStart(2, '0'); 
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    }
-
-    const startDateInput = document.getElementById('start_date');
-    const endDateInput = document.getElementById('end_date');
-
-    // Check if elements exist to prevent errors
-    if (startDateInput) {
-        startDateInput.value = getLocalDateString(today);
-    }
-    if (endDateInput) {
-        endDateInput.value = getLocalDateString(nextMonth);
-    }
+// Update button label when random mode is toggled
+document.getElementById('random-mode-toggle')?.addEventListener('change', function() {
+  const btn = document.getElementById('generate-btn');
+  if (btn) {
+    btn.textContent = this.checked
+      ? '🎲 Generate Random Schedule'
+      : '🚀 Generate Weekly Template';
+  }
 });
 
 // Handle form submission
 document.getElementById('generate-form')?.addEventListener('submit', function(e) {
   e.preventDefault();
-  
+
+  const isRandom = document.getElementById('random-mode-toggle')?.checked ?? false;
+
   const generateBtn = document.getElementById('generate-btn');
   const progressSection = document.getElementById('progress-section');
   const progressFill = document.getElementById('progress-fill');
@@ -227,16 +212,36 @@ document.getElementById('generate-form')?.addEventListener('submit', function(e)
     progressLog.appendChild(entry);
     progressLog.scrollTop = progressLog.scrollHeight;
   }
-  
-  addLog('Sending request to server...', 'info');
+
+  const endpoint = isRandom
+    ? '/mainscheduler/tabs/actions/schedule_random_generate.php'
+    : '/mainscheduler/tabs/actions/schedule_auto_generate.php';
+
+  addLog(isRandom
+    ? 'Random mode: distributing subjects across available slots...'
+    : 'Pattern mode: applying saved schedule patterns...', 'info');
   progressFill.style.width = '30%';
   progressFill.textContent = '30%';
   
-  fetch('/mainscheduler/tabs/actions/schedule_auto_generate.php', {
+  fetch(endpoint, {
     method: 'POST',
     body: formData
   })
-  .then(response => response.json())
+  .then(response => {
+    // Get raw text first so we can show it if JSON parsing fails
+    return response.text().then(text => {
+      if (!text || text.trim() === '') {
+        throw new Error('Server returned empty response. Check PHP error logs.');
+      }
+      try {
+        return JSON.parse(text);
+      } catch(e) {
+        // Show first 300 chars of raw response to help diagnose
+        const preview = text.substring(0, 300).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        throw new Error('Invalid JSON from server. Raw response:<br><pre style="font-size:11px;margin-top:5px;">' + preview + '</pre>');
+      }
+    });
+  })
   .then(data => {
     progressFill.style.width = '100%';
     progressFill.textContent = '100%';
@@ -302,17 +307,17 @@ document.getElementById('generate-form')?.addEventListener('submit', function(e)
   })
   .catch(error => {
     console.error('Error:', error);
-    addLog('✗ Network error occurred', 'error');
+    addLog('✗ ' + error.message.replace(/<[^>]*>/g,'').substring(0,120), 'error');
     
     resultMessage.innerHTML = `
       <div class="alert alert-danger">
         <h3>❌ Error</h3>
-        <p>Failed to generate schedules. Please try again.</p>
+        <p>${error.message}</p>
       </div>
     `;
     
     generateBtn.disabled = false;
-    generateBtn.textContent = '🚀 Generate Schedules';
+    generateBtn.textContent = '🚀 Generate Weekly Template';
   });
 });
 </script>

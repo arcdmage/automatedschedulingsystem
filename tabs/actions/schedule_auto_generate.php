@@ -1,283 +1,292 @@
 <?php
-require_once(__DIR__ . '/../../db_connect.php');
-require_once(__DIR__ . '/action_helper.php');
-require_once(__DIR__ . '/../../lib/schedule_helpers.php');
-header('Content-Type: application/json');
+/**
+ * schedule_auto_generate.php
+ * Generates a Mon-Fri weekly template from configured subject patterns.
+ * No date inputs needed - creates template rows identified by notes LIKE 'Auto-generated%'
+ */
 
-// Debug mode - set to true to see detailed conflict information
-$debug_mode = true;
-$debug_log = [];
+// Suppress HTML error output - must be before anything else
+ini_set('display_errors', '0');
+ini_set('html_errors', '0');
+error_reporting(E_ALL);
 
-function debug_log($message) {
-    global $debug_log, $debug_mode;
-    if ($debug_mode) {
-        $debug_log[] = $message;
+// Output buffer lets us wipe stray output before echoing JSON
+ob_start();
+
+// Only intercept FATAL errors (E_ERROR etc) - these skip the try/catch
+register_shutdown_function(function() {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_end_clean(); // discard any partial HTML output
+        if (!headers_sent()) header('Content-Type: application/json');
+        echo json_encode([
+            'success' => false,
+            'message' => 'Fatal error: ' . $err['message'] . ' (line ' . $err['line'] . ')'
+        ]);
+    } else {
+        ob_end_flush(); // normal exit - flush buffered JSON response
     }
-}
+});
+
+require_once(__DIR__ . '/../../db_connect.php');
+
+// Clear anything db_connect may have printed, then set header
+ob_clean();
+if (!headers_sent()) header('Content-Type: application/json');
+
+// Catch non-fatal PHP errors (notices, warnings) and return as JSON
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    // Only treat E_WARNING and above as fatal for our purposes
+    if ($errno & (E_WARNING | E_ERROR | E_PARSE)) {
+        ob_clean();
+        echo json_encode([
+            'success'  => false,
+            'message'  => "PHP Error [$errno]: $errstr at line $errline"
+        ]);
+        exit;
+    }
+    return false; // let PHP handle notices normally (logged, not printed)
+});
+
+$debug_log = [];
+function dlog($m) { global $debug_log; $debug_log[] = $m; }
+
+$days = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
 
 try {
-    $section_id = intval($_POST['section_id']);
-    $start_date = $_POST['start_date'];
-    $end_date = $_POST['end_date'];
-    
-    if (!$section_id || !$start_date || !$end_date) {
-        throw new Exception('Missing required fields');
+    // ── Validate DB connection ────────────────────────────────────────────────
+    if (!isset($conn) || !$conn) {
+        throw new Exception('Database connection failed. Check db_connect.php.');
     }
-    
-    // Validate dates
-    $start = new DateTime($start_date);
-    $end = new DateTime($end_date);
-    
-    if ($start > $end) {
-        throw new Exception('Start date must be before end date');
+
+    // ── Input ─────────────────────────────────────────────────────────────────
+    $section_id = intval($_POST['section_id'] ?? 0);
+    if (!$section_id) throw new Exception('Missing section_id');
+    dlog("section_id=$section_id");
+
+    // ── Inspect schedules table ───────────────────────────────────────────────
+    $cr = $conn->query("SHOW COLUMNS FROM schedules");
+    if (!$cr) throw new Exception('Cannot inspect schedules table: ' . $conn->error);
+
+    $cols = []; $nullable = []; $col_defaults = [];
+    while ($c = $cr->fetch_assoc()) {
+        $cols[]                  = $c['Field'];
+        $nullable[$c['Field']]   = ($c['Null'] === 'YES');
+        $col_defaults[$c['Field']] = $c['Default'];
     }
-    
-    // Fetch subject requirements with patterns and faculty
-    $stmt = $conn->prepare("SELECT requirement_id, subject_id, hours_per_week, faculty_id FROM subject_requirements WHERE section_id = ?");
-    $stmt->bind_param("i", $section_id);
-    $stmt->execute();
-    $res = $stmt->get_result();
-    $subjects = [];
-    while ($row = $res->fetch_assoc()) {
-        $subjects[$row['requirement_id']] = [
-            'requirement_id' => (int)$row['requirement_id'],
-            'subject_id' => (int)$row['subject_id'],
-            'remaining'  => (int)$row['hours_per_week'],
-            'faculty_id' => $row['faculty_id'], // Keep as-is (could be string or int)
-        ];
-        debug_log("Loaded requirement {$row['requirement_id']}: subject={$row['subject_id']}, faculty='{$row['faculty_id']}'");
-    }
-    $stmt->close();
-    
-    // Fetch patterns for each requirement
-    $patterns = [];
-    foreach ($subjects as $req) {
-        $req_id = $req['requirement_id'];
-        
-        $pattern_query = "SELECT sp.*, ts.start_time, ts.end_time, ts.is_break
-                         FROM schedule_patterns sp
-                         JOIN time_slots ts ON sp.time_slot_id = ts.time_slot_id
-                         WHERE sp.requirement_id = ?
-                         ORDER BY sp.day_of_week, ts.slot_order";
-        $stmt = $conn->prepare($pattern_query);
-        $stmt->bind_param("i", $req_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        $patterns[$req_id] = [];
-        while ($row = $result->fetch_assoc()) {
-            $patterns[$req_id][] = $row;
+    dlog('Cols: ' . implode(', ', $cols));
+
+    $has_day      = in_array('day_of_week',       $cols);
+    $has_auto     = in_array('is_auto_generated',  $cols);
+    $has_room     = in_array('room',               $cols);
+    $date_ok_null = ($nullable['schedule_date']    ?? false);
+    dlog("has_day=$has_day has_auto=$has_auto has_room=$has_room date_ok_null=$date_ok_null");
+
+    // ── Load requirements ─────────────────────────────────────────────────────
+    $r = $conn->prepare(
+        "SELECT requirement_id, subject_id, faculty_id
+         FROM subject_requirements WHERE section_id = ?"
+    );
+    if (!$r) throw new Exception('Prepare requirements: ' . $conn->error);
+    $r->bind_param('i', $section_id);
+    $r->execute();
+    $reqs = $r->get_result()->fetch_all(MYSQLI_ASSOC);
+    $r->close();
+
+    if (empty($reqs)) throw new Exception('No subject requirements for this section.');
+    dlog(count($reqs) . ' requirements loaded');
+
+    // ── Load patterns ─────────────────────────────────────────────────────────
+    $pats = [];
+    foreach ($reqs as $req) {
+        $rid = (int)$req['requirement_id'];
+        $p = $conn->prepare(
+            "SELECT sp.day_of_week, sp.time_slot_id, ts.start_time, ts.end_time
+             FROM schedule_patterns sp
+             JOIN time_slots ts ON sp.time_slot_id = ts.time_slot_id
+             WHERE sp.requirement_id = ?
+             ORDER BY ts.slot_order"
+        );
+        if (!$p) throw new Exception('Prepare patterns: ' . $conn->error);
+        $p->bind_param('i', $rid);
+        $p->execute();
+        $pats[$rid] = $p->get_result()->fetch_all(MYSQLI_ASSOC);
+        $p->close();
+
+        if (empty($pats[$rid])) {
+            throw new Exception("Requirement #$rid has no patterns. Set up patterns in Setup first.");
         }
-        $stmt->close();
+        dlog("Req $rid: " . count($pats[$rid]) . ' pattern(s)');
     }
-    
-    // Check if all requirements have patterns
-    $missing_patterns = [];
-    foreach ($subjects as $req) {
-        if (empty($patterns[$req['requirement_id']])) {
-            $missing_patterns[] = $req['subject_name'];
-        }
-    }
-    
-    if (!empty($missing_patterns)) {
-        throw new Exception('The following subjects are missing schedule patterns: ' . implode(', ', $missing_patterns) . '. Please configure patterns before generating.');
-    }
-    
-    // Start transaction
+
+    // ── Transaction start ─────────────────────────────────────────────────────
     $conn->begin_transaction();
-    
-    $schedules_created = 0;
-    $conflicts_found = 0;
-    
-    // Prepare insert statement
-    $insert_stmt = $conn->prepare("
-        INSERT INTO schedules (faculty_id, subject_id, section_id, schedule_date, start_time, end_time, time_slot_id, notes)
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'Auto-generated')
-    ");
-    
-    // Debug conflict check - shows what conflicts are found
-    $debug_conflict_stmt = $conn->prepare("
-        SELECT 
-            s.schedule_id,
-            s.faculty_id,
-            s.subject_id,
-            s.section_id,
-            sec.section_name,
-            subj.subject_name,
-            ts.start_time,
-            ts.end_time,
-            CASE 
-                WHEN s.section_id = ? AND s.time_slot_id = ? AND s.subject_id = ? THEN 'Same section/subject/time'
-                WHEN s.faculty_id = ? AND s.faculty_id IS NOT NULL AND s.faculty_id != '' 
-                     AND ts.start_time < ? AND ts.end_time > ? THEN 'Faculty time conflict'
-                ELSE 'Unknown'
-            END as conflict_type
-        FROM schedules s
-        JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
-        JOIN sections sec ON s.section_id = sec.section_id
-        JOIN subjects subj ON s.subject_id = subj.subject_id
-        WHERE s.schedule_date = ?
-          AND (
-              (s.section_id = ? AND s.time_slot_id = ? AND s.subject_id = ?)
-              OR 
-              (s.faculty_id = ? AND s.faculty_id IS NOT NULL AND s.faculty_id != '' AND 
-               ts.start_time < ? AND ts.end_time > ?)
-          )
-    ");
-    
-    // Simple conflict count check
-    $conflict_stmt = $conn->prepare("
-        SELECT COUNT(*) as count
-        FROM schedules s
-        JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
-        WHERE s.schedule_date = ?
-          AND (
-              (s.section_id = ? AND s.time_slot_id = ? AND s.subject_id = ?)
-              OR 
-              (s.faculty_id = ? AND s.faculty_id IS NOT NULL AND s.faculty_id != '' AND 
-               ts.start_time < ? AND ts.end_time > ?)
-          )
-    ");
-    
-    // Generate schedules for each date in range
-    $current = clone $start;
-    
-    while ($current <= $end) {
-        $day_name = $current->format('l');
-        
-        // Skip weekends
-        if ($day_name === 'Saturday' || $day_name === 'Sunday') {
-            $current->modify('+1 day');
-            continue;
-        }
-        
-        $date_str = $current->format('Y-m-d');
-        debug_log("Processing date: $date_str ($day_name)");
-        
-        // For each requirement, create schedules based on patterns
-        foreach ($subjects as $req) {
-            $req_id = $req['requirement_id'];
-            
-            if (empty($patterns[$req_id])) continue;
-            
-            foreach ($patterns[$req_id] as $pattern) {
-                // Check if this pattern is for current day
-                if ($pattern['day_of_week'] !== $day_name) continue;
-                
-                $time_slot_id = $pattern['time_slot_id'];
-                $start_time = $pattern['start_time'];
-                $end_time = $pattern['end_time'];
-                $faculty_id = $req['faculty_id'];
-                
-                debug_log("  Attempting: subject={$req['subject_id']}, time=$start_time-$end_time, faculty='$faculty_id'");
-                
-                // Check for conflicts with debug info
-                if ($debug_mode) {
-                    $debug_conflict_stmt->bind_param(
-                        "iiissssiiiiss",
-                        $section_id, $time_slot_id, $req['subject_id'],
-                        $faculty_id, $end_time, $start_time,
-                        $date_str,
-                        $section_id, $time_slot_id, $req['subject_id'],
-                        $faculty_id, $end_time, $start_time
-                    );
-                    $debug_conflict_stmt->execute();
-                    $debug_result = $debug_conflict_stmt->get_result();
-                    
-                    if ($debug_result->num_rows > 0) {
-                        debug_log("    CONFLICTS FOUND:");
-                        while ($conflict_row = $debug_result->fetch_assoc()) {
-                            debug_log("      - {$conflict_row['section_name']}: {$conflict_row['subject_name']} "
-                                    . "({$conflict_row['start_time']}-{$conflict_row['end_time']}) "
-                                    . "faculty='{$conflict_row['faculty_id']}' "
-                                    . "type={$conflict_row['conflict_type']}");
-                        }
-                        $conflicts_found++;
-                        continue;
-                    }
-                }
-                
-                // Regular conflict check
-                $conflict_stmt->bind_param(
-                    "siiisss",
-                    $date_str,
-                    $section_id,
-                    $time_slot_id,
-                    $req['subject_id'],
-                    $faculty_id,
-                    $end_time,
-                    $start_time
-                );
-                $conflict_stmt->execute();
-                $conflict_result = $conflict_stmt->get_result()->fetch_assoc();
-                
-                if ($conflict_result['count'] > 0 && !$debug_mode) {
-                    $conflicts_found++;
+
+    // ── Delete old auto-generated rows for this section ───────────────────────
+    $del = $conn->prepare(
+        "DELETE FROM schedules WHERE section_id = ? AND (notes = 'Auto-generated' OR notes LIKE 'Auto-generated|%')"
+    );
+    if (!$del) throw new Exception('Prepare delete: ' . $conn->error);
+    $del->bind_param('i', $section_id);
+    $del->execute();
+    dlog('Deleted ' . $del->affected_rows . ' old auto rows');
+    $del->close();
+
+    // ── Real dates for the CURRENT Mon–Fri week ─────────────────────────────
+    // Using real dates means view/delete queries (which filter by date range) work.
+    // We anchor to this week's Monday so every regeneration uses a consistent,
+    // predictable date that is easy to query (e.g. "next 7 days" or "this week").
+    $monday = new DateTime();
+    $dow = (int)$monday->format('N'); // 1=Mon, 7=Sun
+    if ($dow !== 1) $monday->modify('-' . ($dow - 1) . ' days');
+    $sentinels = [];
+    $dayNames = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    for ($i = 0; $i < 5; $i++) {
+        $d = clone $monday;
+        $d->modify("+$i days");
+        $sentinels[$dayNames[$i]] = $d->format('Y-m-d');
+    }
+    dlog('Week dates: ' . implode(', ', $sentinels));
+
+    // ── Build INSERT SQL + type string ────────────────────────────────────────
+    // Rules:
+    //   - Only ? placeholders appear in $types
+    //   - Literals (NULL, 1, '') are written directly into SQL, NOT in $types
+    //
+    // Params always bound (in order):
+    //   faculty_id(s), subject_id(i), section_id(i),
+    //   [schedule_date(s) — only when NOT nullable],
+    //   start_time(s), end_time(s), time_slot_id(i), notes(s),
+    //   [day_of_week(s) — only when column exists]
+
+    $icols = ['faculty_id', 'subject_id', 'section_id'];
+    $ivals = ['?', '?', '?'];
+    $types = 'sii';
+
+    // schedule_date
+    $icols[] = 'schedule_date';
+    // Always use real week dates (never NULL) so view/delete date-range queries work
+    $ivals[] = '?';
+    $types   .= 's';
+    $date_ok_null = false; // force sentinel-date branch in bind_param logic below
+
+    // start_time, end_time, time_slot_id, notes
+    array_push($icols, 'start_time', 'end_time', 'time_slot_id', 'notes');
+    array_push($ivals, '?', '?', '?', '?');
+    $types .= 'ssis';
+
+    // day_of_week (optional column)
+    if ($has_day) {
+        $icols[] = 'day_of_week';
+        $ivals[] = '?';
+        $types   .= 's';
+    }
+
+    // is_auto_generated (literal, no bind param)
+    if ($has_auto) {
+        $icols[] = 'is_auto_generated';
+        $ivals[] = '1';
+    }
+
+    // room (literal empty string if NOT NULL with no default)
+    if ($has_room && !$nullable['room'] && $col_defaults['room'] === null) {
+        $icols[] = 'room';
+        $ivals[] = "''";
+        dlog('Adding empty room column (NOT NULL, no default)');
+    }
+
+    $sql = 'INSERT INTO schedules ('
+         . implode(', ', $icols)
+         . ') VALUES ('
+         . implode(', ', $ivals) . ')';
+
+    dlog('SQL: ' . $sql);
+    dlog('Types: "' . $types . '" (' . strlen($types) . ' bound params)');
+
+    $ins = $conn->prepare($sql);
+    if (!$ins) throw new Exception('Prepare insert failed: ' . $conn->error . ' | SQL: ' . $sql);
+
+    // ── Generate template entries Mon–Fri ─────────────────────────────────────
+    $created   = 0;
+    $conflicts = 0;
+    $used_slots = [];  // "Day|slot_id" => true
+    $used_fac   = [];  // [d, f, s, e] arrays
+
+    foreach ($days as $day) {
+        foreach ($reqs as $req) {
+            $rid  = (int)$req['requirement_id'];
+            $subj = (int)$req['subject_id'];
+            $fac  = (string)($req['faculty_id'] ?? '');
+
+            foreach ($pats[$rid] as $pat) {
+                if ($pat['day_of_week'] !== $day) continue;
+
+                $slot  = (int)$pat['time_slot_id'];
+                $ts    = (string)$pat['start_time'];
+                $te    = (string)$pat['end_time'];
+                $note  = 'Auto-generated';
+                $sdate = $sentinels[$day];
+
+                // Slot conflict check
+                $key = "$day|$slot";
+                if (isset($used_slots[$key])) {
+                    $conflicts++;
+                    dlog("SKIP slot conflict: $key");
                     continue;
                 }
-                
-                // Insert schedule
-                $insert_stmt->bind_param(
-                    "siisssi",
-                    $faculty_id,
-                    $req['subject_id'],
-                    $section_id,
-                    $date_str,
-                    $start_time,
-                    $end_time,
-                    $time_slot_id
-                );
-                
-                if ($insert_stmt->execute()) {
-                    $schedules_created++;
-                    debug_log("    ✓ Created schedule");
+
+                // Faculty time overlap check
+                $fc = false;
+                if ($fac !== '') {
+                    foreach ($used_fac as $uf) {
+                        if ($uf['d'] !== $day || $uf['f'] !== $fac) continue;
+                        if ($uf['s'] < $te && $uf['e'] > $ts) { $fc = true; break; }
+                    }
+                }
+                if ($fc) { $conflicts++; dlog("SKIP faculty conflict: $fac $day $ts"); continue; }
+
+                // Build bind_param args array in exact SQL column order
+                $args = [$types, $fac, $subj, $section_id];
+                if (!$date_ok_null) $args[] = $sdate;   // schedule_date (only if bound)
+                array_push($args, $ts, $te, $slot, $note); // start, end, slot, notes
+                if ($has_day) $args[] = $day;            // day_of_week (only if bound)
+
+                $ins->bind_param(...$args);
+
+                if ($ins->execute()) {
+                    $created++;
+                    $used_slots[$key] = true;
+                    if ($fac !== '') {
+                        $used_fac[] = ['d' => $day, 'f' => $fac, 's' => $ts, 'e' => $te];
+                    }
+                    dlog("OK: $day subj=$subj slot=$slot fac='$fac'");
                 } else {
-                    debug_log("    ✗ Failed to insert: " . $insert_stmt->error);
+                    dlog("FAIL insert: " . $ins->error . " | $day subj=$subj slot=$slot");
                 }
             }
         }
-        
-        $current->modify('+1 day');
     }
-    
-    $insert_stmt->close();
-    $conflict_stmt->close();
-    if ($debug_mode) {
-        $debug_conflict_stmt->close();
-    }
-    
-    // Commit transaction
+
+    $ins->close();
     $conn->commit();
-    
-    $response = [
-        'success' => true,
-        'schedules_created' => $schedules_created,
-        'conflicts_found' => $conflicts_found,
-        'message' => 'Schedule generation completed'
-    ];
-    
-    if ($debug_mode) {
-        $response['debug_log'] = $debug_log;
-    }
-    
-    echo json_encode($response);
-    
+
+    ob_clean();
+    echo json_encode([
+        'success'           => true,
+        'schedules_created' => $created,
+        'conflicts_found'   => $conflicts,
+        'message'           => 'Weekly template generated successfully',
+        'debug_log'         => $debug_log,
+    ]);
+
 } catch (Exception $e) {
-    if (isset($conn)) {
-        $conn->rollback();
-    }
-    
-    $response = [
-        'success' => false,
-        'message' => $e->getMessage()
-    ];
-    
-    if ($debug_mode && !empty($debug_log)) {
-        $response['debug_log'] = $debug_log;
-    }
-    
-    echo json_encode($response);
+    try { if (isset($conn) && $conn) $conn->rollback(); } catch (Exception $re) {}
+    ob_clean();
+    echo json_encode([
+        'success'   => false,
+        'message'   => $e->getMessage(),
+        'debug_log' => $debug_log,
+    ]);
 }
 
-$conn->close();
-?>
+if (isset($conn) && $conn) $conn->close();
