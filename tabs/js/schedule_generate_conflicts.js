@@ -1,24 +1,3 @@
-/*
- * schedule_generate_conflicts.js
- *
- * Handles schedule generation UI for schedule_generate.php:
- *  - Submits generation requests to auto/random endpoints
- *  - Shows progress and debug log entries
- *  - If backend responds with needs_confirmation: true, display a modal
- *    listing conflicts and allow the user to confirm (resubmits with confirm_force=1)
- *
- * Expects these elements to exist in the page:
- *  - form#generate-form
- *  - input#random-mode-toggle
- *  - button#generate-btn
- *  - #progress-section, #progress-fill, #progress-log, #result-message
- *  - Modal elements:
- *      #conflictModal, #modalTitle, #modalMessage, #conflictList,
- *      #modalCancelBtn, #modalConfirmBtn
- *
- * Drop this file into: mainscheduler/tabs/js/schedule_generate_conflicts.js
- */
-
 (function () {
   // Helper to query and allow graceful degradation if an element is missing
   function $id(id) {
