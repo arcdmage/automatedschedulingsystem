@@ -1,16 +1,23 @@
 <?php
-require_once(__DIR__ . '/../db_connect.php');
+require_once __DIR__ . "/../db_connect.php";
 
 $limit_options = [5, 10, 25, 50, 100];
 $default_limit = 5;
 
-$limit  = isset($_GET['limit']) && in_array((int)$_GET['limit'], $limit_options) ? (int)$_GET['limit'] : $default_limit;
-$page   = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+$limit =
+    isset($_GET["limit"]) && in_array((int) $_GET["limit"], $limit_options)
+        ? (int) $_GET["limit"]
+        : $default_limit;
+$page = isset($_GET["page"]) ? max(1, (int) $_GET["page"]) : 1;
 $offset = ($page - 1) * $limit;
 
-$result        = $conn->query("SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset");
-$total_records = $conn->query("SELECT COUNT(*) as total FROM faculty")->fetch_assoc()['total'];
-$total_pages   = max(1, ceil($total_records / $limit));
+$result = $conn->query(
+    "SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset",
+);
+$total_records = $conn
+    ->query("SELECT COUNT(*) as total FROM faculty")
+    ->fetch_assoc()["total"];
+$total_pages = max(1, ceil($total_records / $limit));
 ?>
 
 <!-- Toolbar -->
@@ -19,7 +26,10 @@ $total_pages   = max(1, ceil($total_records / $limit));
     <span class="toolbar-title">Faculty Members</span>
     <span style="font-size:12px;color:#9ca3af;"><?= $total_records ?> total</span>
   </div>
-  <input type="text" class="search-input" placeholder="Search faculty…" oninput="filterTable(this.value)">
+  <div class="table-toolbar-right">
+    <input type="text" class="search-input" placeholder="Search faculty…" oninput="filterTable(this.value)" style="width:150px;">
+    <button class="add-faculty-btn" onclick="openAddModal()">+ Add Faculty</button>
+  </div>
 </div>
 
 <!-- Table -->
@@ -38,15 +48,18 @@ $total_pages   = max(1, ceil($total_records / $limit));
     </thead>
     <tbody>
       <?php if ($result && $result->num_rows > 0): ?>
-        <?php while($row = $result->fetch_assoc()):
-          $initials    = strtoupper(substr($row['fname'],0,1).substr($row['lname'],0,1));
-          $gClass      = 'gender-'.strtolower($row['gender'] ?? 'other');
-          $statusEmpty = empty(trim($row['status'] ?? ''));
-        ?>
-        <tr data-id="<?= (int)$row['faculty_id'] ?>">
+        <?php while ($row = $result->fetch_assoc()):
+
+            $initials = strtoupper(
+                substr($row["fname"], 0, 1) . substr($row["lname"], 0, 1),
+            );
+            $gClass = "gender-" . strtolower($row["gender"] ?? "other");
+            $statusEmpty = empty(trim($row["status"] ?? ""));
+            ?>
+        <tr data-id="<?= (int) $row["faculty_id"] ?>">
 
           <!-- ID -->
-          <td><span class="id-badge"><?= (int)$row['faculty_id'] ?></span></td>
+          <td><span class="id-badge"><?= (int) $row["faculty_id"] ?></span></td>
 
           <!-- Name -->
           <td>
@@ -55,13 +68,21 @@ $total_pages   = max(1, ceil($total_records / $limit));
               <div style="min-width:0;">
                 <!-- View -->
                 <div class="v-name name-primary">
-                  <?= htmlspecialchars($row['fname'].' '.$row['mname'].' '.$row['lname']) ?>
+                  <?= htmlspecialchars(
+                      $row["fname"] . " " . $row["mname"] . " " . $row["lname"],
+                  ) ?>
                 </div>
                 <!-- Edit -->
                 <div class="e-name" style="display:none; flex-wrap:wrap; gap:4px;">
-                  <input class="edit-input" name="fname"  value="<?= htmlspecialchars($row['fname'])  ?>" placeholder="First"  style="width:78px;">
-                  <input class="edit-input" name="mname"  value="<?= htmlspecialchars($row['mname'])  ?>" placeholder="Middle" style="width:68px;">
-                  <input class="edit-input" name="lname"  value="<?= htmlspecialchars($row['lname'])  ?>" placeholder="Last"   style="width:78px;">
+                  <input class="edit-input" name="fname"  value="<?= htmlspecialchars(
+                      $row["fname"],
+                  ) ?>" placeholder="First"  style="width:78px;">
+                  <input class="edit-input" name="mname"  value="<?= htmlspecialchars(
+                      $row["mname"],
+                  ) ?>" placeholder="Middle" style="width:68px;">
+                  <input class="edit-input" name="lname"  value="<?= htmlspecialchars(
+                      $row["lname"],
+                  ) ?>" placeholder="Last"   style="width:78px;">
                 </div>
               </div>
             </div>
@@ -69,32 +90,54 @@ $total_pages   = max(1, ceil($total_records / $limit));
 
           <!-- Gender -->
           <td>
-            <span class="v-field gender-badge <?= $gClass ?>"><?= htmlspecialchars(ucfirst($row['gender'] ?? '')) ?></span>
+            <span class="v-field gender-badge <?= $gClass ?>"><?= htmlspecialchars(
+    ucfirst($row["gender"] ?? ""),
+) ?></span>
             <select class="e-field edit-select" name="gender" style="display:none;">
-              <option value="female" <?= strtolower($row['gender'])==='female'?'selected':''?>>Female</option>
-              <option value="male"   <?= strtolower($row['gender'])==='male'  ?'selected':''?>>Male</option>
-              <option value="other"  <?= strtolower($row['gender'])==='other' ?'selected':''?>>Other</option>
+              <option value="female" <?= strtolower($row["gender"]) === "female"
+                  ? "selected"
+                  : "" ?>>Female</option>
+              <option value="male"   <?= strtolower($row["gender"]) === "male"
+                  ? "selected"
+                  : "" ?>>Male</option>
+              <option value="other"  <?= strtolower($row["gender"]) === "other"
+                  ? "selected"
+                  : "" ?>>Other</option>
             </select>
           </td>
 
           <!-- Phone -->
           <td>
-            <span class="v-field"><?= htmlspecialchars($row['pnumber'] ?? '') ?></span>
-            <input class="e-field edit-input" name="pnumber" value="<?= htmlspecialchars($row['pnumber'] ?? '') ?>" placeholder="Phone" style="display:none;width:120px;">
+            <span class="v-field"><?= htmlspecialchars(
+                $row["pnumber"] ?? "",
+            ) ?></span>
+            <input class="e-field edit-input" name="pnumber" value="<?= htmlspecialchars(
+                $row["pnumber"] ?? "",
+            ) ?>" placeholder="Phone" style="display:none;width:120px;">
           </td>
 
           <!-- Address -->
           <td>
-            <span class="v-field"><?= htmlspecialchars($row['address'] ?? '') ?></span>
-            <input class="e-field edit-input" name="address" value="<?= htmlspecialchars($row['address'] ?? '') ?>" placeholder="Address" style="display:none;">
+            <span class="v-field"><?= htmlspecialchars(
+                $row["address"] ?? "",
+            ) ?></span>
+            <input class="e-field edit-input" name="address" value="<?= htmlspecialchars(
+                $row["address"] ?? "",
+            ) ?>" placeholder="Address" style="display:none;">
           </td>
 
           <!-- Status -->
           <td>
-            <span class="v-field status-badge <?= $statusEmpty?'empty':'' ?>">
-              <?= $statusEmpty ? 'No status' : htmlspecialchars($row['status']) ?>
+            <span class="v-field status-badge <?= $statusEmpty
+                ? "empty"
+                : "" ?>">
+              <?= $statusEmpty
+                  ? "No status"
+                  : htmlspecialchars($row["status"]) ?>
             </span>
-            <input class="e-field edit-input" name="status" value="<?= htmlspecialchars($row['status'] ?? '') ?>" placeholder="Status" style="display:none;width:110px;">
+            <input class="e-field edit-input" name="status" value="<?= htmlspecialchars(
+                $row["status"] ?? "",
+            ) ?>" placeholder="Status" style="display:none;width:110px;">
           </td>
 
           <!-- Actions -->
@@ -121,7 +164,8 @@ $total_pages   = max(1, ceil($total_records / $limit));
           </td>
 
         </tr>
-        <?php endwhile; ?>
+        <?php
+        endwhile; ?>
       <?php else: ?>
         <tr><td colspan="7"><div class="empty-state">No faculty members found.</div></td></tr>
       <?php endif; ?>
@@ -135,19 +179,23 @@ $total_pages   = max(1, ceil($total_records / $limit));
     <label for="rows-per-page">Rows per page:</label>
     <select id="rows-per-page">
       <?php foreach ($limit_options as $opt): ?>
-        <option value="<?= $opt ?>" <?= $limit==$opt?'selected':''?>><?= $opt ?></option>
+        <option value="<?= $opt ?>" <?= $limit == $opt
+    ? "selected"
+    : "" ?>><?= $opt ?></option>
       <?php endforeach; ?>
     </select>
   </div>
   <div class="pagination">
     <?php if ($page > 1): ?>
-      <button class="page-btn" data-page="<?= $page-1 ?>">&laquo;</button>
+      <button class="page-btn" data-page="<?= $page - 1 ?>">&laquo;</button>
     <?php endif; ?>
-    <?php for ($i=1; $i<=$total_pages; $i++): ?>
-      <button class="page-btn <?= $i==$page?'active':''?>" data-page="<?= $i ?>"><?= $i ?></button>
+    <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+      <button class="page-btn <?= $i == $page
+          ? "active"
+          : "" ?>" data-page="<?= $i ?>"><?= $i ?></button>
     <?php endfor; ?>
     <?php if ($page < $total_pages): ?>
-      <button class="page-btn" data-page="<?= $page+1 ?>">&raquo;</button>
+      <button class="page-btn" data-page="<?= $page + 1 ?>">&raquo;</button>
     <?php endif; ?>
   </div>
 </div>
