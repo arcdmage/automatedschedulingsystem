@@ -12,8 +12,6 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <body>
 
-<h1>List of Subjects</h1>
-<p>Shows the list of subjects, categorized by grade level and STRAND.</p>
 
 <!-- Subject Table Section -->
 <div class="subject-table-container">

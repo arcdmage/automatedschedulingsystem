@@ -94,8 +94,6 @@ $sections_result = $conn->query($sections_query);
 
 <body>
 
-<h1>Schedule Management</h1>
-<p>Create and manage teacher schedules, classes, and events.</p>
 
 <!-- Mode Selection Tabs -->
 <div class="schedule-mode-tabs">

@@ -10,9 +10,6 @@ require_once(__DIR__ . '/../db_connect.php');
 </head>
 <body>
 
-<h1>Faculty</h1>
-<p>Will show different categories of faculty, teachers, staff, and non-teaching personnel.</p>
-
 <!-- Faculty Table Section -->
 <div class="faculty-table-container">
   <div id="faculty-table-content">

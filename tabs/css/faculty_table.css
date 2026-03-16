@@ -23,9 +23,10 @@ h1 + p {
 }
 
 .faculty-page {
-  max-width: 1100px;
-  margin: 0 auto;
+  max-width: auto;
+  margin: 40px auto 120px;
   padding: 0 20px;
+  width: 100%;
 }
 
 .faculty-table-container {
@@ -34,6 +35,8 @@ h1 + p {
   border-radius: 12px;
   overflow: hidden;
   margin-bottom: 16px;
+  justify-content: center;
+  align-items: center;
 }
 
 .table-toolbar {
@@ -285,10 +288,12 @@ h1 + p {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 0px 20px;
   border-top: 1px solid #f3f4f6;
   flex-wrap: wrap;
   gap: 10px;
+  padding-top: 50px;
+  padding-bottom: 0px;
 }
 
 .rows-selector {
