@@ -488,7 +488,7 @@ function switchTab(tab) {
 }
 
 // Update form submission
-document.getElementById('update-form').addEventListener('submit', async function(e) {
+document.getElementById('update-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
   const formData = new FormData(this);
   

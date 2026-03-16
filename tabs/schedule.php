@@ -1,16 +1,19 @@
 <?php
-require_once(__DIR__ . '/../db_connect.php');
+require_once __DIR__ . "/../db_connect.php";
 
 // Fetch all faculty members for dropdown
-$faculty_query = "SELECT faculty_id, fname, mname, lname FROM faculty ORDER BY lname, fname";
+$faculty_query =
+    "SELECT faculty_id, fname, mname, lname FROM faculty ORDER BY lname, fname";
 $faculty_result = $conn->query($faculty_query);
 
 // Fetch all subjects for dropdown
-$subjects_query = "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name";
+$subjects_query =
+    "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name";
 $subjects_result = $conn->query($subjects_query);
 
 // Fetch all sections for automation
-$sections_query = "SELECT section_id, section_name, grade_level, track, school_year, semester FROM sections ORDER BY grade_level, section_name";
+$sections_query =
+    "SELECT section_id, section_name, grade_level, track, school_year, semester FROM sections ORDER BY grade_level, section_name";
 $sections_result = $conn->query($sections_query);
 ?>
 
@@ -97,15 +100,15 @@ $sections_result = $conn->query($sections_query);
 
 <!-- Mode Selection Tabs -->
 <div class="schedule-mode-tabs">
-  <button class="mode-tab active" onclick="switchMode('manual', this)"> Manual Entry</button>
+  <button class="mode-tab active" onclick="switchMode('manual', this)"> Calendar</button>
   <button class="mode-tab" onclick="switchMode('setup', this)"> Setup</button>
-  <button class="mode-tab" onclick="switchMode('generate', this)"> Auto Generate</button>
-  <button class="mode-tab" onclick="switchMode('view', this)"> View Schedules</button>
+  <button class="mode-tab" onclick="switchMode('generate', this)"> Generate</button>
+  <button class="mode-tab" onclick="switchMode('view', this)"> Schedules</button>
 </div>
 
 <!-- Manual Entry Mode (Updated Layout) -->
 <div id="mode-manual" class="mode-content active">
-  
+
   <!-- Action Buttons -->
   <div class="card-section">
     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
@@ -121,7 +124,7 @@ $sections_result = $conn->query($sections_query);
   <!-- Filters -->
   <div class="card-section">
     <div class="form-grid">
-      
+
       <div class="form-group">
         <label for="view-type">View Mode</label>
         <select id="view-type" onchange="changeView()">
@@ -134,14 +137,16 @@ $sections_result = $conn->query($sections_query);
         <label for="teacher-filter">Select Teacher</label>
         <select id="teacher-filter" onchange="loadCalendar()">
           <option value="">-- Select Teacher --</option>
-          <?php 
+          <?php
           $faculty_result->data_seek(0);
-          while($faculty = $faculty_result->fetch_assoc()): 
-          ?>
-            <option value="<?php echo $faculty['faculty_id']; ?>">
-              <?php echo htmlspecialchars($faculty['lname'] . ', ' . $faculty['fname']); ?>
+          while ($faculty = $faculty_result->fetch_assoc()): ?>
+            <option value="<?php echo $faculty["faculty_id"]; ?>">
+              <?php echo htmlspecialchars(
+                  $faculty["lname"] . ", " . $faculty["fname"],
+              ); ?>
             </option>
-          <?php endwhile; ?>
+          <?php endwhile;
+          ?>
         </select>
       </div>
 
@@ -161,21 +166,21 @@ $sections_result = $conn->query($sections_query);
 
 <!-- Subject Setup Mode -->
 <div id="mode-setup" class="mode-content">
-  <iframe src="/mainscheduler/tabs/schedule_setup.php" 
+  <iframe src="/mainscheduler/tabs/schedule_setup.php"
           style="width:100%; height:800px; border:none; border-radius:8px;">
   </iframe>
 </div>
 
 <!-- Auto Generate Mode -->
 <div id="mode-generate" class="mode-content">
-  <iframe src="/mainscheduler/tabs/schedule_generate.php" 
+  <iframe src="/mainscheduler/tabs/schedule_generate.php"
           style="width:100%; height:800px; border:none; border-radius:8px;">
   </iframe>
 </div>
 
 <!-- Weekly View Mode -->
 <div id="mode-view" class="mode-content">
-  <iframe src="/mainscheduler/tabs/schedule_view.php" 
+  <iframe src="/mainscheduler/tabs/schedule_view.php"
           style="width:100%; height:800px; border:none; border-radius:8px;">
   </iframe>
 </div>
@@ -193,31 +198,34 @@ $sections_result = $conn->query($sections_query);
       <label for="faculty_id"><b>Teacher</b></label>
       <select name="faculty_id" id="faculty_id" required>
         <option value="">Select Teacher</option>
-        <?php 
+        <?php
         $faculty_result->data_seek(0);
-        while($faculty = $faculty_result->fetch_assoc()): 
-        ?>
-          <option value="<?php echo $faculty['faculty_id']; ?>">
-            <?php echo htmlspecialchars($faculty['lname'] . ', ' . $faculty['fname'] . ' ' . $faculty['mname']); ?>
+        while ($faculty = $faculty_result->fetch_assoc()): ?>
+          <option value="<?php echo $faculty["faculty_id"]; ?>">
+            <?php echo htmlspecialchars(
+                $faculty["lname"] .
+                    ", " .
+                    $faculty["fname"] .
+                    " " .
+                    $faculty["mname"],
+            ); ?>
           </option>
-        <?php endwhile; ?>
+        <?php endwhile;
+        ?>
       </select>
 
       <label for="subject_id"><b>Subject</b></label>
       <select name="subject_id" id="subject_id" required>
         <option value="">Select Subject</option>
-        <?php 
+        <?php
         $subjects_result->data_seek(0);
-        while($subject = $subjects_result->fetch_assoc()): 
-        ?>
-          <option value="<?php echo $subject['subject_id']; ?>">
-            <?php echo htmlspecialchars($subject['subject_name']); ?>
+        while ($subject = $subjects_result->fetch_assoc()): ?>
+          <option value="<?php echo $subject["subject_id"]; ?>">
+            <?php echo htmlspecialchars($subject["subject_name"]); ?>
           </option>
-        <?php endwhile; ?>
+        <?php endwhile;
+        ?>
       </select>
-
-      <label for="schedule_date"><b>Date</b></label>
-      <input type="date" name="schedule_date" id="schedule_date" required>
 
       <label for="start_time"><b>Start Time</b></label>
       <input type="time" name="start_time" id="start_time" required>
@@ -293,12 +301,12 @@ function switchMode(mode, el) {
   document.querySelectorAll('.mode-content').forEach(content => {
     content.classList.remove('active');
   });
-  
+
   // Deactivate all tabs
   document.querySelectorAll('.mode-tab').forEach(tab => {
     tab.classList.remove('active');
   });
-  
+
   // Show selected mode and activate clicked tab
   document.getElementById('mode-' + mode).classList.add('active');
   el.classList.add('active');
@@ -309,7 +317,7 @@ document.addEventListener("DOMContentLoaded", function() {
   const now = new Date();
   const currentMonth = now.toISOString().slice(0, 7);
   document.getElementById('month-select').value = currentMonth;
-  
+
   loadCalendar();
 });
 
@@ -317,7 +325,7 @@ function changeView() {
   const viewType = document.getElementById('view-type').value;
   const teacherFilter = document.getElementById('teacher-filter');
   const teacherLabel = document.getElementById('teacher-filter-label');
-  
+
   if (viewType === 'specific') {
     teacherFilter.style.display = 'block';
     teacherLabel.style.display = 'block';
@@ -326,7 +334,7 @@ function changeView() {
     teacherLabel.style.display = 'none';
     teacherFilter.value = '';
   }
-  
+
   loadCalendar();
 }
 
@@ -334,23 +342,23 @@ function loadCalendar() {
   const viewType = document.getElementById('view-type').value;
   const teacherId = document.getElementById('teacher-filter').value;
   const month = document.getElementById('month-select').value;
-  
+
   const params = new URLSearchParams({
     view: viewType,
     month: month
   });
-  
+
   if (viewType === 'specific' && teacherId) {
     params.append('teacher_id', teacherId);
   }
-  
+
   // Include section_id if available from URL or context
   const urlParams = new URLSearchParams(window.location.search);
   const sectionId = urlParams.get('section_id');
   if (sectionId) {
     params.append('section_id', sectionId);
   }
-  
+
   fetch(`/mainscheduler/tabs/calendar_view.php?${params.toString()}`)
     .then(response => response.text())
     .then(data => {
@@ -358,7 +366,7 @@ function loadCalendar() {
     })
     .catch(error => {
       console.error('Error loading calendar:', error);
-      document.getElementById('calendar-container').innerHTML = 
+      document.getElementById('calendar-container').innerHTML =
         '<p style="color:red;">Error loading calendar. Please try again.</p>';
     });
 }
@@ -366,7 +374,6 @@ function loadCalendar() {
 // Modal Functions
 function openScheduleModal() {
   document.getElementById('schedule-modal').style.display = 'block';
-  document.getElementById('schedule_date').value = new Date().toISOString().split('T')[0];
 }
 
 function closeScheduleModal() {
@@ -387,9 +394,9 @@ function closeEventModal() {
 // Form Submissions
 document.getElementById('schedule-form').addEventListener('submit', function(e) {
   e.preventDefault();
-  
+
   const formData = new FormData(this);
-  
+
   fetch('/mainscheduler/tabs/actions/schedule_create.php', {
     method: 'POST',
     body: formData
@@ -412,9 +419,9 @@ document.getElementById('schedule-form').addEventListener('submit', function(e) 
 
 document.getElementById('event-form').addEventListener('submit', function(e) {
   e.preventDefault();
-  
+
   const formData = new FormData(this);
-  
+
   fetch('/mainscheduler/tabs/actions/event_create.php', {
     method: 'POST',
     body: formData
