@@ -81,7 +81,7 @@ $total_pages = max(1, ceil($total_records / $limit));
     <thead>
       <tr>
         <th>Subject Name</th>
-        <th>In Specialization Of</th>
+        <th>Faculty</th>
         <th>Grade Level</th>
         <th style="text-align:right;">Actions</th>
       </tr>

@@ -41,13 +41,13 @@ require_once __DIR__ . "/../db_connect.php"; ?>
       <br><br>
 
       <label for="pnumber"><b>Phone</b></label>
-      <input type="text" placeholder="Phone Number" name="pnumber" required>
+      <input type="text" placeholder="Phone Number (optional)" name="pnumber">
 
       <label for="address"><b>Address</b></label>
-      <input type="text" placeholder="Address" name="address" required>
+      <input type="text" placeholder="Address (optional)" name="address">
 
       <label for="status"><b>Status</b></label>
-      <input type="text" placeholder="Status" name="status">
+      <input type="text" placeholder="Status (optional)" name="status">
 
       <button type="submit">Create</button>
     </div>
