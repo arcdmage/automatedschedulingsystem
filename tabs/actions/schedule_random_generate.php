@@ -60,6 +60,79 @@ function dlog($m)
 
 $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
+function detect_random_conflicts(mysqli $conn, array $entries): array
+{
+    global $debug_log;
+
+    $conflict_details = [];
+    $filtered = [];
+    $total_external_conflicts = 0;
+
+    $conflict_check_stmt = $conn->prepare(
+        "CALL sp_check_schedule_conflict(?, ?, ?, ?, ?, @conflict_type, @conflict_message)",
+    );
+    if (!$conflict_check_stmt) {
+        throw new Exception(
+            "Prepare sp_check_schedule_conflict failed: " . $conn->error,
+        );
+    }
+
+    $get_conflict_result_stmt = $conn->prepare(
+        "SELECT @conflict_type AS conflict_type, @conflict_message AS conflict_message",
+    );
+    if (!$get_conflict_result_stmt) {
+        throw new Exception(
+            "Prepare get conflict result failed: " . $conn->error,
+        );
+    }
+
+    foreach ($entries as $entry) {
+        $conflict_check_stmt->bind_param(
+            "iisii",
+            $entry["p_faculty_id"],
+            $entry["p_section_id"],
+            $entry["p_schedule_date"],
+            $entry["p_time_slot_id"],
+            $entry["p_room_id"],
+        );
+        $conflict_check_stmt->execute();
+
+        if ($res = $conflict_check_stmt->get_result()) {
+            $res->free();
+        }
+        while ($conflict_check_stmt->more_results()) {
+            $conflict_check_stmt->next_result();
+            if ($r = $conflict_check_stmt->get_result()) {
+                $r->free();
+            }
+        }
+
+        $get_conflict_result_stmt->execute();
+        $conflict_result = $get_conflict_result_stmt
+            ->get_result()
+            ->fetch_assoc();
+
+        if ($conflict_result["conflict_type"] !== null) {
+            $conflict_details[] = [
+                "type" => $conflict_result["conflict_type"],
+                "message" => $conflict_result["conflict_message"],
+                "details" => "Subject ID {$entry["subject_id"]} on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]} (Faculty: {$entry["p_faculty_id"]})",
+            ];
+            $total_external_conflicts++;
+            dlog(
+                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for Subject {$entry["subject_id"]} on {$entry["day_of_week"]} {$entry["start_time"]}",
+            );
+        } else {
+            $filtered[] = $entry;
+        }
+    }
+
+    $conflict_check_stmt->close();
+    $get_conflict_result_stmt->close();
+
+    return [$filtered, $conflict_details, $total_external_conflicts];
+}
+
 try {
     if (!isset($conn) || !$conn) {
         throw new Exception(
@@ -325,82 +398,12 @@ try {
     );
 
     // --- Step 2: Perform comprehensive conflict checks using sp_check_schedule_conflict against existing schedules ---
-    $external_conflict_details = []; // Stores detailed messages from sp_check_schedule_conflict
-
-    // Do not start a nested transaction for stored procedure calls; use the outer transaction context.
-
-    $conflict_check_stmt = $conn->prepare(
-        "CALL sp_check_schedule_conflict(?, ?, ?, ?, ?, @conflict_type, @conflict_message)",
-    );
-    if (!$conflict_check_stmt) {
-        throw new Exception(
-            "Prepare sp_check_schedule_conflict failed: " . $conn->error,
-        );
-    }
-
-    $get_conflict_result_stmt = $conn->prepare(
-        "SELECT @conflict_type AS conflict_type, @conflict_message AS conflict_message",
-    );
-    if (!$get_conflict_result_stmt) {
-        throw new Exception(
-            "Prepare get conflict result failed: " . $conn->error,
-        );
-    }
-
-    $total_external_conflicts = 0;
-    foreach ($prospective_schedules as $index => $entry) {
-        $faculty_id = $entry["p_faculty_id"];
-        $section_id_sp = $entry["p_section_id"];
-        $schedule_date = $entry["p_schedule_date"];
-        $time_slot_id = $entry["p_time_slot_id"];
-        $room_id = $entry["p_room_id"];
-
-        $conflict_check_stmt->bind_param(
-            "iisii",
-            $faculty_id,
-            $section_id_sp,
-            $schedule_date,
-            $time_slot_id,
-            $room_id,
-        );
-        $conflict_check_stmt->execute();
-
-        // Consume any resultset(s) returned by the CALL to avoid "Commands out of sync" errors.
-        // Some stored procedures return result sets even when they only set user variables.
-        if ($res = $conflict_check_stmt->get_result()) {
-            $res->free();
-        }
-        while ($conflict_check_stmt->more_results()) {
-            $conflict_check_stmt->next_result();
-            if ($r = $conflict_check_stmt->get_result()) {
-                $r->free();
-            }
-        }
-
-        $get_conflict_result_stmt->execute();
-        $conflict_result = $get_conflict_result_stmt
-            ->get_result()
-            ->fetch_assoc();
-
-        if ($conflict_result["conflict_type"] !== null) {
-            $external_conflict_details[] = [
-                "type" => $conflict_result["conflict_type"],
-                "message" => $conflict_result["conflict_message"],
-                "details" => "Subject ID {$entry["subject_id"]} on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]} (Faculty: {$entry["p_faculty_id"]})",
-            ];
-            $total_external_conflicts++;
-            dlog(
-                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for Subject {$entry["subject_id"]} on {$entry["day_of_week"]} {$entry["start_time"]}",
-            );
-            // Mark this prospective schedule as having an external conflict so it's not inserted later
-            unset($prospective_schedules[$index]);
-        }
-    }
-
-    // No nested commit here — leave transaction control to the outer flow.
-    $conflict_check_stmt->close();
-    $get_conflict_result_stmt->close();
-
+    $prospective_backup = $prospective_schedules;
+    [
+        $prospective_schedules,
+        $external_conflict_details,
+        $total_external_conflicts,
+    ] = detect_random_conflicts($conn, $prospective_schedules);
     $total_conflicts_found =
         $total_skipped_from_insufficient_slots + $total_external_conflicts;
 
@@ -438,141 +441,47 @@ try {
             }
             exit();
         } else {
-            // User confirmed. Delete old auto-generated rows first, because some external
-            // conflicts may have been caused by those rows. After deletion, re-run the
-            // stored-proc conflict check on the remaining prospective schedules and
-            // remove any that still conflict.
-            $del = $conn->prepare(
-                "DELETE FROM schedules WHERE section_id = ? AND (notes = 'Auto-generated' OR notes LIKE 'Auto-generated|%')",
-            );
-            if (!$del) {
-                throw new Exception("Prepare delete: " . $conn->error);
-            }
-            $del->bind_param("i", $section_id);
-            $del->execute();
+            $prospective_schedules = $prospective_backup;
+            [
+                $prospective_schedules,
+                $external_conflict_details,
+                $total_external_conflicts,
+            ] = detect_random_conflicts($conn, $prospective_schedules);
+            $total_conflicts_found =
+                $total_skipped_from_insufficient_slots +
+                $total_external_conflicts;
             dlog(
-                "Deleted " .
-                    $del->affected_rows .
-                    " old auto rows (user confirmed)",
+                "After confirmation rechecked conflicts; ${total_external_conflicts} external remain.",
             );
-            $del->close();
-
-            // Re-check external conflicts against the live DB (some conflicts may be gone now).
-            $recheck_stmt = $conn->prepare(
-                "CALL sp_check_schedule_conflict(?, ?, ?, ?, ?, @conflict_type, @conflict_message)",
-            );
-            if (!$recheck_stmt) {
+            if (empty($prospective_schedules)) {
                 throw new Exception(
-                    "Prepare sp_check_schedule_conflict (recheck) failed: " .
-                        $conn->error,
+                    "After conflict resolution there were no slots to save; generation was cancelled to preserve the existing schedule.",
                 );
             }
-            $get_recheck_result_stmt = $conn->prepare(
-                "SELECT @conflict_type AS conflict_type, @conflict_message AS conflict_message",
-            );
-            if (!$get_recheck_result_stmt) {
-                throw new Exception(
-                    "Prepare get conflict result (recheck) failed: " .
-                        $conn->error,
-                );
-            }
-
-            $external_conflict_details_after = [];
-            foreach ($prospective_schedules as $index => $entry) {
-                $faculty_id = $entry["p_faculty_id"];
-                $section_id_sp = $entry["p_section_id"];
-                $schedule_date = $entry["p_schedule_date"];
-                $time_slot_id = $entry["p_time_slot_id"];
-                $room_id = $entry["p_room_id"];
-
-                $recheck_stmt->bind_param(
-                    "iisii",
-                    $faculty_id,
-                    $section_id_sp,
-                    $schedule_date,
-                    $time_slot_id,
-                    $room_id,
-                );
-                $recheck_stmt->execute();
-
-                // Consume any resultset(s) returned by the CALL to avoid "Commands out of sync" errors.
-                if ($res = $recheck_stmt->get_result()) {
-                    $res->free();
-                }
-                while ($recheck_stmt->more_results()) {
-                    $recheck_stmt->next_result();
-                    if ($r = $recheck_stmt->get_result()) {
-                        $r->free();
-                    }
-                }
-
-                // Retrieve OUT parameters from user variables
-                $get_recheck_result_stmt->execute();
-                $gr = $get_recheck_result_stmt->get_result();
-                $conflict_result = $gr ? $gr->fetch_assoc() : null;
-                if ($gr instanceof mysqli_result) {
-                    $gr->free();
-                }
-
-                if (
-                    $conflict_result &&
-                    $conflict_result["conflict_type"] !== null
-                ) {
-                    // Still conflicts after deleting previous auto rows -> report and skip insertion
-                    $external_conflict_details_after[] = [
-                        "type" => $conflict_result["conflict_type"],
-                        "message" => $conflict_result["conflict_message"],
-                        "details" => "Subject ID {$entry["subject_id"]} on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}",
-                    ];
-                    dlog(
-                        "RECHECK EXTERNAL CONFLICT STILL DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for Subject {$entry["subject_id"]} on {$entry["day_of_week"]} {$entry["start_time"]}",
-                    );
-                    // Remove from prospective insertion list
-                    unset($prospective_schedules[$index]);
-                }
-            }
-
-            $recheck_stmt->close();
-            $get_recheck_result_stmt->close();
-
-            // If after recheck there are still conflicts, add them to debug log so the user can be informed
-            if (!empty($external_conflict_details_after)) {
-                $total_remaining_conflicts = count(
-                    $external_conflict_details_after,
-                );
-                dlog(
-                    "After delete+recheck, $total_remaining_conflicts external conflicts remain; these will be skipped during insertion.",
-                );
-                // Append to debug_log and also keep $external_conflict_details for returning if desired
-                foreach ($external_conflict_details_after as $cd) {
-                    $external_conflict_details[] = $cd;
-                }
-            }
-            // Proceed to insertion with the filtered $prospective_schedules
         }
     }
     // If $force is true, we proceed normally; the later deletion/inserts will run and replace auto-generated rows.
 
-    // --- Step 3: If no conflicts, proceed with deletion and insertion ---
-    // Note: The deletion of old auto-generated schedules is handled *before*
-    // the conflict check block in the schedule_auto_generate.php file.
-    // Here, we ensure it's done *after* the conflict check.
-    // If we reach this point, it means no conflicts were found, so we can proceed.
+    // --- Step 3: If conflicts are resolved, delete the prior schedule and insert the fresh template ---
+    if (empty($prospective_schedules)) {
+        throw new Exception(
+            "After conflict resolution there were no slots to save; generation was cancelled to preserve the existing schedule.",
+        );
+    }
+
     $conn->begin_transaction(); // Start a new transaction for the actual DML operations
 
-    // Delete old auto-generated rows for this section
-    // This deletion is now moved AFTER the conflict check to ensure we don't
-    // remove schedules that would have conflicted with the new ones.
-    // If conflicts are found, this block will not be reached.
-    $del = $conn->prepare(
-        "DELETE FROM schedules WHERE section_id = ? AND (notes = 'Auto-generated' OR notes LIKE 'Auto-generated|%')",
-    );
+    $del = $conn->prepare("DELETE FROM schedules WHERE section_id = ?");
     if (!$del) {
         throw new Exception("Prepare delete: " . $conn->error);
     }
     $del->bind_param("i", $section_id);
     $del->execute();
-    dlog("Deleted " . $del->affected_rows . " old auto rows");
+    dlog(
+        "Deleted " .
+            $del->affected_rows .
+            " existing schedule rows for section {$section_id} before inserting random template.",
+    );
     $del->close();
 
     // Prepare insert statement for actual insertion
