@@ -156,10 +156,38 @@ function detect_conflicts(
                 "Section",
             );
 
+            $conflict_row = fetch_conflict_row(
+                $conn,
+                $entry,
+                $conflict_result["conflict_type"],
+            );
+            $other_details = "";
+            if ($conflict_row) {
+                $other_teacher = format_entity_label(
+                    $labels["faculties"],
+                    $conflict_row["faculty_id"],
+                    "Faculty",
+                );
+                $other_subject = format_entity_label(
+                    $labels["subjects"],
+                    $conflict_row["subject_id"],
+                    "Subject",
+                );
+                $other_section = format_entity_label(
+                    $labels["sections"],
+                    $conflict_row["section_id"],
+                    "Section",
+                );
+                $other_details = " Conflicts with $other_subject (Faculty: $other_teacher, Section: $other_section).";
+            }
+
             $conflict_details[] = [
                 "type" => $conflict_result["conflict_type"],
                 "message" => $conflict_result["conflict_message"],
-                "details" => "$subject_label (Faculty: $faculty_label, Section: $section_label) on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}",
+                "details" =>
+                    "$subject_label (Faculty: $faculty_label, Section: $section_label)" .
+                    " on {$entry["day_of_week"]} ({$entry["p_schedule_date"]})" .
+                    " at {$entry["start_time"]}-{$entry["end_time"]}.$other_details",
             ];
             dlog(
                 "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for $subject_label on {$entry["day_of_week"]} {$entry["start_time"]} (Faculty: $faculty_label)",

@@ -105,4 +105,67 @@ function prepare_entity_labels(mysqli $conn): array
         ),
     ];
 }
+
+function fetch_conflict_row(
+    mysqli $conn,
+    array $entry,
+    string $conflict_type,
+): ?array {
+    $params = [
+        "p_section_id" => $entry["p_section_id"],
+        "p_schedule_date" => $entry["p_schedule_date"],
+        "p_time_slot_id" => $entry["p_time_slot_id"],
+    ];
+
+    switch ($conflict_type) {
+        case "Teacher Conflict":
+            $sql = "SELECT faculty_id, section_id, subject_id FROM schedules
+                 WHERE faculty_id = ? AND schedule_date = ? AND time_slot_id = ?
+                 LIMIT 1";
+            $values = [
+                $entry["p_faculty_id"],
+                $params["p_schedule_date"],
+                $params["p_time_slot_id"],
+            ];
+            break;
+        case "Section Conflict":
+            $sql = "SELECT faculty_id, section_id, subject_id FROM schedules
+                 WHERE section_id = ? AND schedule_date = ? AND time_slot_id = ?
+                 LIMIT 1";
+            $values = [
+                $params["p_section_id"],
+                $params["p_schedule_date"],
+                $params["p_time_slot_id"],
+            ];
+            break;
+        case "Room Conflict":
+            $sql = "SELECT faculty_id, section_id, subject_id FROM schedules
+                 WHERE room_id = ? AND schedule_date = ? AND time_slot_id = ?
+                 LIMIT 1";
+            $values = [
+                $entry["p_room_id"],
+                $params["p_schedule_date"],
+                $params["p_time_slot_id"],
+            ];
+            break;
+        default:
+            return null;
+    }
+
+    if (!$values[0]) {
+        return null;
+    }
+
+    $stmt = $conn->prepare($sql);
+    if (!$stmt) {
+        return null;
+    }
+
+    $types = str_repeat("i", count($values));
+    $stmt->bind_param($types, ...$values);
+    $stmt->execute();
+    $row = $stmt->get_result()->fetch_assoc();
+    $stmt->close();
+    return $row ?: null;
+}
 ?>
