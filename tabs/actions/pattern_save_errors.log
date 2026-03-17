@@ -233,23 +233,3 @@
 [19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Deleted 4 existing patterns
 [19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Inserted 5 new patterns
 [19-Feb-2026 08:04:46 Europe/Berlin] Pattern Save - Transaction committed successfully
-[17-Mar-2026 08:12:56 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":34,"pattern":[{"day_of_week":"Monday","time_slot_id":47},{"day_of_week":"Tuesday","time_slot_id":47},{"day_of_week":"Wednesday","time_slot_id":47},{"day_of_week":"Thursday","time_slot_id":47},{"day_of_week":"Friday","time_slot_id":47}]}
-[17-Mar-2026 08:12:56 Europe/Berlin] Pattern Save - Processing requirement_id: 34 with 5 slots
-[17-Mar-2026 08:12:56 Europe/Berlin] Pattern Save - Section ID: 3
-[17-Mar-2026 08:12:56 Europe/Berlin] Pattern Save Error: Conflict: an existing scheduled subject is already set on Monday for this time slot (time_slot_id=47).
-[17-Mar-2026 08:12:56 Europe/Berlin] Pattern Save Error Trace: #0 {main}
-[17-Mar-2026 08:13:13 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":21,"pattern":[{"day_of_week":"Thursday","time_slot_id":47},{"day_of_week":"Friday","time_slot_id":47},{"day_of_week":"Wednesday","time_slot_id":47},{"day_of_week":"Tuesday","time_slot_id":47},{"day_of_week":"Monday","time_slot_id":47}]}
-[17-Mar-2026 08:13:13 Europe/Berlin] Pattern Save - Processing requirement_id: 21 with 5 slots
-[17-Mar-2026 08:13:13 Europe/Berlin] Pattern Save - Section ID: 3
-[17-Mar-2026 08:13:13 Europe/Berlin] Pattern Save Error: Conflict: another subject already has a pattern for Thursday at this time slot (time_slot_id=47).
-[17-Mar-2026 08:13:13 Europe/Berlin] Pattern Save Error Trace: #0 {main}
-[17-Mar-2026 08:13:20 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":21,"pattern":[{"day_of_week":"Thursday","time_slot_id":47},{"day_of_week":"Friday","time_slot_id":47},{"day_of_week":"Wednesday","time_slot_id":47},{"day_of_week":"Tuesday","time_slot_id":47},{"day_of_week":"Monday","time_slot_id":47}]}
-[17-Mar-2026 08:13:20 Europe/Berlin] Pattern Save - Processing requirement_id: 21 with 5 slots
-[17-Mar-2026 08:13:20 Europe/Berlin] Pattern Save - Section ID: 3
-[17-Mar-2026 08:13:20 Europe/Berlin] Pattern Save Error: Conflict: another subject already has a pattern for Thursday at this time slot (time_slot_id=47).
-[17-Mar-2026 08:13:20 Europe/Berlin] Pattern Save Error Trace: #0 {main}
-[17-Mar-2026 08:14:13 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":21,"pattern":[{"day_of_week":"Friday","time_slot_id":47},{"day_of_week":"Thursday","time_slot_id":47},{"day_of_week":"Wednesday","time_slot_id":47},{"day_of_week":"Tuesday","time_slot_id":47},{"day_of_week":"Monday","time_slot_id":47}]}
-[17-Mar-2026 08:14:13 Europe/Berlin] Pattern Save - Processing requirement_id: 21 with 5 slots
-[17-Mar-2026 08:14:13 Europe/Berlin] Pattern Save - Section ID: 3
-[17-Mar-2026 08:14:13 Europe/Berlin] Pattern Save Error: Conflict: another subject already has a pattern for Friday at this time slot (time_slot_id=47).
-[17-Mar-2026 08:14:13 Europe/Berlin] Pattern Save Error Trace: #0 {main}
