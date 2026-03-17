@@ -73,7 +73,7 @@ h1 + p {
 }
 
 .toolbar-title {
-    font-size: 13px;
+    font-size: 18px;
     font-weight: 700;
     color: #374151;
     text-transform: uppercase;
@@ -108,12 +108,12 @@ h1 + p {
 .faculty-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 13px;
+    font-size: 16px;
     min-width: 780px;
 }
 
 .faculty-table thead th {
-    font-size: 11px;
+    font-size: 14px;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.06em;
@@ -418,10 +418,10 @@ h1 + p {
         background 0.15s,
         transform 0.12s;
     white-space: nowrap;
-    flex: 0 0 auto; 
-    max-width: 140px; 
+    flex: 0 0 auto;
+    max-width: 140px;
     overflow: hidden;
-    text-overflow: ellipsis; 
+    text-overflow: ellipsis;
     box-sizing: border-box;
 }
 
@@ -467,8 +467,6 @@ h1 + p {
     box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
     background-color: #fff;
 }
-
-
 
 @media (max-width: 900px) {
     .table-toolbar {
