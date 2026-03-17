@@ -11,7 +11,7 @@
     <body>
         <ul class="tabs">
             <li data-tab-target="#home">Home</li>
-            <li data-tab-target="#faculty_members">Faculty Members</li>
+            <li data-tab-target="#faculty_members">Faculty Members</li> 
             <li data-tab-target="#subject_list">Subject List</li>
             <li data-tab-target="#schedule">Schedule</li>
         </ul>

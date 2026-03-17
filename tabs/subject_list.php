@@ -1,6 +1,5 @@
 <?php
-require_once(__DIR__ . '/../db_connect.php');
-?>
+require_once __DIR__ . "/../db_connect.php"; ?>
 <!--copied from faculty_member.php just re-configured.-->
 <!DOCTYPE html>
 <html>
@@ -20,8 +19,7 @@ require_once(__DIR__ . '/../db_connect.php');
   </div>
 </div>
 
-<!-- Add Subject Button -->
-<button onclick="document.getElementById('id02').style.display='block'" class="add-subject-btn">Add Subject</button>
+
 
 <!-- Modal -->
 <div id="id02" class="modal">
@@ -46,7 +44,7 @@ require_once(__DIR__ . '/../db_connect.php');
       <label><input type="radio" name="strand" value="HUMMS" required> HUMMS</label>
       <label><input type="radio" name="strand" value="STEM"> STEM</label>
       <label><input type="radio" name="strand" value="ABM"> ABM</label>
-      <label><input type="radio" name="strand" value="GAS"> GAS</label> 
+      <label><input type="radio" name="strand" value="GAS"> GAS</label>
       <br><br>
 
       <button type="submit">Create</button>
@@ -84,16 +82,16 @@ document.addEventListener("DOMContentLoaded", function() {
 
   // Handle form submission with AJAX
   const form = document.getElementById('subject-form');
-  
+
   if (form) {
     form.addEventListener("submit", function(e) {
       e.preventDefault(); // Prevent page reload
       e.stopPropagation(); // Stop event bubbling
-      
+
       console.log("Form submitted via AJAX");
-      
+
       const formData = new FormData(form);
-      
+
       fetch("/mainscheduler/tabs/actions/subject_create.php", {
         method: "POST",
         body: formData
@@ -110,7 +108,7 @@ document.addEventListener("DOMContentLoaded", function() {
         console.error("Error adding subject:", error);
         alert("Error adding subject. Please try again.");
       });
-      
+
       return false; // Extra prevention
     });
   }

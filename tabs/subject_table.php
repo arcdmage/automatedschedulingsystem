@@ -23,6 +23,37 @@ $total_pages = max(1, ceil($total_records / $limit));
 ?>
 
 <!-- Toolbar -->
+<style>
+/* Add Subject button — copied from faculty styles, kept local so subject list can customize separately */
+.add-subject-btn {
+    margin-top: -2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 12px;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        transform 0.12s;
+    white-space: nowrap;
+    flex: 0 0 auto; /* don't grow or shrink unexpectedly */
+    max-width: 140px; /* keep the button from overflowing the toolbar */
+    overflow: hidden;
+    text-overflow: ellipsis; /* truncate label if it would overflow */
+    box-sizing: border-box;
+}
+.add-subject-btn:hover {
+    background: #16a34a;
+    transform: scale(1.02);
+}
+</style>
+
 <div class="table-toolbar">
   <div class="table-toolbar-left">
     <span class="toolbar-title">Subject List</span>
@@ -31,7 +62,7 @@ $total_pages = max(1, ceil($total_records / $limit));
 
   <div class="table-toolbar-right">
     <input type="text" class="search-input" placeholder="Search subject…" oninput="filterSubjectTable(this.value)">
-    <button class="add-faculty-btn" onclick="document.getElementById('id02').style.display='block'">+ Add Subject</button>
+    <button class="add-subject-btn" onclick="document.getElementById('id02').style.display='block'">+ Add Subject</button>
   </div>
 </div>
 

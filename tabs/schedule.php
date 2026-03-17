@@ -2,28 +2,24 @@
 require_once __DIR__ . "/../db_connect.php";
 
 // Fetch all faculty members for dropdown
-$faculty_query =
-    "SELECT faculty_id, fname, mname, lname FROM faculty ORDER BY lname, fname";
+$faculty_query = "SELECT faculty_id, fname, mname, lname FROM faculty ORDER BY lname, fname";
 $faculty_result = $conn->query($faculty_query);
 
 // Fetch all subjects for dropdown
-$subjects_query =
-    "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name";
+$subjects_query = "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name";
 $subjects_result = $conn->query($subjects_query);
 
 // Fetch all sections for automation
-$sections_query =
-    "SELECT section_id, section_name, grade_level, track, school_year, semester FROM sections ORDER BY grade_level, section_name";
+$sections_query = "SELECT section_id, section_name, grade_level, track, school_year, semester FROM sections ORDER BY grade_level, section_name";
 $sections_result = $conn->query($sections_query);
 ?>
-
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
 <style>
-/* shit just doesnt work when I put it in schedule.css */
+/* Local styles retained for schedule UI */
 .schedule-mode-tabs {
   display: flex;
   background: white;
@@ -67,64 +63,46 @@ $sections_result = $conn->query($sections_query);
   display: block;
 }
 
-.quick-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 15px;
-  margin-bottom: 20px;
-}
-
-.stat-card {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  padding: 20px;
+/* keep iframes visually consistent */
+.mode-content iframe {
+  width: 100%;
+  height: 800px;
+  border: none;
   border-radius: 8px;
-  text-align: center;
 }
 
-.stat-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 14px;
-  opacity: 0.9;
-}
-
-.stat-card .number {
-  font-size: 32px;
-  font-weight: bold;
+/* simple card layout used in the page */
+.card-section {
+  background: white;
+  padding: 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 </style>
 </head>
 
 <body>
 
-
 <!-- Mode Selection Tabs -->
-<div class="schedule-mode-tabs">
-  <button class="mode-tab active" onclick="switchMode('manual', this)"> Calendar</button>
-  <button class="mode-tab" onclick="switchMode('setup', this)"> Setup</button>
-  <button class="mode-tab" onclick="switchMode('generate', this)"> Generate</button>
-  <button class="mode-tab" onclick="switchMode('view', this)"> Schedules</button>
+<div class="schedule-mode-tabs" role="tablist" aria-label="Schedule modes">
+  <button class="mode-tab active" data-mode="manual" onclick="switchMode('manual', this)" role="tab" aria-selected="true">Calendar</button>
+  <button class="mode-tab" data-mode="setup" onclick="switchMode('setup', this)" role="tab">Setup</button>
+  <button class="mode-tab" data-mode="generate" onclick="switchMode('generate', this)" role="tab">Generate</button>
+  <button class="mode-tab" data-mode="view" onclick="switchMode('view', this)" role="tab">Schedules</button>
 </div>
 
-<!-- Manual Entry Mode (Updated Layout) -->
-<div id="mode-manual" class="mode-content active">
-
-  <!-- Action Buttons -->
+<!-- Manual Entry Mode (Calendar) -->
+<div id="mode-manual" class="mode-content active" data-mode-id="manual">
   <div class="card-section">
     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-      <button onclick="openScheduleModal()" class="btn btn-primary" style="flex: 1;">
-        + Add Class Schedule
-      </button>
-      <button onclick="openEventModal()" class="btn btn-success" style="flex: 1;">
-        + Add Event/Meeting
-      </button>
+      <button onclick="openScheduleModal()" class="btn btn-primary" style="flex: 1;">+ Add Class Schedule</button>
+      <button onclick="openEventModal()" class="btn btn-success" style="flex: 1;">+ Add Event/Meeting</button>
     </div>
   </div>
 
-  <!-- Filters -->
   <div class="card-section">
     <div class="form-grid">
-
       <div class="form-group">
         <label for="view-type">View Mode</label>
         <select id="view-type" onchange="changeView()">
@@ -140,13 +118,8 @@ $sections_result = $conn->query($sections_query);
           <?php
           $faculty_result->data_seek(0);
           while ($faculty = $faculty_result->fetch_assoc()): ?>
-            <option value="<?php echo $faculty["faculty_id"]; ?>">
-              <?php echo htmlspecialchars(
-                  $faculty["lname"] . ", " . $faculty["fname"],
-              ); ?>
-            </option>
-          <?php endwhile;
-          ?>
+            <option value="<?php echo $faculty["faculty_id"]; ?>"><?php echo htmlspecialchars($faculty["lname"] . ", " . $faculty["fname"]); ?></option>
+          <?php endwhile; ?>
         </select>
       </div>
 
@@ -158,42 +131,34 @@ $sections_result = $conn->query($sections_query);
     </div>
   </div>
 
-  <!-- Calendar Container -->
   <div id="calendar-container" class="card-section" style="padding: 0; overflow: hidden;">
-    <!-- Calendar loads here via AJAX -->
+    <!-- calendar content injected via AJAX by loadCalendar() -->
   </div>
 </div>
 
-<!-- Subject Setup Mode -->
-<div id="mode-setup" class="mode-content">
-  <iframe src="/mainscheduler/tabs/schedule_setup.php"
-          style="width:100%; height:800px; border:none; border-radius:8px;">
-  </iframe>
+<!-- Setup Mode -->
+<div id="mode-setup" class="mode-content" data-mode-id="setup">
+  <!-- Use data-src to store the real URL and keep src blank until the mode is shown -->
+  <iframe data-src="/mainscheduler/tabs/schedule_setup.php" src="about:blank" loading="lazy" title="Schedule Setup"></iframe>
 </div>
 
-<!-- Auto Generate Mode -->
-<div id="mode-generate" class="mode-content">
-  <iframe src="/mainscheduler/tabs/schedule_generate.php"
-          style="width:100%; height:800px; border:none; border-radius:8px;">
-  </iframe>
+<!-- Generate Mode -->
+<div id="mode-generate" class="mode-content" data-mode-id="generate">
+  <iframe data-src="/mainscheduler/tabs/schedule_generate.php" src="about:blank" loading="lazy" title="Auto Generate"></iframe>
 </div>
 
 <!-- Weekly View Mode -->
-<div id="mode-view" class="mode-content">
-  <iframe src="/mainscheduler/tabs/schedule_view.php"
-          style="width:100%; height:800px; border:none; border-radius:8px;">
-  </iframe>
+<div id="mode-view" class="mode-content" data-mode-id="view">
+  <iframe data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Schedules View"></iframe>
 </div>
 
-<!-- Modals remain the same -->
-<!-- Add Schedule Modal -->
-<div id="schedule-modal" class="modal">
+<!-- Modals (unchanged) -->
+<div id="schedule-modal" class="modal" aria-hidden="true">
   <form class="modal-content animate" id="schedule-form">
     <div class="imgcontainer">
       <span onclick="closeScheduleModal()" class="close" title="Close">&times;</span>
       <h2>Add Schedule</h2>
     </div>
-
     <div class="container">
       <label for="faculty_id"><b>Teacher</b></label>
       <select name="faculty_id" id="faculty_id" required>
@@ -201,17 +166,8 @@ $sections_result = $conn->query($sections_query);
         <?php
         $faculty_result->data_seek(0);
         while ($faculty = $faculty_result->fetch_assoc()): ?>
-          <option value="<?php echo $faculty["faculty_id"]; ?>">
-            <?php echo htmlspecialchars(
-                $faculty["lname"] .
-                    ", " .
-                    $faculty["fname"] .
-                    " " .
-                    $faculty["mname"],
-            ); ?>
-          </option>
-        <?php endwhile;
-        ?>
+          <option value="<?php echo $faculty["faculty_id"]; ?>"><?php echo htmlspecialchars($faculty["lname"] . ", " . $faculty["fname"] . " " . $faculty["mname"]); ?></option>
+        <?php endwhile; ?>
       </select>
 
       <label for="subject_id"><b>Subject</b></label>
@@ -220,11 +176,8 @@ $sections_result = $conn->query($sections_query);
         <?php
         $subjects_result->data_seek(0);
         while ($subject = $subjects_result->fetch_assoc()): ?>
-          <option value="<?php echo $subject["subject_id"]; ?>">
-            <?php echo htmlspecialchars($subject["subject_name"]); ?>
-          </option>
-        <?php endwhile;
-        ?>
+          <option value="<?php echo $subject["subject_id"]; ?>"><?php echo htmlspecialchars($subject["subject_name"]); ?></option>
+        <?php endwhile; ?>
       </select>
 
       <label for="start_time"><b>Start Time</b></label>
@@ -248,18 +201,15 @@ $sections_result = $conn->query($sections_query);
   </form>
 </div>
 
-<!-- Add Event Modal -->
-<div id="event-modal" class="modal">
+<div id="event-modal" class="modal" aria-hidden="true">
   <form class="modal-content animate" id="event-form">
     <div class="imgcontainer">
       <span onclick="closeEventModal()" class="close" title="Close">&times;</span>
       <h2>Add Event/Meeting</h2>
     </div>
-
     <div class="container">
       <label for="event_title"><b>Event Title</b></label>
       <input type="text" name="event_title" id="event_title" placeholder="e.g., Faculty Meeting" required>
-
       <label for="event_type"><b>Event Type</b></label>
       <select name="event_type" id="event_type" required>
         <option value="">Select Type</option>
@@ -269,25 +219,18 @@ $sections_result = $conn->query($sections_query);
         <option value="holiday">Holiday</option>
         <option value="other">Other</option>
       </select>
-
       <label for="event_date"><b>Date</b></label>
       <input type="date" name="event_date" id="event_date" required>
-
       <label for="event_start_time"><b>Start Time</b></label>
       <input type="time" name="event_start_time" id="event_start_time" required>
-
       <label for="event_end_time"><b>End Time</b></label>
       <input type="time" name="event_end_time" id="event_end_time" required>
-
       <label for="event_location"><b>Location</b></label>
       <input type="text" name="event_location" id="event_location" placeholder="e.g., Conference Room">
-
       <label for="event_description"><b>Description</b></label>
       <textarea name="event_description" id="event_description" rows="3" placeholder="Event details..."></textarea>
-
       <button type="submit" class="btn btn-secondary">Create Event</button>
     </div>
-
     <div class="container" style="background-color:#f1f1f1">
       <button type="button" onclick="closeEventModal()" class="cancelbtn">Cancel</button>
     </div>
@@ -295,166 +238,168 @@ $sections_result = $conn->query($sections_query);
 </div>
 
 <script>
-// Mode Switching
-function switchMode(mode, el) {
-  // Hide all modes
-  document.querySelectorAll('.mode-content').forEach(content => {
-    content.classList.remove('active');
-  });
+/*
+  Behavior goals implemented here:
+  - When switching between schedule modes (Calendar / Setup / Generate / View),
+    any iframe belonging to the mode being hidden will be reset (src cleared)
+    so that when you return the iframe reloads fresh.
+  - When the Schedule tab (the whole schedule page) is hidden (user switches to a different top-level tab),
+    all mode iframes are reset. When the Schedule tab is shown again, the currently active mode's iframe is loaded.
+  - We use data-src attributes on the iframes to keep the original URL, and only set iframe.src when needed.
+*/
 
-  // Deactivate all tabs
-  document.querySelectorAll('.mode-tab').forEach(tab => {
-    tab.classList.remove('active');
-  });
-
-  // Show selected mode and activate clicked tab
-  document.getElementById('mode-' + mode).classList.add('active');
-  el.classList.add('active');
+/* Utility: set or clear iframe for a given mode (manual has no iframe) */
+function setModeIframe(mode, load) {
+  const container = document.getElementById('mode-' + mode);
+  if (!container) return;
+  const iframe = container.querySelector('iframe[data-src]');
+  if (!iframe) return;
+  if (load) {
+    const src = iframe.getAttribute('data-src');
+    if (iframe.src === '' || iframe.src === 'about:blank') {
+      iframe.src = src;
+    } else {
+      // force reload: clear then set (small delay ensures navigation)
+      iframe.src = 'about:blank';
+      setTimeout(() => { iframe.src = src; }, 50);
+    }
+  } else {
+    // clear iframe to free memory and reset state
+    iframe.src = 'about:blank';
+  }
 }
 
-// Initialize on page load
-document.addEventListener("DOMContentLoaded", function() {
-  const now = new Date();
-  const currentMonth = now.toISOString().slice(0, 7);
-  document.getElementById('month-select').value = currentMonth;
+/* Switch mode (attached to each mode tab button) */
+function switchMode(mode, el) {
+  // Find current active mode
+  const prev = document.querySelector('.mode-content.active');
+  const prevMode = prev ? prev.getAttribute('data-mode-id') : null;
 
+  if (prev && prevMode === mode) {
+    // clicking same tab: do nothing
+    return;
+  }
+
+  // Hide previous mode and reset its iframe if it had one
+  if (prev) {
+    prev.classList.remove('active');
+    if (prevMode) setModeIframe(prevMode, false);
+  }
+
+  // Deactivate all mode tabs, then activate clicked one
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  // Show selected mode
+  const target = document.getElementById('mode-' + mode);
+  if (!target) return;
+  target.classList.add('active');
+
+  // Load iframe for the shown mode (if any)
+  setModeIframe(mode, true);
+
+  // If we just switched to the manual calendar, ensure calendar refresh
+  if (mode === 'manual') {
+    loadCalendar();
+  }
+}
+
+/* Initial setup: only load iframe for the active mode (if any) */
+document.addEventListener('DOMContentLoaded', function() {
+  // set default month for calendar
+  const now = new Date();
+  const currentMonth = now.toISOString().slice(0,7);
+  const monthEl = document.getElementById('month-select');
+  if (monthEl) monthEl.value = currentMonth;
+
+  // load calendar initially
   loadCalendar();
+
+  // Load iframe for whichever mode is active on page load
+  document.querySelectorAll('.mode-content').forEach(c => {
+    if (c.classList.contains('active')) {
+      const mode = c.getAttribute('data-mode-id');
+      if (mode && mode !== 'manual') setModeIframe(mode, true);
+    } else {
+      const mode = c.getAttribute('data-mode-id');
+      if (mode && mode !== 'manual') setModeIframe(mode, false);
+    }
+  });
+
+  // Listen for the main tab being hidden/shown via custom events dispatched by the global tab-switcher
+  const scheduleContainer = document.getElementById('schedule');
+  if (scheduleContainer) {
+    // When schedule tab is hidden, reset all iframes
+    scheduleContainer.addEventListener('tab-hidden', function () {
+      document.querySelectorAll('.mode-content').forEach(c => {
+        const mode = c.getAttribute('data-mode-id');
+        if (mode && mode !== 'manual') setModeIframe(mode, false);
+      });
+      // also reset calendar container to keep consistent state
+      const calContainer = document.getElementById('calendar-container');
+      if (calContainer) calContainer.innerHTML = '';
+    });
+
+    // When schedule tab is shown, reload the currently active mode's iframe (if any)
+    scheduleContainer.addEventListener('tab-shown', function () {
+      const active = document.querySelector('.mode-content.active');
+      if (active) {
+        const mode = active.getAttribute('data-mode-id');
+        if (mode && mode !== 'manual') setModeIframe(mode, true);
+        if (mode === 'manual') loadCalendar();
+      }
+    });
+  }
+
+  // Also listen for the custom events on the schedule page root (in case the global dispatcher attaches to the element)
+  document.querySelectorAll('[data-tab-content]').forEach(el => {
+    // support for older dispatch patterns: if event is fired directly on the element we'll handle it
+    el.addEventListener('tab-hidden', function (ev) {
+      if (ev && ev.detail && ev.detail.id && ev.detail.id === 'schedule') {
+        document.querySelectorAll('.mode-content').forEach(c => {
+          const mode = c.getAttribute('data-mode-id');
+          if (mode && mode !== 'manual') setModeIframe(mode, false);
+        });
+      }
+    });
+    el.addEventListener('tab-shown', function (ev) {
+      if (ev && ev.detail && ev.detail.id && ev.detail.id === 'schedule') {
+        const active = document.querySelector('.mode-content.active');
+        if (active) {
+          const mode = active.getAttribute('data-mode-id');
+          if (mode && mode !== 'manual') setModeIframe(mode, true);
+          if (mode === 'manual') loadCalendar();
+        }
+      }
+    });
+  });
 });
 
+/* Calendar loader (AJAX) */
 function changeView() {
   const viewType = document.getElementById('view-type').value;
   const teacherFilter = document.getElementById('teacher-filter');
-  const teacherLabel = document.getElementById('teacher-filter-label');
-
   if (viewType === 'specific') {
-    teacherFilter.style.display = 'block';
-    teacherLabel.style.display = 'block';
+    document.getElementById('teacher-filter-group').style.display = 'block';
   } else {
-    teacherFilter.style.display = 'none';
-    teacherLabel.style.display = 'none';
-    teacherFilter.value = '';
+    document.getElementById('teacher-filter-group').style.display = 'none';
+    if (teacherFilter) teacherFilter.value = '';
   }
-
   loadCalendar();
 }
 
 function loadCalendar() {
-  const viewType = document.getElementById('view-type').value;
-  const teacherId = document.getElementById('teacher-filter').value;
-  const month = document.getElementById('month-select').value;
+  const viewType = document.getElementById('view-type') ? document.getElementById('view-type').value : 'all';
+  const teacherId = document.getElementById('teacher-filter') ? document.getElementById('teacher-filter').value : '';
+  const month = document.getElementById('month-select') ? document.getElementById('month-select').value : '';
 
-  const params = new URLSearchParams({
-    view: viewType,
-    month: month
-  });
-
-  if (viewType === 'specific' && teacherId) {
-    params.append('teacher_id', teacherId);
-  }
-
-  // Include section_id if available from URL or context
-  const urlParams = new URLSearchParams(window.location.search);
-  const sectionId = urlParams.get('section_id');
-  if (sectionId) {
-    params.append('section_id', sectionId);
-  }
+  const params = new URLSearchParams({ view: viewType, month: month });
+  if (viewType === 'specific' && teacherId) params.append('teacher_id', teacherId);
 
   fetch(`/mainscheduler/tabs/calendar_view.php?${params.toString()}`)
     .then(response => response.text())
-    .then(data => {
-      document.getElementById('calendar-container').innerHTML = data;
+    .then(html => {
+      document.getElementById('calendar-container').innerHTML = html;
     })
-    .catch(error => {
-      console.error('Error loading calendar:', error);
-      document.getElementById('calendar-container').innerHTML =
-        '<p style="color:red;">Error loading calendar. Please try again.</p>';
-    });
-}
-
-// Modal Functions
-function openScheduleModal() {
-  document.getElementById('schedule-modal').style.display = 'block';
-}
-
-function closeScheduleModal() {
-  document.getElementById('schedule-modal').style.display = 'none';
-  document.getElementById('schedule-form').reset();
-}
-
-function openEventModal() {
-  document.getElementById('event-modal').style.display = 'block';
-  document.getElementById('event_date').value = new Date().toISOString().split('T')[0];
-}
-
-function closeEventModal() {
-  document.getElementById('event-modal').style.display = 'none';
-  document.getElementById('event-form').reset();
-}
-
-// Form Submissions
-document.getElementById('schedule-form').addEventListener('submit', function(e) {
-  e.preventDefault();
-
-  const formData = new FormData(this);
-
-  fetch('/mainscheduler/tabs/actions/schedule_create.php', {
-    method: 'POST',
-    body: formData
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert('Schedule created successfully!');
-      closeScheduleModal();
-      loadCalendar();
-    } else {
-      alert('Error: ' + data.message);
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error creating schedule. Please try again.');
-  });
-});
-
-document.getElementById('event-form').addEventListener('submit', function(e) {
-  e.preventDefault();
-
-  const formData = new FormData(this);
-
-  fetch('/mainscheduler/tabs/actions/event_create.php', {
-    method: 'POST',
-    body: formData
-  })
-  .then(response => response.json())
-  .then(data => {
-    if (data.success) {
-      alert('Event created successfully!');
-      closeEventModal();
-      loadCalendar();
-    } else {
-      alert('Error: ' + data.message);
-    }
-  })
-  .catch(error => {
-    console.error('Error:', error);
-    alert('Error creating event. Please try again.');
-  });
-});
-
-// Close modals when clicking outside
-window.onclick = function(event) {
-  const scheduleModal = document.getElementById('schedule-modal');
-  const eventModal = document.getElementById('event-modal');
-
-  if (event.target == scheduleModal) {
-    closeScheduleModal();
-  }
-  if (event.target == eventModal) {
-    closeEventModal();
-  }
-}
-</script>
-
-</body>
-</html>
+    .catch(err => {
+      console.error('Error loading
