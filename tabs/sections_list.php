@@ -52,11 +52,6 @@ $total_records = (int) $conn
     ->fetch_assoc()["total"];
 $total_pages = max(1, ceil($total_records / $limit));
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Sections List</title>
 <link rel="stylesheet" href="/mainscheduler/tabs/css/subject_table.css">
 <link rel="stylesheet" href="/mainscheduler/tabs/css/subject_modal.css">
 <style>
@@ -67,17 +62,16 @@ $total_pages = max(1, ceil($total_records / $limit));
 .search-input { padding:8px 10px; border-radius:6px; border:1px solid #ddd; min-width:240px; }
 .empty-state { color:#6b7280; padding:10px 0; text-align:center; }
 </style>
-</head>
-<body>
 
-<div class="table-toolbar">
+<div class="sections-card">
+  <div class="table-toolbar">
   <div class="table-toolbar-left">
     <span class="toolbar-title">Sections List</span>
     <span style="font-size:12px;color:#9ca3af;"><?= (int) $total_records ?> total</span>
   </div>
 
   <div class="table-toolbar-right">
-    <input type="text" class="search-input" id="sections-search" placeholder="Search section…" oninput="filterSectionsTable(this.value)">
+    <input type="text" class="search-input" id="sections-search" placeholder="Search section..." oninput="filterSectionsTable(this.value)">
     <button class="add-subject-btn" id="open-create-btn">+ Add Section</button>
   </div>
 </div>
@@ -150,12 +144,6 @@ $total_pages = max(1, ceil($total_records / $limit));
           </td>
 
           <td>
-
-
-          <td>
-
-
-          <td>
             <span class="v-field"><?= htmlspecialchars(
                 $row["adviser_name"] ?? "",
             ) ?></span>
@@ -209,7 +197,7 @@ $total_pages = max(1, ceil($total_records / $limit));
         </tr>
         <?php endwhile; ?>
       <?php else: ?>
-        <tr><td colspan="7"><div class="empty-state">No sections found.</div></td></tr>
+        <tr><td colspan="5"><div class="empty-state">No sections found.</div></td></tr>
       <?php endif; ?>
     </tbody>
   </table>
@@ -240,6 +228,7 @@ $total_pages = max(1, ceil($total_records / $limit));
     <?php if ($page < $total_pages): ?>
       <button class="page-btn" data-page="<?= $page + 1 ?>">&raquo;</button>
     <?php endif; ?>
+  </div>
   </div>
 </div>
 
@@ -354,7 +343,7 @@ document.getElementById('create-section-form').addEventListener('submit', functi
   const form = this;
   const submitBtn = document.getElementById('section-form-submit');
   const origText = submitBtn.textContent;
-  submitBtn.textContent = 'Saving…';
+  submitBtn.textContent = 'Saving...';
   submitBtn.disabled = true;
 
   const formData = new FormData(form);
@@ -482,7 +471,7 @@ async function saveSection(btn) {
   });
 
   const orig = btn.innerHTML;
-  btn.textContent = 'Saving…';
+  btn.textContent = 'Saving...';
   btn.disabled = true;
 
   try {
@@ -518,5 +507,3 @@ window.addEventListener('click', function(event) {
   if (event.target === modal) closeCreateSectionModal();
 });
 </script>
-</body>
-</html>
