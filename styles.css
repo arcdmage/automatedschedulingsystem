@@ -28,6 +28,11 @@
 
 body {
     background-color: #ffffff;
+    background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
     color: #333;
     display: flex;
     flex-direction: column;

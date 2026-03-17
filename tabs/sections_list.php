@@ -52,17 +52,6 @@ $total_records = (int) $conn
     ->fetch_assoc()["total"];
 $total_pages = max(1, ceil($total_records / $limit));
 ?>
-<link rel="stylesheet" href="/mainscheduler/tabs/css/subject_table.css">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/subject_modal.css">
-<style>
-/* Small tweaks for the table toolbar when rendered inline */
-.table-toolbar { display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; gap:12px; }
-.table-toolbar-left { display:flex; align-items:center; gap:8px; }
-.table-toolbar-right { display:flex; align-items:center; gap:8px; }
-.search-input { padding:8px 10px; border-radius:6px; border:1px solid #ddd; min-width:240px; }
-.empty-state { color:#6b7280; padding:10px 0; text-align:center; }
-</style>
-
 <div class="sections-card">
   <div class="table-toolbar">
   <div class="table-toolbar-left">
@@ -77,7 +66,7 @@ $total_pages = max(1, ceil($total_records / $limit));
 </div>
 
 <div class="table-wrapper">
-  <table class="faculty-table" id="sections-data-table">
+  <table class="subject-table faculty-table" id="sections-data-table">
     <thead>
       <tr>
         <th>Section Name</th>

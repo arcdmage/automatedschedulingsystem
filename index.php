@@ -6,6 +6,8 @@
     <head>
         <script src="script.js" defer></script>
         <link href="styles.css" rel="stylesheet">
+        <link rel="stylesheet" href="tabs/css/subject_table.css">
+        <link rel="stylesheet" href="tabs/css/subject_modal.css">
         <title>SJNHS Faculty Panel</title>
     </head>
     <body>

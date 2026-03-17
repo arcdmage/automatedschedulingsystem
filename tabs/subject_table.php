@@ -16,6 +16,15 @@ $offset = ($page - 1) * $limit;
 $result = $conn->query(
     "SELECT * FROM subjects ORDER BY subject_name ASC LIMIT $limit OFFSET $offset",
 );
+$faculty_options = [];
+$faculty_query = $conn->query(
+    "SELECT CONCAT(lname, ', ', fname) AS name FROM faculty ORDER BY lname, fname",
+);
+if ($faculty_query) {
+    while ($faculty = $faculty_query->fetch_assoc()) {
+        $faculty_options[] = $faculty["name"];
+    }
+}
 $total_records = $conn
     ->query("SELECT COUNT(*) as total FROM subjects")
     ->fetch_assoc()["total"];
@@ -103,9 +112,16 @@ $total_pages = max(1, ceil($total_records / $limit));
             <span class="v-field"><?= htmlspecialchars(
                 $row["special"] ?? "",
             ) ?></span>
-            <input class="e-field edit-input" name="special" value="<?= htmlspecialchars(
-                $row["special"] ?? "",
-            ) ?>" placeholder="Specialization" style="display:none;">
+            <select class="e-field edit-select" name="special" style="display:none;">
+              <option value="">--</option>
+              <?php foreach ($faculty_options as $faculty_name): ?>
+                <option value="<?= htmlspecialchars(
+                    $faculty_name,
+                ) ?>" <?= ($row["special"] ?? "") === $faculty_name
+    ? "selected"
+    : "" ?>><?= htmlspecialchars($faculty_name) ?></option>
+              <?php endforeach; ?>
+            </select>
           </td>
 
           <td>
