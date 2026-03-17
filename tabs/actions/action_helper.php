@@ -106,6 +106,46 @@ function prepare_entity_labels(mysqli $conn): array
     ];
 }
 
+function build_entity_signature(array $labels, array $entry): string
+{
+    $teacher = format_entity_label(
+        $labels["faculties"],
+        $entry["p_faculty_id"],
+        "Faculty",
+    );
+    $subject = format_entity_label(
+        $labels["subjects"],
+        $entry["subject_id"],
+        "Subject",
+    );
+    $section = format_entity_label(
+        $labels["sections"],
+        $entry["p_section_id"],
+        "Section",
+    );
+    return "$subject_$teacher_$section";
+}
+
+function build_schedule_description(array $labels, array $entry): string
+{
+    $teacher = format_entity_label(
+        $labels["faculties"],
+        $entry["p_faculty_id"] ?? null,
+        "Faculty",
+    );
+    $subject = format_entity_label(
+        $labels["subjects"],
+        $entry["subject_id"] ?? null,
+        "Subject",
+    );
+    $section = format_entity_label(
+        $labels["sections"],
+        $entry["p_section_id"] ?? null,
+        "Section",
+    );
+    return "$subject ({$teacher}) — {$section}";
+}
+
 function fetch_conflict_row(
     mysqli $conn,
     array $entry,

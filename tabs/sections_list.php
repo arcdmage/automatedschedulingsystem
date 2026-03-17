@@ -275,6 +275,14 @@ $total_pages = max(1, ceil($total_records / $limit));
 <script>
 // Client-side behaviors for Sections List page
 
+function retainSectionsTab() {
+  try {
+    sessionStorage.setItem("mainscheduler-active-tab", "sections_list");
+  } catch (err) {
+    console.warn("Unable to persist active tab:", err);
+  }
+}
+
 function filterSectionsTable(q) {
   document.querySelectorAll('#sections-data-table tbody tr').forEach(row => {
     row.style.display = row.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
@@ -289,6 +297,7 @@ document.querySelectorAll('.page-btn').forEach(btn => {
     const params = new URLSearchParams(window.location.search);
     params.set('page', page);
     params.set('limit', limit);
+    retainSectionsTab();
     window.location.search = params.toString();
   });
 });
@@ -299,6 +308,7 @@ document.getElementById('rows-per-page').addEventListener('change', function() {
   const params = new URLSearchParams(window.location.search);
   params.set('page', 1);
   params.set('limit', limit);
+  retainSectionsTab();
   window.location.search = params.toString();
 });
 
@@ -345,6 +355,7 @@ document.getElementById('create-section-form').addEventListener('submit', functi
     .then(json => {
       if (json && json.success) {
         // refresh the page or reload listing
+        retainSectionsTab();
         window.location.reload();
       } else {
         alert('Error: ' + (json && json.message ? json.message : 'Unknown error'));
@@ -417,7 +428,10 @@ function deleteSection(btn) {
         row.style.transition = 'opacity .2s, transform .2s';
         row.style.opacity = '0';
         row.style.transform = 'translateX(8px)';
-        setTimeout(() => window.location.reload(), 220);
+        setTimeout(() => {
+          retainSectionsTab();
+          window.location.reload();
+        }, 220);
       } else {
         alert('Delete failed: ' + (json && json.message ? json.message : 'Unknown'));
       }
@@ -475,6 +489,7 @@ async function saveSection(btn) {
       } else {
         // fallback: update the visible cells from returned data if provided,
         // otherwise reload the page to show changes.
+        retainSectionsTab();
         window.location.reload();
       }
     } else {
