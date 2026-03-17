@@ -399,3 +399,40 @@ select:focus, input:focus, textarea:focus {
 .mode-content.active {
   display: block;
 }
+
+#section-select {
+  border-radius: 15px;
+}
+
+#create-section-modal {
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  align-items: flex-start;  /* 👈 changed from center */
+  justify-content: center;
+}
+
+#create-section-modal .modal-content {
+  background: #fff;
+  border: 1px solid #000000;
+  border-radius: 12px;
+  overflow: hidden;
+  padding: 20px;
+  width: 60%;
+  height: fit-content;
+  margin-top: 80px; /* 👈 adjust this value to control how far from the top */
+}
+
+
+/* The grid for the form fields */
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+#create-section-modal.open {
+  display: flex; /* 👈 only shows when .open class is added */
+}

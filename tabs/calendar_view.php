@@ -76,6 +76,9 @@ $conn->close();
   width: 14.28%;
   position: relative;
 }
+.calendar td:hover {
+  background-color:  rgba(0, 0, 0, 0.2);
+}
 
 .calendar td.empty {
   background-color: #f9f9f9;
