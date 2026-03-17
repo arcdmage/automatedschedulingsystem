@@ -68,9 +68,15 @@
       conflicts.forEach((c) => {
         const li = document.createElement("li");
         // build readable string
-        const details = c.details ? c.details + " — " : "";
-        const msg = c.message || c.type || "";
-        li.textContent = details + msg;
+        const parts = [];
+        if (c.details) {
+          parts.push(c.details);
+        } else if (c.message) {
+          parts.push(c.message);
+        } else if (c.type) {
+          parts.push(c.type);
+        }
+        li.textContent = parts.join(" — ");
         li.style.marginBottom = "6px";
         ul.appendChild(li);
       });

@@ -133,20 +133,18 @@ function detect_random_conflicts(
                 ]);
             }
 
-            $target_time = "{$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}";
+            $clear_message = build_clear_conflict_message(
+                $labels,
+                $entry,
+                $conflict_row,
+                $conflict_result["conflict_type"],
+            );
             $conflict_details[] = [
                 "type" => $conflict_result["conflict_type"],
-                "message" => "{$conflict_result["conflict_message"]} (conflicts with {$other_description})",
-                "details" => "{$entry_description} conflicts with {$other_description} on {$target_time}",
+                "details" => $clear_message,
                 "conflict_with" => $other_description,
             ];
-            dlog(
-                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for " .
-                    $entry_description .
-                    " conflicts with " .
-                    $other_description .
-                    " on {$target_time}",
-            );
+            dlog("EXTERNAL CONFLICT DETECTED: " . $clear_message);
         } else {
             $filtered[] = $entry;
         }
