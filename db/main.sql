@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 15, 2026 at 04:06 AM
+-- Generation Time: Mar 17, 2026 at 03:47 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -26,46 +26,108 @@ DELIMITER $$
 -- Procedures
 --
 CREATE DEFINER=`root`@`localhost` PROCEDURE `sp_check_schedule_conflict` (IN `p_faculty_id` INT, IN `p_section_id` INT, IN `p_schedule_date` DATE, IN `p_time_slot_id` INT, IN `p_room_id` INT, OUT `p_conflict_type` VARCHAR(50), OUT `p_conflict_message` VARCHAR(255))   BEGIN
-  DECLARE teacher_conflict INT DEFAULT 0;
-  DECLARE room_conflict INT DEFAULT 0;
-  DECLARE section_conflict INT DEFAULT 0;
-  
-  -- Check teacher conflict
-  SELECT COUNT(*) INTO teacher_conflict
-  FROM schedules
-  WHERE faculty_id = p_faculty_id
-    AND schedule_date = p_schedule_date
-    AND time_slot_id = p_time_slot_id;
-  
-  -- Check room conflict
-  SELECT COUNT(*) INTO room_conflict
-  FROM schedules
-  WHERE room_id = p_room_id
-    AND schedule_date = p_schedule_date
-    AND time_slot_id = p_time_slot_id
-    AND p_room_id IS NOT NULL;
-  
-  -- Check section conflict
-  SELECT COUNT(*) INTO section_conflict
-  FROM schedules
-  WHERE section_id = p_section_id
-    AND schedule_date = p_schedule_date
-    AND time_slot_id = p_time_slot_id;
-  
-  -- Set conflict type and message
-  IF teacher_conflict > 0 THEN
-    SET p_conflict_type = 'Teacher Conflict';
-    SET p_conflict_message = 'Teacher is already scheduled at this time';
-  ELSEIF room_conflict > 0 THEN
-    SET p_conflict_type = 'Room Conflict';
-    SET p_conflict_message = 'Room is already booked at this time';
-  ELSEIF section_conflict > 0 THEN
-    SET p_conflict_type = 'Section Conflict';
-    SET p_conflict_message = 'Section already has a class at this time';
-  ELSE
+    DECLARE teacher_conflict INT DEFAULT 0;
+    DECLARE room_conflict INT DEFAULT 0;
+    DECLARE section_conflict INT DEFAULT 0;
+    DECLARE candidate_start TIME DEFAULT NULL;
+    DECLARE candidate_end TIME DEFAULT NULL;
+
+    -- Initialize output parameters
     SET p_conflict_type = NULL;
-    SET p_conflict_message = 'No conflicts found';
-  END IF;
+    SET p_conflict_message = NULL;
+
+    -- Debugging: Log input parameters
+    SELECT CONCAT('DEBUG SP: Inputs - FacultyID:', IFNULL(p_faculty_id, 'NULL'), ', SectionID:', IFNULL(p_section_id, 'NULL'), ', Date:', p_schedule_date, ', TimeSlotID:', p_time_slot_id, ', RoomID:', IFNULL(p_room_id, 'NULL')) AS debug_message;
+
+    -- Capture candidate slot times (if available)
+    IF p_time_slot_id IS NOT NULL AND p_time_slot_id != 0 THEN
+        SELECT start_time, end_time INTO candidate_start, candidate_end
+        FROM time_slots
+        WHERE time_slot_id = p_time_slot_id
+        LIMIT 1;
+    END IF;
+
+    -- Check teacher conflict
+    IF p_faculty_id IS NOT NULL AND p_faculty_id != 0 THEN
+        IF candidate_start IS NOT NULL THEN
+            SELECT COUNT(*) INTO teacher_conflict
+            FROM schedules s
+            JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
+            WHERE s.faculty_id = p_faculty_id
+              AND s.schedule_date = p_schedule_date
+              AND NOT (ts.end_time <= candidate_start OR ts.start_time >= candidate_end);
+        ELSE
+            SELECT COUNT(*) INTO teacher_conflict
+            FROM schedules
+            WHERE faculty_id = p_faculty_id
+              AND schedule_date = p_schedule_date
+              AND time_slot_id = p_time_slot_id;
+        END IF;
+
+        -- Debugging: Log teacher conflict check result
+        SELECT CONCAT('DEBUG SP: Teacher Conflict Check - Count:', teacher_conflict) AS debug_message;
+
+        IF teacher_conflict > 0 THEN
+            SET p_conflict_type = 'Teacher Conflict';
+            SET p_conflict_message = 'Teacher is already scheduled at this time';
+        END IF;
+    END IF;
+
+    -- Check room conflict (only if p_room_id is provided)
+    IF p_conflict_type IS NULL AND p_room_id IS NOT NULL AND p_room_id != 0 THEN
+        IF candidate_start IS NOT NULL THEN
+            SELECT COUNT(*) INTO room_conflict
+            FROM schedules s
+            JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
+            WHERE s.room_id = p_room_id
+              AND s.schedule_date = p_schedule_date
+              AND NOT (ts.end_time <= candidate_start OR ts.start_time >= candidate_end);
+        ELSE
+            SELECT COUNT(*) INTO room_conflict
+            FROM schedules
+            WHERE room_id = p_room_id
+              AND schedule_date = p_schedule_date
+              AND time_slot_id = p_time_slot_id;
+        END IF;
+
+        -- Debugging: Log room conflict check result
+        SELECT CONCAT('DEBUG SP: Room Conflict Check - Count:', room_conflict) AS debug_message;
+
+        IF room_conflict > 0 THEN
+            SET p_conflict_type = 'Room Conflict';
+            SET p_conflict_message = 'Room is already scheduled at this time';
+        END IF;
+    END IF;
+
+    -- Check section conflict
+    -- This checks if *another* schedule exists for the *same* section at the *same* time slot.
+    -- This might be redundant if the calling script guarantees unique assignments within a section,
+    -- but it catches manually added duplicates or cross-generation issues.
+    IF p_conflict_type IS NULL AND p_section_id IS NOT NULL AND p_section_id != 0 THEN
+        IF candidate_start IS NOT NULL THEN
+            SELECT COUNT(*) INTO section_conflict
+            FROM schedules s
+            JOIN time_slots ts ON s.time_slot_id = ts.time_slot_id
+            WHERE s.section_id = p_section_id
+              AND s.schedule_date = p_schedule_date
+              AND NOT (ts.end_time <= candidate_start OR ts.start_time >= candidate_end);
+        ELSE
+            SELECT COUNT(*) INTO section_conflict
+            FROM schedules
+            WHERE section_id = p_section_id
+              AND schedule_date = p_schedule_date
+              AND time_slot_id = p_time_slot_id;
+        END IF;
+
+        -- Debugging: Log section conflict check result
+        SELECT CONCAT('DEBUG SP: Section Conflict Check - Count:', section_conflict) AS debug_message;
+
+        IF section_conflict > 0 THEN
+            SET p_conflict_type = 'Section Conflict';
+            SET p_conflict_message = 'Section already has a schedule at this time';
+        END IF;
+    END IF;
+
 END$$
 
 DELIMITER ;
@@ -88,6 +150,13 @@ CREATE TABLE `events` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `events`
+--
+
+INSERT INTO `events` (`event_id`, `event_title`, `event_type`, `event_date`, `start_time`, `end_time`, `location`, `description`, `created_at`, `updated_at`) VALUES
+(1, 'Day Remembrance', 'meeting', '2026-03-20', '06:00:00', '09:00:00', 'Conference Room', 'ExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExample', '2026-03-17 14:33:04', '2026-03-17 14:33:04');
 
 -- --------------------------------------------------------
 
@@ -112,7 +181,7 @@ CREATE TABLE `faculty` (
 --
 
 INSERT INTO `faculty` (`faculty_id`, `fname`, `mname`, `lname`, `gender`, `pnumber`, `address`, `email`, `status`) VALUES
-(100000, 'Mark Andrie', 'Blanco', 'Santos', 'male', 0, 'Facoma Street, Brgy. Labangan Poblacion', 'markandrieblancosantos@gmail.com', 'Married'),
+(100000, 'Mark Andrie', 'Blanco', 'Santos', 'male', 9123, 'Facoma Street, Brgy. Labangan Poblacion', 'markandrieblancosantos@gmail.com', 'Married'),
 (100001, 'Mark Andrie', 'Blanco', 'Santos', 'male', 9933364675, 'Facoma Street, Brgy. Labangan Poblacion', 'markandrieblancosantos@gmail.com', 'Single'),
 (100002, 'Mark Andrie', 'Blanco', 'Santos', 'Male', 9933364675, 'Facoma St. Brgy. Labangan', 'markandrieblancosantos@gmail.com', ''),
 (100003, 'Mark Andrie', 'Blanco', 'Santos', 'Male', 9933364675, 'Facoma St. Brgy. Labangan', 'markandrieblancosantos@gmail.com', 'dead inside'),
@@ -204,6 +273,62 @@ CREATE TABLE `schedules` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `schedules`
+--
+
+INSERT INTO `schedules` (`schedule_id`, `section_id`, `faculty_id`, `subject_id`, `schedule_date`, `day_of_week`, `time_slot_id`, `start_time`, `end_time`, `room`, `room_id`, `notes`, `is_auto_generated`, `created_at`, `updated_at`) VALUES
+(5815, 3, 100017, 6, '2026-03-16', 'Monday', 14, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5816, 3, 100019, 7, '2026-03-16', 'Monday', 15, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5817, 3, 100020, 4, '2026-03-16', 'Monday', 17, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5818, 3, 100010, 3, '2026-03-16', 'Monday', 18, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5819, 3, 100016, 2, '2026-03-16', 'Monday', 21, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5820, 3, 100020, 9, '2026-03-16', 'Monday', 23, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5821, 3, 100010, 5, '2026-03-16', 'Monday', 20, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5822, 3, 100011, 11, '2026-03-16', 'Monday', 47, '16:15:00', '17:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5823, 3, 100015, 1, '2026-03-16', 'Monday', 72, '17:15:00', '18:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5824, 3, 100019, 12, '2026-03-16', 'Monday', 73, '18:15:00', '19:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5825, 3, 100017, 6, '2026-03-17', 'Tuesday', 14, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5826, 3, 100019, 7, '2026-03-17', 'Tuesday', 15, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5827, 3, 100020, 4, '2026-03-17', 'Tuesday', 17, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5828, 3, 100010, 3, '2026-03-17', 'Tuesday', 18, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5829, 3, 100016, 2, '2026-03-17', 'Tuesday', 21, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5830, 3, 100020, 9, '2026-03-17', 'Tuesday', 23, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5831, 3, 100010, 5, '2026-03-17', 'Tuesday', 20, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5832, 3, 100011, 11, '2026-03-17', 'Tuesday', 47, '16:15:00', '17:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5833, 3, 100015, 1, '2026-03-17', 'Tuesday', 72, '17:15:00', '18:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5834, 3, 100019, 12, '2026-03-17', 'Tuesday', 73, '18:15:00', '19:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5835, 3, 100017, 6, '2026-03-18', 'Wednesday', 14, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5836, 3, 100019, 7, '2026-03-18', 'Wednesday', 15, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5837, 3, 100020, 4, '2026-03-18', 'Wednesday', 17, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5838, 3, 100010, 3, '2026-03-18', 'Wednesday', 18, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5839, 3, 100016, 2, '2026-03-18', 'Wednesday', 21, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5840, 3, 100020, 9, '2026-03-18', 'Wednesday', 23, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5841, 3, 100010, 5, '2026-03-18', 'Wednesday', 20, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5842, 3, 100011, 11, '2026-03-18', 'Wednesday', 47, '16:15:00', '17:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5843, 3, 100015, 1, '2026-03-18', 'Wednesday', 72, '17:15:00', '18:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5844, 3, 100019, 12, '2026-03-18', 'Wednesday', 73, '18:15:00', '19:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5845, 3, 100017, 6, '2026-03-19', 'Thursday', 14, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5846, 3, 100019, 7, '2026-03-19', 'Thursday', 15, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5847, 3, 100020, 4, '2026-03-19', 'Thursday', 17, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5848, 3, 100010, 3, '2026-03-19', 'Thursday', 18, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5849, 3, 100016, 2, '2026-03-19', 'Thursday', 21, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5850, 3, 100020, 9, '2026-03-19', 'Thursday', 23, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5851, 3, 100010, 5, '2026-03-19', 'Thursday', 20, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5852, 3, 100011, 11, '2026-03-19', 'Thursday', 47, '16:15:00', '17:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5853, 3, 100015, 1, '2026-03-19', 'Thursday', 72, '17:15:00', '18:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5854, 3, 100019, 12, '2026-03-19', 'Thursday', 73, '18:15:00', '19:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5855, 3, 100017, 6, '2026-03-20', 'Friday', 14, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5856, 3, 100019, 7, '2026-03-20', 'Friday', 15, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5857, 3, 100020, 4, '2026-03-20', 'Friday', 17, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5858, 3, 100010, 3, '2026-03-20', 'Friday', 18, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5859, 3, 100016, 2, '2026-03-20', 'Friday', 21, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5860, 3, 100020, 9, '2026-03-20', 'Friday', 23, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5861, 3, 100010, 5, '2026-03-20', 'Friday', 20, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5862, 3, 100011, 11, '2026-03-20', 'Friday', 47, '16:15:00', '17:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5863, 3, 100015, 1, '2026-03-20', 'Friday', 72, '17:15:00', '18:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36'),
+(5864, 3, 100019, 12, '2026-03-20', 'Friday', 73, '18:15:00', '19:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 13:04:36', '2026-03-17 13:04:36');
 
 -- --------------------------------------------------------
 
@@ -703,21 +828,36 @@ INSERT INTO `schedule_patterns` (`pattern_id`, `requirement_id`, `day_of_week`, 
 (120, 33, 'Wednesday', 46, '2026-01-27 15:07:36'),
 (121, 33, 'Thursday', 46, '2026-01-27 15:07:36'),
 (122, 33, 'Friday', 46, '2026-01-27 15:07:36'),
-(123, 24, 'Monday', 37, '2026-01-27 15:12:15'),
-(124, 24, 'Tuesday', 37, '2026-01-27 15:12:15'),
-(125, 24, 'Wednesday', 37, '2026-01-27 15:12:15'),
-(126, 24, 'Thursday', 37, '2026-01-27 15:12:15'),
-(127, 24, 'Friday', 37, '2026-01-27 15:12:15'),
-(132, 34, 'Monday', 47, '2026-02-19 06:57:17'),
-(133, 34, 'Tuesday', 47, '2026-02-19 06:57:17'),
-(134, 34, 'Wednesday', 47, '2026-02-19 06:57:17'),
-(135, 34, 'Thursday', 47, '2026-02-19 06:57:17'),
-(136, 34, 'Friday', 47, '2026-02-19 06:57:17'),
 (145, 16, 'Monday', 14, '2026-02-20 15:04:31'),
 (146, 16, 'Tuesday', 14, '2026-02-20 15:04:31'),
 (147, 16, 'Wednesday', 14, '2026-02-20 15:04:31'),
 (148, 16, 'Thursday', 14, '2026-02-20 15:04:31'),
-(149, 16, 'Friday', 14, '2026-02-20 15:04:31');
+(149, 16, 'Friday', 14, '2026-02-20 15:04:31'),
+(150, 36, 'Monday', 47, '2026-03-17 11:48:24'),
+(151, 36, 'Tuesday', 47, '2026-03-17 11:48:24'),
+(152, 36, 'Wednesday', 47, '2026-03-17 11:48:24'),
+(153, 36, 'Thursday', 47, '2026-03-17 11:48:24'),
+(154, 36, 'Friday', 47, '2026-03-17 11:48:24'),
+(155, 39, 'Monday', 72, '2026-03-17 11:51:08'),
+(156, 39, 'Tuesday', 72, '2026-03-17 11:51:08'),
+(157, 39, 'Wednesday', 72, '2026-03-17 11:51:08'),
+(158, 39, 'Thursday', 72, '2026-03-17 11:51:08'),
+(159, 39, 'Friday', 72, '2026-03-17 11:51:08'),
+(160, 41, 'Monday', 73, '2026-03-17 12:33:24'),
+(161, 41, 'Tuesday', 73, '2026-03-17 12:33:24'),
+(162, 41, 'Wednesday', 73, '2026-03-17 12:33:24'),
+(163, 41, 'Thursday', 73, '2026-03-17 12:33:24'),
+(164, 41, 'Friday', 73, '2026-03-17 12:33:24'),
+(165, 24, 'Monday', 74, '2026-03-17 12:44:07'),
+(166, 24, 'Tuesday', 74, '2026-03-17 12:44:07'),
+(167, 24, 'Wednesday', 74, '2026-03-17 12:44:07'),
+(168, 24, 'Thursday', 74, '2026-03-17 12:44:07'),
+(169, 24, 'Friday', 74, '2026-03-17 12:44:07'),
+(170, 42, 'Monday', 37, '2026-03-17 12:44:12'),
+(171, 42, 'Tuesday', 37, '2026-03-17 12:44:12'),
+(172, 42, 'Wednesday', 37, '2026-03-17 12:44:12'),
+(173, 42, 'Thursday', 37, '2026-03-17 12:44:12'),
+(174, 42, 'Friday', 37, '2026-03-17 12:44:12');
 
 -- --------------------------------------------------------
 
@@ -762,7 +902,8 @@ CREATE TABLE `sections` (
 INSERT INTO `sections` (`section_id`, `section_name`, `grade_level`, `track`, `school_year`, `semester`, `adviser_id`, `created_at`, `updated_at`) VALUES
 (1, 'STEM VENUS', 'Grade 12', 'STEM', 'SY 2025-2026', 'Second Semester', NULL, '2025-12-06 05:57:50', '2025-12-06 05:57:50'),
 (2, 'STEM MARS', 'Grade 12', 'STEM', 'SY 2025-2026', 'Second Semester', NULL, '2025-12-06 05:57:50', '2025-12-06 05:57:50'),
-(3, 'ABM SATURN', 'Grade 11', 'ABM', 'SY 2025-2026', 'Second Semester', NULL, '2025-12-06 05:57:50', '2025-12-06 05:57:50');
+(3, 'ABM SATURN', 'Grade 11', 'ABM', '', '', 100017, '2025-12-06 05:57:50', '2026-03-17 12:28:34'),
+(4, 'BRUHS', 'Grade 11', 'ABM', '', '', 100012, '2026-03-17 01:25:09', '2026-03-17 09:52:25');
 
 -- --------------------------------------------------------
 
@@ -788,12 +929,13 @@ INSERT INTO `subjects` (`subject_id`, `subject_name`, `special`, `grade_level`, 
 (3, 'Genereal Physics 1', 'Mafeth Jinco', 0, ''),
 (4, 'General Physics 2', 'Mafeth Jinco', 0, 'STEM'),
 (5, 'GP1', 'Mafeth Jinco', 12, 'STEM'),
-(6, 'DRRM', 'Evelyn', 12, 'STEM'),
+(6, 'DRRM', 'Angerlo, Angerlo', 12, 'STEM'),
 (7, 'Entrepreneurship', 'Mam', 12, 'STEM'),
 (8, 'test', 'test', 12, 'STEM'),
-(9, 'test', 'test', 12, 'ABM'),
+(9, 'Reading', 'savior, savior', 12, 'STEM'),
 (10, 'qwed', 'qwe', 12, 'GAS'),
-(11, 'tesa1', 'te23', 12, 'HUMMS');
+(11, 'tesa1', 'te23', 12, 'HUMMS'),
+(12, 'Remedial', 'Ma\'am Gaudiel', 11, 'STEM');
 
 -- --------------------------------------------------------
 
@@ -833,7 +975,10 @@ INSERT INTO `subject_requirements` (`requirement_id`, `section_id`, `subject_id`
 (28, 2, 5, 100013, 5, NULL, NULL, '2025-12-08 12:06:44', '2026-01-28 01:18:24', NULL),
 (32, 2, 2, 100020, 5, NULL, NULL, '2026-01-27 15:04:10', '2026-01-27 15:06:40', NULL),
 (33, 2, 8, 100008, 5, NULL, NULL, '2026-01-27 15:07:31', '2026-01-28 01:18:32', NULL),
-(34, 3, 10, 100004, 5, NULL, NULL, '2026-02-19 06:56:59', '2026-02-19 06:57:10', NULL);
+(36, 3, 11, 100011, 5, NULL, NULL, '2026-03-17 11:47:51', '2026-03-17 11:47:51', NULL),
+(39, 3, 1, 100015, 5, NULL, NULL, '2026-03-17 11:50:59', '2026-03-17 11:50:59', NULL),
+(41, 3, 12, 100019, 5, NULL, NULL, '2026-03-17 12:33:17', '2026-03-17 12:42:30', NULL),
+(42, 2, 12, 100018, 5, NULL, NULL, '2026-03-17 12:44:00', '2026-03-17 12:44:00', NULL);
 
 -- --------------------------------------------------------
 
@@ -878,7 +1023,6 @@ INSERT INTO `time_slots` (`time_slot_id`, `start_time`, `end_time`, `is_break`, 
 (45, '15:00:00', '15:15:00', 1, 'RECESS', 9, '2026-01-27 15:04:37', 2),
 (46, '15:15:00', '16:15:00', 0, '', 10, '2026-01-27 15:04:37', 2),
 (47, '16:15:00', '17:15:00', 0, '', 11, '2026-01-28 03:07:24', 3),
-(59, '17:15:00', '18:15:00', 0, '', 12, '2026-02-20 15:01:46', 3),
 (60, '07:30:00', '08:30:00', 0, '', 1, '2026-03-14 06:50:39', 1),
 (61, '08:30:00', '09:30:00', 0, '', 2, '2026-03-14 06:50:39', 1),
 (62, '09:30:00', '09:45:00', 1, 'RECESS', 3, '2026-03-14 06:50:39', 1),
@@ -890,7 +1034,10 @@ INSERT INTO `time_slots` (`time_slot_id`, `start_time`, `end_time`, `is_break`, 
 (68, '15:00:00', '15:15:00', 1, 'RECESS', 9, '2026-03-14 06:50:39', 1),
 (69, '15:15:00', '16:15:00', 0, '', 10, '2026-03-14 06:50:39', 1),
 (70, '16:15:00', '17:15:00', 0, '', 11, '2026-03-14 06:50:39', 1),
-(71, '17:15:00', '18:15:00', 0, '', 12, '2026-03-14 06:50:39', 1);
+(71, '17:15:00', '18:15:00', 0, '', 12, '2026-03-14 06:50:39', 1),
+(72, '17:15:00', '18:15:00', 0, '', 12, '2026-03-17 11:50:10', 3),
+(73, '18:15:00', '19:15:00', 0, '', 13, '2026-03-17 12:30:15', 3),
+(74, '17:15:00', '18:15:00', 0, '', 11, '2026-03-17 12:43:45', 2);
 
 -- --------------------------------------------------------
 
@@ -1089,7 +1236,7 @@ ALTER TABLE `time_slots`
 -- AUTO_INCREMENT for table `events`
 --
 ALTER TABLE `events`
-  MODIFY `event_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `event_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `faculty`
@@ -1113,7 +1260,7 @@ ALTER TABLE `rooms`
 -- AUTO_INCREMENT for table `schedules`
 --
 ALTER TABLE `schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3941;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5900;
 
 --
 -- AUTO_INCREMENT for table `schedule_generation_logs`
@@ -1125,7 +1272,7 @@ ALTER TABLE `schedule_generation_logs`
 -- AUTO_INCREMENT for table `schedule_patterns`
 --
 ALTER TABLE `schedule_patterns`
-  MODIFY `pattern_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=150;
+  MODIFY `pattern_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=175;
 
 --
 -- AUTO_INCREMENT for table `schedule_templates`
@@ -1137,25 +1284,25 @@ ALTER TABLE `schedule_templates`
 -- AUTO_INCREMENT for table `sections`
 --
 ALTER TABLE `sections`
-  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
+  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `subject_requirements`
 --
 ALTER TABLE `subject_requirements`
-  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=43;
 
 --
 -- AUTO_INCREMENT for table `time_slots`
 --
 ALTER TABLE `time_slots`
-  MODIFY `time_slot_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=72;
+  MODIFY `time_slot_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=75;
 
 --
 -- Constraints for dumped tables
