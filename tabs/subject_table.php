@@ -18,7 +18,7 @@ $result = $conn->query(
 );
 $faculty_options = [];
 $faculty_query = $conn->query(
-    "SELECT CONCAT(lname, ', ', fname) AS name FROM faculty ORDER BY lname, fname",
+    "SELECT DISTINCT lname AS name FROM faculty WHERE lname <> '' ORDER BY lname",
 );
 if ($faculty_query) {
     while ($faculty = $faculty_query->fetch_assoc()) {
@@ -89,6 +89,21 @@ $total_pages = max(1, ceil($total_records / $limit));
     <tbody>
       <?php if ($result && $result->num_rows > 0): ?>
         <?php while ($row = $result->fetch_assoc()): ?>
+        <?php
+        $special_raw = (string) ($row["special"] ?? "");
+        $special_list = array_values(
+            array_filter(array_map("trim", explode(",", $special_raw))),
+        );
+        $special_full = implode(", ", $special_list);
+        $special_preview = implode(", ", array_slice($special_list, 0, 2));
+        $special_has_more = count($special_list) > 2;
+        $all_faculty = $faculty_options;
+        foreach ($special_list as $name) {
+            if (!in_array($name, $all_faculty, true)) {
+                $all_faculty[] = $name;
+            }
+        }
+        ?>
         <tr data-id="<?= (int) ($row["subject_id"] ?? 0) ?>">
           <td>
             <div style="display:flex;align-items:center;gap:10px;">
@@ -108,15 +123,26 @@ $total_pages = max(1, ceil($total_records / $limit));
           </td>
 
           <td>
-            <span class="v-field"><?= htmlspecialchars(
-                $row["special"] ?? "",
-            ) ?></span>
-            <select class="e-field edit-select" name="special" style="display:none;">
+            <div class="v-field">
+              <?php if ($special_full === ""): ?>
+                <span class="faculty-empty">--</span>
+              <?php elseif ($special_has_more): ?>
+                <button type="button" class="faculty-toggle" onclick="toggleSubjectFaculty(this)">
+                  <?= htmlspecialchars($special_preview) ?>…
+                </button>
+                <div class="faculty-full" style="display:none;">
+                  <?= htmlspecialchars($special_full) ?>
+                </div>
+              <?php else: ?>
+                <span><?= htmlspecialchars($special_full) ?></span>
+              <?php endif; ?>
+            </div>
+            <select class="e-field edit-select faculty-multi" name="special" multiple style="display:none;">
               <option value="">--</option>
-              <?php foreach ($faculty_options as $faculty_name): ?>
+              <?php foreach ($all_faculty as $faculty_name): ?>
                 <option value="<?= htmlspecialchars(
                     $faculty_name,
-                ) ?>" <?= ($row["special"] ?? "") === $faculty_name
+                ) ?>" <?= in_array($faculty_name, $special_list, true)
     ? "selected"
     : "" ?>><?= htmlspecialchars($faculty_name) ?></option>
               <?php endforeach; ?>

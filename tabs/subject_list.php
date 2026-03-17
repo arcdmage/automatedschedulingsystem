@@ -3,7 +3,7 @@ require_once __DIR__ . "/../db_connect.php";
 
 $faculty_options = [];
 $faculty_query = $conn->query(
-    "SELECT CONCAT(lname, ', ', fname) AS name FROM faculty ORDER BY lname, fname",
+    "SELECT DISTINCT lname AS name FROM faculty WHERE lname <> '' ORDER BY lname",
 );
 if ($faculty_query) {
     while ($faculty = $faculty_query->fetch_assoc()) {
@@ -47,8 +47,8 @@ if ($faculty_query) {
       <label for="subject_name"><b>Subject Name</b></label>
       <input type="text" placeholder="Subject Name" name="subject_name" id="subject_name" required>
 
-      <label for="special"><b>In Specialization</b></label>
-      <select name="special" id="special" required>
+      <label for="special"><b>Faculty</b></label>
+      <select name="special" id="special" multiple required>
         <option value="">-- Select Faculty --</option>
         <?php foreach ($faculty_options as $faculty_name): ?>
           <option value="<?= htmlspecialchars(
@@ -56,6 +56,7 @@ if ($faculty_query) {
           ) ?>"><?= htmlspecialchars($faculty_name) ?></option>
         <?php endforeach; ?>
       </select>
+      <small style="display:block;color:#6b7280;margin-top:6px;">Hold Ctrl (Windows) or Command (Mac) to select multiple.</small>
 
       <label><b>Grade Level</b></label><br>
       <label><input type="radio" name="grade_level" value="11" id="grade_level_11" required> Grade 11</label>
@@ -109,6 +110,14 @@ document.addEventListener("DOMContentLoaded", function() {
     });
   };
 
+  window.toggleSubjectFaculty = function(btn) {
+    const wrapper = btn.closest('td');
+    if (!wrapper) return;
+    const full = wrapper.querySelector('.faculty-full');
+    if (!full) return;
+    full.style.display = full.style.display === 'none' || full.style.display === '' ? 'block' : 'none';
+  };
+
   /* Inline edit behavior for subjects (mirrors faculty inline editing) */
   window.startEditSubject = function(btn) {
     const row = btn.closest('tr');
@@ -137,7 +146,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     // collect editable inputs from the row
     row.querySelectorAll('.e-field, .e-name input, .e-name select').forEach(el => {
-      if (el.name) data.append(el.name, el.value);
+      if (!el.name) return;
+      if (el.tagName === 'SELECT' && el.multiple) {
+        const values = Array.from(el.selectedOptions).map(opt => opt.value).filter(v => v);
+        data.append('special', values.join(', '));
+        return;
+      }
+      data.append(el.name, el.value);
     });
 
     const orig = btn.innerHTML;
@@ -225,6 +240,11 @@ document.addEventListener("DOMContentLoaded", function() {
       e.stopPropagation();
 
       const formData = new FormData(form);
+      const specialSelect = form.querySelector('#special');
+      if (specialSelect && specialSelect.multiple) {
+        const values = Array.from(specialSelect.selectedOptions).map(opt => opt.value).filter(v => v);
+        formData.set('special', values.join(', '));
+      }
       const subjectId = formData.get('subject_id');
       const isEdit = subjectId && subjectId !== '';
 

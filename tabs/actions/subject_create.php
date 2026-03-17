@@ -15,20 +15,22 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $grade_level = $_POST["grade_level"] ?? "";
     $strand = $_POST["strand"] ?? "";
 
+    if (is_array($special)) {
+        $special = implode(", ", array_filter(array_map("trim", $special)));
+    }
+
     // Validate required fields
-    if (empty($subject_name) || empty($grade_level) || empty($strand)) {
+    if (empty($subject_name) || empty($grade_level)) {
         if ($isAjax) {
             header("Content-Type: application/json");
             echo json_encode([
                 "success" => false,
                 "message" =>
-                    "Missing required fields (subject_name, grade_level, strand)",
+                    "Missing required fields (subject_name, grade_level)",
             ]);
             exit();
         } else {
-            die(
-                "Error: Missing required fields (subject_name, grade_level, strand)"
-            );
+            die("Error: Missing required fields (subject_name, grade_level)");
         }
     }
 
