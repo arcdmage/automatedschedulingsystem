@@ -65,6 +65,8 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     return false; // let PHP handle notices normally (logged, not printed)
 });
 
+require_once __DIR__ . "/action_helper.php";
+
 $debug_log = [];
 function dlog($m)
 {
@@ -77,9 +79,15 @@ $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 /**
  * Runs the conflict stored procedure against the supplied prospective entries.
  * Returns the filtered list (entries with no conflicts) and the list of conflict details.
+ *
+ * @param array $labels signature returned by prepare_entity_labels()
  */
-function detect_conflicts(mysqli $conn, array $entries, bool $has_day): array
-{
+function detect_conflicts(
+    mysqli $conn,
+    array $entries,
+    bool $has_day,
+    array $labels,
+): array {
     global $debug_log;
 
     $conflict_details = [];
@@ -132,13 +140,29 @@ function detect_conflicts(mysqli $conn, array $entries, bool $has_day): array
 
         if ($conflict_result && $conflict_result["conflict_type"] !== null) {
             $total_external_conflicts++;
+            $faculty_label = format_entity_label(
+                $labels["faculties"],
+                $entry["p_faculty_id"],
+                "Faculty",
+            );
+            $subject_label = format_entity_label(
+                $labels["subjects"],
+                $entry["subject_id"],
+                "Subject",
+            );
+            $section_label = format_entity_label(
+                $labels["sections"],
+                $entry["p_section_id"],
+                "Section",
+            );
+
             $conflict_details[] = [
                 "type" => $conflict_result["conflict_type"],
                 "message" => $conflict_result["conflict_message"],
-                "details" => "Subject ID {$entry["subject_id"]} on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}",
+                "details" => "$subject_label (Faculty: $faculty_label, Section: $section_label) on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}",
             ];
             dlog(
-                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for Subject {$entry["subject_id"]} on {$entry["day_of_week"]} {$entry["start_time"]}",
+                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for $subject_label on {$entry["day_of_week"]} {$entry["start_time"]} (Faculty: $faculty_label)",
             );
         } else {
             $filtered[] = $entry;
@@ -152,6 +176,7 @@ function detect_conflicts(mysqli $conn, array $entries, bool $has_day): array
 }
 
 try {
+    $entity_labels = prepare_entity_labels($conn);
     // ── Validate DB connection ────────────────────────────────────────────────
     if (!isset($conn) || !$conn) {
         throw new Exception(
@@ -394,7 +419,12 @@ try {
         $prospective_schedules,
         $external_conflict_details,
         $total_external_conflicts,
-    ] = detect_conflicts($conn, $prospective_schedules, $has_day);
+    ] = detect_conflicts(
+        $conn,
+        $prospective_schedules,
+        $has_day,
+        $entity_labels,
+    );
     $total_conflicts_found =
         $internal_skipped_count + $total_external_conflicts;
 
@@ -436,7 +466,12 @@ try {
             $prospective_schedules,
             $external_conflict_details,
             $total_external_conflicts,
-        ] = detect_conflicts($conn, $prospective_schedules, $has_day);
+        ] = detect_conflicts(
+            $conn,
+            $prospective_schedules,
+            $has_day,
+            $entity_labels,
+        );
         $total_conflicts_found =
             $internal_skipped_count + $total_external_conflicts;
         dlog(

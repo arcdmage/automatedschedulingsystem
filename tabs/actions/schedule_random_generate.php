@@ -34,6 +34,7 @@ register_shutdown_function(function () {
 });
 
 require_once __DIR__ . "/../../db_connect.php";
+require_once __DIR__ . "/action_helper.php";
 ob_clean();
 if (!headers_sent()) {
     header("Content-Type: application/json");
@@ -60,8 +61,11 @@ function dlog($m)
 
 $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
-function detect_random_conflicts(mysqli $conn, array $entries): array
-{
+function detect_random_conflicts(
+    mysqli $conn,
+    array $entries,
+    array $labels,
+): array {
     global $debug_log;
 
     $conflict_details = [];
@@ -113,14 +117,30 @@ function detect_random_conflicts(mysqli $conn, array $entries): array
             ->fetch_assoc();
 
         if ($conflict_result["conflict_type"] !== null) {
+            $faculty_label = format_entity_label(
+                $labels["faculties"],
+                $entry["p_faculty_id"],
+                "Faculty",
+            );
+            $subject_label = format_entity_label(
+                $labels["subjects"],
+                $entry["subject_id"],
+                "Subject",
+            );
+            $section_label = format_entity_label(
+                $labels["sections"],
+                $entry["p_section_id"],
+                "Section",
+            );
+
             $conflict_details[] = [
                 "type" => $conflict_result["conflict_type"],
                 "message" => $conflict_result["conflict_message"],
-                "details" => "Subject ID {$entry["subject_id"]} on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]} (Faculty: {$entry["p_faculty_id"]})",
+                "details" => "$subject_label (Faculty: $faculty_label, Section: $section_label) on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}",
             ];
             $total_external_conflicts++;
             dlog(
-                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for Subject {$entry["subject_id"]} on {$entry["day_of_week"]} {$entry["start_time"]}",
+                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for $subject_label on {$entry["day_of_week"]} {$entry["start_time"]} (Faculty: $faculty_label)",
             );
         } else {
             $filtered[] = $entry;
@@ -139,6 +159,8 @@ try {
             "Database connection failed. Check db_connect.php.",
         );
     }
+
+    $entity_labels = prepare_entity_labels($conn);
 
     $section_id = intval($_POST["section_id"] ?? 0);
     if (!$section_id) {
@@ -403,7 +425,7 @@ try {
         $prospective_schedules,
         $external_conflict_details,
         $total_external_conflicts,
-    ] = detect_random_conflicts($conn, $prospective_schedules);
+    ] = detect_random_conflicts($conn, $prospective_schedules, $entity_labels);
     $total_conflicts_found =
         $total_skipped_from_insufficient_slots + $total_external_conflicts;
 
@@ -446,7 +468,11 @@ try {
                 $prospective_schedules,
                 $external_conflict_details,
                 $total_external_conflicts,
-            ] = detect_random_conflicts($conn, $prospective_schedules);
+            ] = detect_random_conflicts(
+                $conn,
+                $prospective_schedules,
+                $entity_labels,
+            );
             $total_conflicts_found =
                 $total_skipped_from_insufficient_slots +
                 $total_external_conflicts;
