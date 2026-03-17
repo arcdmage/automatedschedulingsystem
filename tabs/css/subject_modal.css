@@ -24,18 +24,10 @@
   overflow: hidden;
 }
 
-/* header Bar */
-.imgcontainer {
-  background: #04AA6D;
-  color: white;
-  padding: 12px 20px;
-  position: relative;
-  text-align: center;
-}
 
 .imgcontainer h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 30px;
 }
 
 /* close button */

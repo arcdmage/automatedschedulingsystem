@@ -42,6 +42,7 @@ h1 + p {
     justify-content: center;
     align-items: center;
     position: relative;
+    padding: 20px;
 }
 
 .table-toolbar {
@@ -417,10 +418,10 @@ h1 + p {
         background 0.15s,
         transform 0.12s;
     white-space: nowrap;
-    flex: 0 0 auto; /* don't grow or shrink unexpectedly */
-    max-width: 140px; /* keep the button from overflowing the toolbar */
+    flex: 0 0 auto; 
+    max-width: 140px; 
     overflow: hidden;
-    text-overflow: ellipsis; /* truncate label if it would overflow */
+    text-overflow: ellipsis; 
     box-sizing: border-box;
 }
 
@@ -466,6 +467,8 @@ h1 + p {
     box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
     background-color: #fff;
 }
+
+
 
 @media (max-width: 900px) {
     .table-toolbar {
