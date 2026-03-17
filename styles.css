@@ -151,14 +151,15 @@ ul.tabs li[data-tab-target="#home"] {
     color: white;
     z-index: 1;
     justify-content: center;
-    padding-right: 25%;
-    padding-left: 25%;
-    padding-top: 10%;
+    padding: 90px 5% 40px;
     top: 0;
     bottom: 0;
     position: fixed;
     overflow-y: scroll;
     overflow-x: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
 #faculty_members {
@@ -267,4 +268,91 @@ ul.tabs li[data-tab-target="#home"] {
     background-repeat: no-repeat;
     background-attachment: fixed;
     background-color: rgba(0, 0, 0, 0.4);
+}
+
+.home-title {
+    text-align: center;
+    color: #ffffff;
+    margin: 10px 0 20px 0;
+    font-size: 32px;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 8px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.2);
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
+}
+
+.home-title:hover {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    transform: scale(1.04);
+}
+
+.home-embeds {
+    display: grid;
+    grid-template-columns: 760px minmax(0, 1fr);
+    align-items: start;
+    column-gap: 0;
+    row-gap: 10px;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+.home-embed {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+}
+
+.googlemap.home-embed {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+}
+
+.fb-scrollbox {
+    width: 760px;
+    max-width: 760px;
+    height: 900px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 4px;
+    background: #ffffff;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.fb-scrollbox::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+}
+
+.fb-iframe {
+    border: none;
+    width: 760px;
+    max-width: 760px;
+    height: 1200px;
+}
+
+.map-iframe {
+    border: 0;
+    width: 100%;
+    max-width: none;
+    height: 900px;
+}
+
+@media (max-width: 1100px) {
+    .home-embeds {
+        grid-template-columns: 1fr;
+    }
+
+    .home-embed {
+        width: 100%;
+    }
 }
