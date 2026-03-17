@@ -140,30 +140,33 @@ function detect_conflicts(
 
         if ($conflict_result && $conflict_result["conflict_type"] !== null) {
             $total_external_conflicts++;
-            $faculty_label = format_entity_label(
-                $labels["faculties"],
-                $entry["p_faculty_id"],
-                "Faculty",
+            $conflict_row = fetch_conflict_row(
+                $conn,
+                $entry,
+                $conflict_result["conflict_type"],
             );
-            $subject_label = format_entity_label(
-                $labels["subjects"],
-                $entry["subject_id"],
-                "Subject",
-            );
-            $section_label = format_entity_label(
-                $labels["sections"],
-                $entry["p_section_id"],
-                "Section",
-            );
+            $entry_description = build_schedule_description($labels, $entry);
+            $other_description = "unknown entry";
+            if ($conflict_row) {
+                $other_description = build_schedule_description($labels, [
+                    "p_faculty_id" => $conflict_row["faculty_id"],
+                    "subject_id" => $conflict_row["subject_id"],
+                    "p_section_id" => $conflict_row["section_id"],
+                ]);
+            }
 
+            $clear_message = build_clear_conflict_message(
+                $labels,
+                $entry,
+                $conflict_row,
+                $conflict_result["conflict_type"],
+            );
             $conflict_details[] = [
                 "type" => $conflict_result["conflict_type"],
-                "message" => $conflict_result["conflict_message"],
-                "details" => "$subject_label (Faculty: $faculty_label, Section: $section_label) on {$entry["day_of_week"]} ({$entry["p_schedule_date"]}) at {$entry["start_time"]}-{$entry["end_time"]}",
+                "details" => $clear_message,
+                "conflict_with" => $other_description,
             ];
-            dlog(
-                "EXTERNAL CONFLICT DETECTED: {$conflict_result["conflict_type"]} - {$conflict_result["conflict_message"]} for $subject_label on {$entry["day_of_week"]} {$entry["start_time"]} (Faculty: $faculty_label)",
-            );
+            dlog("EXTERNAL CONFLICT DETECTED: " . $clear_message);
         } else {
             $filtered[] = $entry;
         }

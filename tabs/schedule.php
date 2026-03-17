@@ -21,8 +21,7 @@ $sections_result = $conn->query($sections_query);
   Fragment: schedule.php
   - This file is intended to be included inside a parent page (no DOCTYPE/head/body here)
   - It exports a small UI for the Schedule tab and exposes a handful of global functions:
-    switchMode, changeView, loadCalendar, openScheduleModal, closeScheduleModal,
-    openEventModal, closeEventModal
+    switchMode, loadCalendar, openEventModal, closeEventModal
 -->
 
 <link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
@@ -89,6 +88,73 @@ $sections_result = $conn->query($sections_query);
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
 
+.calendar-controls {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+@media print {
+  [data-tab-content] {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+  }
+
+  #schedule {
+    opacity: 1 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+  }
+
+  ul.tabs,
+  .schedule-mode-tabs,
+  .calendar-controls,
+  .btn,
+  .card-section:not(#calendar-container) {
+    display: none !important;
+  }
+
+  #mode-manual {
+    display: block !important;
+  }
+
+  #schedule {
+    position: static !important;
+    inset: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  .tab-content {
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    box-shadow: none !important;
+  }
+
+  #calendar-container {
+    box-shadow: none;
+    border: none;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+    display: block !important;
+    visibility: visible !important;
+  }
+
+  #calendar-container * {
+    visibility: visible !important;
+  }
+
+  body {
+    background: #ffffff !important;
+  }
+}
+
 /* Basic modal styles (kept small) */
 .modal[aria-hidden="true"] {
   display: none;
@@ -112,6 +178,7 @@ $sections_result = $conn->query($sections_query);
   width: 90%;
   max-width: 720px;
   border-radius: 8px;
+  color: #1f2937;
 }
 .close {
   float: right;
@@ -131,43 +198,9 @@ $sections_result = $conn->query($sections_query);
 <!-- Manual Entry Mode (Calendar) -->
 <div id="mode-manual" class="mode-content active" data-mode-id="manual">
   <div class="card-section">
-    <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-      <button onclick="openScheduleModal()" class="btn btn-primary" style="flex: 1;">+ Add Class Schedule</button>
-      <button onclick="openEventModal()" class="btn btn-success" style="flex: 1;">+ Add Event/Meeting</button>
-    </div>
-  </div>
-
-  <div class="card-section">
-    <div class="form-grid" style="display:flex;gap:16px;flex-wrap:wrap;">
-      <div class="form-group" style="flex:1;min-width:180px;">
-        <label for="view-type">View Mode</label>
-        <select id="view-type" onchange="changeView()" class="form-control">
-          <option value="all">All Teachers</option>
-          <option value="specific">Specific Teacher</option>
-        </select>
-      </div>
-
-      <div class="form-group" id="teacher-filter-group" style="display:none;flex:1;min-width:200px;">
-        <label for="teacher-filter">Select Teacher</label>
-        <select id="teacher-filter" onchange="loadCalendar()" class="form-control">
-          <option value="">-- Select Teacher --</option>
-          <?php if ($faculty_result) {
-              $faculty_result->data_seek(0);
-              while ($faculty = $faculty_result->fetch_assoc()): ?>
-              <option value="<?php echo (int) $faculty[
-                  "faculty_id"
-              ]; ?>"><?php echo htmlspecialchars(
-    $faculty["lname"] . ", " . $faculty["fname"],
-); ?></option>
-          <?php endwhile;
-          } ?>
-        </select>
-      </div>
-
-      <div class="form-group" style="flex:1;min-width:180px;">
-        <label for="month-select">Month</label>
-        <input type="month" id="month-select" onchange="loadCalendar()" class="form-control">
-      </div>
+    <div class="calendar-controls">
+      <button type="button" onclick="openEventModal()" class="btn btn-success" style="flex: 1;">+ Add Event/Meeting</button>
+      <button type="button" onclick="window.print()" class="btn btn-primary" style="flex: 1;">Print Calendar</button>
     </div>
   </div>
 
@@ -189,64 +222,6 @@ $sections_result = $conn->query($sections_query);
 <!-- Weekly View Mode -->
 <div id="mode-view" class="mode-content" data-mode-id="view">
   <iframe data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Schedules View"></iframe>
-</div>
-
-<!-- Modals -->
-<div id="schedule-modal" class="modal" aria-hidden="true">
-  <div class="modal-content">
-    <span onclick="closeScheduleModal()" class="close" title="Close">&times;</span>
-    <h2>Add Schedule</h2>
-    <form id="schedule-form">
-      <div style="display:flex;flex-direction:column;gap:8px;">
-        <label for="faculty_id"><b>Teacher</b></label>
-        <select name="faculty_id" id="faculty_id" required>
-          <option value="">Select Teacher</option>
-          <?php if ($faculty_result) {
-              $faculty_result->data_seek(0);
-              while ($faculty = $faculty_result->fetch_assoc()): ?>
-              <option value="<?php echo (int) $faculty[
-                  "faculty_id"
-              ]; ?>"><?php echo htmlspecialchars(
-    $faculty["lname"] . ", " . $faculty["fname"] . " " . $faculty["mname"],
-); ?></option>
-          <?php endwhile;
-          } ?>
-        </select>
-
-        <label for="subject_id"><b>Subject</b></label>
-        <select name="subject_id" id="subject_id" required>
-          <option value="">Select Subject</option>
-          <?php if ($subjects_result) {
-              $subjects_result->data_seek(0);
-              while ($subject = $subjects_result->fetch_assoc()): ?>
-              <option value="<?php echo (int) $subject[
-                  "subject_id"
-              ]; ?>"><?php echo htmlspecialchars(
-    $subject["subject_name"],
-); ?></option>
-          <?php endwhile;
-          } ?>
-        </select>
-
-        <label for="start_time"><b>Start Time</b></label>
-        <input type="time" name="start_time" id="start_time" required>
-
-        <label for="end_time"><b>End Time</b></label>
-        <input type="time" name="end_time" id="end_time" required>
-
-        <label for="room"><b>Room</b></label>
-        <input type="text" name="room" id="room" placeholder="e.g., Room 101">
-
-        <label for="notes"><b>Notes</b></label>
-        <textarea name="notes" id="notes" rows="3" placeholder="Additional notes..."></textarea>
-
-        <div style="display:flex;gap:8px;margin-top:8px;">
-          <button type="submit" class="btn btn-primary">Create Schedule</button>
-          <button type="button" onclick="closeScheduleModal()" class="btn">Cancel</button>
-        </div>
-      </div>
-    </form>
-  </div>
 </div>
 
 <div id="event-modal" class="modal" aria-hidden="true">
@@ -289,6 +264,24 @@ $sections_result = $conn->query($sections_query);
         </div>
       </div>
     </form>
+  </div>
+</div>
+
+<div id="event-view-modal" class="modal" aria-hidden="true">
+  <div class="modal-content">
+    <span onclick="closeEventViewModal()" class="close" title="Close">&times;</span>
+    <h2 id="event-view-title">Event Details</h2>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+      <div><b>Type:</b> <span id="event-view-type">-</span></div>
+      <div><b>Date:</b> <span id="event-view-date">-</span></div>
+      <div><b>Time:</b> <span id="event-view-time">-</span></div>
+      <div><b>Location:</b> <span id="event-view-location">-</span></div>
+      <div><b>Description:</b></div>
+      <div id="event-view-description" style="white-space:pre-wrap;">-</div>
+      <div style="margin-top:12px;">
+        <button type="button" onclick="closeEventViewModal()" class="btn">Close</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -354,33 +347,11 @@ $sections_result = $conn->query($sections_query);
     }
   };
 
-  // Change the view (all vs specific teacher)
-  window.changeView = function () {
-    var viewTypeEl = document.getElementById('view-type');
-    if (!viewTypeEl) return;
-    var viewType = viewTypeEl.value;
-    var teacherGroup = document.getElementById('teacher-filter-group');
-    var teacherFilter = document.getElementById('teacher-filter');
-    if (viewType === 'specific') {
-      if (teacherGroup) teacherGroup.style.display = 'block';
-    } else {
-      if (teacherGroup) teacherGroup.style.display = 'none';
-      if (teacherFilter) teacherFilter.value = '';
-    }
-    loadCalendar();
-  };
-
   // Calendar loader via AJAX (returns HTML fragment inserted into #calendar-container)
   window.loadCalendar = function () {
-    var viewTypeEl = document.getElementById('view-type');
-    var viewType = viewTypeEl ? viewTypeEl.value : 'all';
-    var teacherIdEl = document.getElementById('teacher-filter');
-    var teacherId = teacherIdEl ? teacherIdEl.value : '';
-    var monthEl = document.getElementById('month-select');
-    var month = monthEl ? monthEl.value : '';
-
-    var params = new URLSearchParams({ view: viewType, month: month });
-    if (viewType === 'specific' && teacherId) params.append('teacher_id', teacherId);
+    var now = new Date();
+    var month = now.toISOString().slice(0, 7);
+    var params = new URLSearchParams({ month: month });
 
     var url = '/mainscheduler/tabs/calendar_view.php?' + params.toString();
     fetch(url, { credentials: 'same-origin' })
@@ -400,14 +371,6 @@ $sections_result = $conn->query($sections_query);
   };
 
   // Simple modal open/close functions
-  window.openScheduleModal = function () {
-    var m = document.getElementById('schedule-modal');
-    if (m) m.setAttribute('aria-hidden', 'false');
-  };
-  window.closeScheduleModal = function () {
-    var m = document.getElementById('schedule-modal');
-    if (m) m.setAttribute('aria-hidden', 'true');
-  };
   window.openEventModal = function () {
     var m = document.getElementById('event-modal');
     if (m) m.setAttribute('aria-hidden', 'false');
@@ -417,28 +380,69 @@ $sections_result = $conn->query($sections_query);
     if (m) m.setAttribute('aria-hidden', 'true');
   };
 
+  window.openEventViewModal = function (data) {
+    var m = document.getElementById('event-view-modal');
+    if (!m) return;
+    document.getElementById('event-view-title').textContent = data.title || 'Event Details';
+    document.getElementById('event-view-type').textContent = data.type || '-';
+    document.getElementById('event-view-date').textContent = data.date || '-';
+    document.getElementById('event-view-time').textContent = data.time || '-';
+    document.getElementById('event-view-location').textContent = data.location || '-';
+    document.getElementById('event-view-description').textContent = data.description || '-';
+    m.setAttribute('aria-hidden', 'false');
+  };
+  window.closeEventViewModal = function () {
+    var m = document.getElementById('event-view-modal');
+    if (m) m.setAttribute('aria-hidden', 'true');
+  };
+
   // Wire up simple form handlers to prevent page navigation and close the modal on submit.
   // You can replace these with real AJAX submissions later.
   function bindFormHandlers() {
-    var scheduleForm = document.getElementById('schedule-form');
-    if (scheduleForm) {
-      scheduleForm.addEventListener('submit', function (ev) {
-        ev.preventDefault();
-        // TODO: submit via fetch to server endpoint; for now just close modal and reload calendar
-        closeScheduleModal();
-        setTimeout(loadCalendar, 200);
-      });
-    }
-
     var eventForm = document.getElementById('event-form');
     if (eventForm) {
       eventForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
-        // TODO: submit via fetch; for now close modal and reload calendar
-        closeEventModal();
-        setTimeout(loadCalendar, 200);
+        var formData = new FormData(eventForm);
+        fetch('/mainscheduler/tabs/actions/event_create.php', {
+          method: 'POST',
+          body: formData,
+          credentials: 'same-origin'
+        })
+          .then(function (resp) { return resp.json(); })
+          .then(function (json) {
+            if (!json || !json.success) {
+              throw new Error(json && json.message ? json.message : 'Failed to create event');
+            }
+            closeEventModal();
+            setTimeout(loadCalendar, 200);
+          })
+          .catch(function (err) {
+            console.error('Event create failed:', err);
+            alert(err.message || 'Failed to create event');
+          });
       });
     }
+  }
+
+  function bindCalendarEventClicks() {
+    var container = document.getElementById('calendar-container');
+    if (!container) return;
+    container.addEventListener('click', function (ev) {
+      var target = ev.target;
+      if (!target) return;
+      var item = target.closest ? target.closest('.event-item') : null;
+      if (!item) return;
+      var data = {
+        title: item.getAttribute('data-title') || '',
+        type: item.getAttribute('data-type') || '',
+        date: item.getAttribute('data-date') || '',
+        time: item.getAttribute('data-time') || '',
+        location: item.getAttribute('data-location') || '',
+        description: item.getAttribute('data-description') || ''
+      };
+      window.openEventViewModal(data);
+    });
   }
 
   // Initialization on DOMContentLoaded: set current month, initial calendar load if this fragment is active,
@@ -447,10 +451,8 @@ $sections_result = $conn->query($sections_query);
     try {
       var now = new Date();
       var currentMonth = now.toISOString().slice(0, 7);
-      var monthEl = document.getElementById('month-select');
-      if (monthEl && !monthEl.value) monthEl.value = currentMonth;
-
       bindFormHandlers();
+      bindCalendarEventClicks();
 
       // If the schedule tab (container) is active in the page, do initial loads.
       var scheduleContainer = document.getElementById('schedule');

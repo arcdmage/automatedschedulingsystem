@@ -1,5 +1,16 @@
 <?php
-require_once __DIR__ . "/../db_connect.php"; ?>
+require_once __DIR__ . "/../db_connect.php";
+
+$faculty_options = [];
+$faculty_query = $conn->query(
+    "SELECT CONCAT(lname, ', ', fname) AS name FROM faculty ORDER BY lname, fname",
+);
+if ($faculty_query) {
+    while ($faculty = $faculty_query->fetch_assoc()) {
+        $faculty_options[] = $faculty["name"];
+    }
+}
+?>
 <!--copied from faculty_member.php just re-configured.-->
 <!DOCTYPE html>
 <html>
@@ -37,7 +48,14 @@ require_once __DIR__ . "/../db_connect.php"; ?>
       <input type="text" placeholder="Subject Name" name="subject_name" id="subject_name" required>
 
       <label for="special"><b>In Specialization</b></label>
-      <input type="text" placeholder="In Specialization" name="special" id="special" required>
+      <select name="special" id="special" required>
+        <option value="">-- Select Faculty --</option>
+        <?php foreach ($faculty_options as $faculty_name): ?>
+          <option value="<?= htmlspecialchars(
+              $faculty_name,
+          ) ?>"><?= htmlspecialchars($faculty_name) ?></option>
+        <?php endforeach; ?>
+      </select>
 
       <label><b>Grade Level</b></label><br>
       <label><input type="radio" name="grade_level" value="11" id="grade_level_11" required> Grade 11</label>

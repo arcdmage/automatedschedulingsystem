@@ -1,79 +1,27 @@
 <?php
-require_once(__DIR__ . '/../db_connect.php');
+require_once __DIR__ . "/../db_connect.php";
 
-$view = isset($_GET['view']) ? $_GET['view'] : 'all';
-$teacher_id = isset($_GET['teacher_id']) ? intval($_GET['teacher_id']) : null;
-$month = isset($_GET['month']) ? $_GET['month'] : date('Y-m');
+$month = isset($_GET["month"]) ? $_GET["month"] : date("Y-m");
 
 // Parse the month
-$year = date('Y', strtotime($month . '-01'));
-$monthNum = date('m', strtotime($month . '-01'));
-$monthName = date('F Y', strtotime($month . '-01'));
+$year = date("Y", strtotime($month . "-01"));
+$monthNum = date("m", strtotime($month . "-01"));
+$monthName = date("F Y", strtotime($month . "-01"));
 
 // Get first and last day of month
-$firstDay = date('Y-m-01', strtotime($month . '-01'));
-$lastDay = date('Y-m-t', strtotime($month . '-01'));
+$firstDay = date("Y-m-01", strtotime($month . "-01"));
+$lastDay = date("Y-m-t", strtotime($month . "-01"));
 
 // Get day of week for first day (0=Sunday, 6=Saturday)
-$firstDayOfWeek = date('w', strtotime($firstDay));
+$firstDayOfWeek = date("w", strtotime($firstDay));
 
 // Get total days in month
-$totalDays = date('t', strtotime($month . '-01'));
+$totalDays = date("t", strtotime($month . "-01"));
 
-// Fetch schedules for the month
-// Check if section_id is provided (for section-specific view)
-$section_id = isset($_GET['section_id']) ? intval($_GET['section_id']) : null;
-
-if ($view === 'specific' && $teacher_id) {
-  $schedule_query = "SELECT s.*, f.fname, f.lname, f.mname, sub.subject_name
-                     FROM schedules s
-                     JOIN faculty f ON s.faculty_id = f.faculty_id
-                     JOIN subjects sub ON s.subject_id = sub.subject_id
-                     WHERE s.faculty_id = ? 
-                     AND s.schedule_date BETWEEN ? AND ?";
-  if ($section_id) {
-    $schedule_query .= " AND s.section_id = ?";
-  }
-  $schedule_query .= " ORDER BY s.schedule_date, s.start_time";
-  $stmt = $conn->prepare($schedule_query);
-  if ($section_id) {
-    $stmt->bind_param("issi", $teacher_id, $firstDay, $lastDay, $section_id);
-  } else {
-    $stmt->bind_param("iss", $teacher_id, $firstDay, $lastDay);
-  }
-} else {
-  $schedule_query = "SELECT s.*, f.fname, f.lname, f.mname, sub.subject_name
-                     FROM schedules s
-                     JOIN faculty f ON s.faculty_id = f.faculty_id
-                     JOIN subjects sub ON s.subject_id = sub.subject_id
-                     WHERE s.schedule_date BETWEEN ? AND ?";
-  if ($section_id) {
-    $schedule_query .= " AND s.section_id = ?";
-  }
-  $schedule_query .= " ORDER BY s.schedule_date, s.start_time";
-  $stmt = $conn->prepare($schedule_query);
-  if ($section_id) {
-    $stmt->bind_param("ssi", $firstDay, $lastDay, $section_id);
-  } else {
-    $stmt->bind_param("ss", $firstDay, $lastDay);
-  }
-}
-
-$stmt->execute();
-$schedules = $stmt->get_result();
-
-// Organize schedules by date
-$schedulesByDate = [];
-while ($schedule = $schedules->fetch_assoc()) {
-  $date = $schedule['schedule_date'];
-  if (!isset($schedulesByDate[$date])) {
-    $schedulesByDate[$date] = [];
-  }
-  $schedulesByDate[$date][] = $schedule;
-}
+// Calendar is used for special events/meetings only.
 
 // Fetch events for the month
-$event_query = "SELECT * FROM events 
+$event_query = "SELECT * FROM events
                 WHERE event_date BETWEEN ? AND ?
                 ORDER BY event_date, start_time";
 $stmt = $conn->prepare($event_query);
@@ -84,11 +32,11 @@ $events = $stmt->get_result();
 // Organize events by date
 $eventsByDate = [];
 while ($event = $events->fetch_assoc()) {
-  $date = $event['event_date'];
-  if (!isset($eventsByDate[$date])) {
-    $eventsByDate[$date] = [];
-  }
-  $eventsByDate[$date][] = $event;
+    $date = $event["event_date"];
+    if (!isset($eventsByDate[$date])) {
+        $eventsByDate[$date] = [];
+    }
+    $eventsByDate[$date][] = $event;
 }
 
 $conn->close();
@@ -111,11 +59,13 @@ $conn->close();
 }
 
 .calendar th {
-  background-color: #f2f2f2;
+  background-color: #e7eef7;
   padding: 10px;
   text-align: center;
-  font-weight: bold;
-  border: 1px solid #ddd;
+  font-weight: 700;
+  border: 1px solid #d2dae3;
+  color: #1f2937;
+  text-shadow: 0 1px 0 rgba(255,255,255,0.6);
 }
 
 .calendar td {
@@ -140,21 +90,6 @@ $conn->close();
   font-size: 14px;
   margin-bottom: 5px;
   color: #333;
-}
-
-.schedule-item {
-  background-color: #e3f2fd;
-  border-left: 3px solid #2196F3;
-  padding: 3px 5px;
-  margin-bottom: 3px;
-  font-size: 11px;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
-
-.schedule-item:hover {
-  background-color: #bbdefb;
 }
 
 .event-item {
@@ -220,11 +155,6 @@ $conn->close();
   border-radius: 3px;
 }
 
-.legend-color.schedule {
-  background-color: #e3f2fd;
-  border-left: 3px solid #2196F3;
-}
-
 .legend-color.event {
   background-color: #fff3e0;
   border-left: 3px solid #ff9800;
@@ -250,86 +180,88 @@ $conn->close();
   <tbody>
     <?php
     $dayCount = 1;
-    $today = date('Y-m-d');
-    
+    $today = date("Y-m-d");
+
     // Calculate total weeks needed
     $weeksNeeded = ceil(($totalDays + $firstDayOfWeek) / 7);
-    
+
     for ($week = 0; $week < $weeksNeeded; $week++) {
-      echo "<tr>";
-      
-      for ($dayOfWeek = 0; $dayOfWeek < 7; $dayOfWeek++) {
-        // First week: add empty cells before first day
-        if ($week == 0 && $dayOfWeek < $firstDayOfWeek) {
-          echo "<td class='empty'></td>";
-        }
-        // Days that exist in the month
-        elseif ($dayCount <= $totalDays) {
-          $currentDate = sprintf("%s-%02d-%02d", $year, $monthNum, $dayCount);
-          $isToday = ($currentDate == $today) ? 'today' : '';
-          
-          echo "<td class='$isToday'>";
-          echo "<div class='day-number'>$dayCount</div>";
-          
-          // Display schedules for this date
-          if (isset($schedulesByDate[$currentDate])) {
-            $itemCount = 0;
-            $maxDisplay = 3;
-            
-            foreach ($schedulesByDate[$currentDate] as $schedule) {
-              if ($itemCount < $maxDisplay) {
-                $startTime = date('g:i A', strtotime($schedule['start_time']));
-                $teacher = $schedule['lname'] . ', ' . $schedule['fname'][0] . '.';
-                $subject = $schedule['subject_name'];
-                
-                echo "<div class='schedule-item' title='{$schedule['subject_name']} - {$teacher}'>";
-                echo "<span class='item-time'>$startTime</span> ";
-                echo "<span class='item-subject'>$subject</span>";
-                if ($view === 'all') {
-                  echo "<span class='item-teacher'>$teacher</span>";
+        echo "<tr>";
+
+        for ($dayOfWeek = 0; $dayOfWeek < 7; $dayOfWeek++) {
+            // First week: add empty cells before first day
+            if ($week == 0 && $dayOfWeek < $firstDayOfWeek) {
+                echo "<td class='empty'></td>";
+            }
+            // Days that exist in the month
+            elseif ($dayCount <= $totalDays) {
+                $currentDate = sprintf(
+                    "%s-%02d-%02d",
+                    $year,
+                    $monthNum,
+                    $dayCount,
+                );
+                $isToday = $currentDate == $today ? "today" : "";
+
+                echo "<td class='$isToday'>";
+                echo "<div class='day-number'>$dayCount</div>";
+
+                // Display events for this date
+                if (isset($eventsByDate[$currentDate])) {
+                    foreach ($eventsByDate[$currentDate] as $event) {
+                        $startTime = date(
+                            "g:i A",
+                            strtotime($event["start_time"]),
+                        );
+                        $endTime = date("g:i A", strtotime($event["end_time"]));
+                        $timeRange = trim($startTime . " - " . $endTime);
+                        $safeTitle = htmlspecialchars(
+                            $event["event_title"] ?? "",
+                            ENT_QUOTES,
+                        );
+                        $safeType = htmlspecialchars(
+                            $event["event_type"] ?? "",
+                            ENT_QUOTES,
+                        );
+                        $safeDate = htmlspecialchars(
+                            $event["event_date"] ?? "",
+                            ENT_QUOTES,
+                        );
+                        $safeLocation = htmlspecialchars(
+                            $event["location"] ?? "",
+                            ENT_QUOTES,
+                        );
+                        $safeDescription = htmlspecialchars(
+                            $event["description"] ?? "",
+                            ENT_QUOTES,
+                        );
+                        $safeTime = htmlspecialchars(
+                            $timeRange ?? "",
+                            ENT_QUOTES,
+                        );
+                        echo "<div class='event-item' title='{$safeTitle}' data-title='{$safeTitle}' data-type='{$safeType}' data-date='{$safeDate}' data-time='{$safeTime}' data-location='{$safeLocation}' data-description='{$safeDescription}'>";
+                        echo "<span class='item-time'>$timeRange</span> ";
+                        echo "<span class='item-subject'>{$safeTitle}</span>";
+                        echo "</div>";
+                    }
                 }
-                echo "</div>";
-                $itemCount++;
-              }
+
+                echo "</td>";
+                $dayCount++;
             }
-            
-            $remaining = count($schedulesByDate[$currentDate]) - $maxDisplay;
-            if ($remaining > 0) {
-              echo "<div class='more-items'>+$remaining more</div>";
+            // Empty cells after last day
+            else {
+                echo "<td class='empty'></td>";
             }
-          }
-          
-          // Display events for this date
-          if (isset($eventsByDate[$currentDate])) {
-            foreach ($eventsByDate[$currentDate] as $event) {
-              $startTime = date('g:i A', strtotime($event['start_time']));
-              echo "<div class='event-item' title='{$event['event_title']}'>";
-              echo "<span class='item-time'>$startTime</span> ";
-              echo "<span class='item-subject'>{$event['event_title']}</span>";
-              echo "</div>";
-            }
-          }
-          
-          echo "</td>";
-          $dayCount++;
         }
-        // Empty cells after last day
-        else {
-          echo "<td class='empty'></td>";
-        }
-      }
-      
-      echo "</tr>";
+
+        echo "</tr>";
     }
     ?>
   </tbody>
 </table>
 
 <div class="legend">
-  <div class="legend-item">
-    <div class="legend-color schedule"></div>
-    <span>Class Schedule</span>
-  </div>
   <div class="legend-item">
     <div class="legend-color event"></div>
     <span>Event/Meeting</span>
