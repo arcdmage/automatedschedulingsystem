@@ -133,6 +133,11 @@ ul.tabs li[data-tab-target="#schedule"] {
 ul.tabs li[data-tab-target="#home"] {
     border-bottom-left-radius: 0%;
 }
+
+ul.tabs li[data-tab-target="#faculty_members"],
+ul.tabs li[data-tab-target="#subject_list"] {
+    font-size: 19px;
+}
 .tab-content {
     margin: 50px;
     left: 30px;

@@ -62,13 +62,6 @@ if ($faculty_query) {
       <label><input type="radio" name="grade_level" value="12" id="grade_level_12"> Grade 12</label>
       <br><br>
 
-      <label><b>Strand</b></label><br>
-      <label><input type="radio" name="strand" value="HUMMS" id="strand_humms" required> HUMMS</label>
-      <label><input type="radio" name="strand" value="STEM" id="strand_stem"> STEM</label>
-      <label><input type="radio" name="strand" value="ABM" id="strand_abm"> ABM</label>
-      <label><input type="radio" name="strand" value="GAS" id="strand_gas"> GAS</label>
-      <br><br>
-
       <button type="submit" id="subject-form-submit">Create</button>
     </div>
 
