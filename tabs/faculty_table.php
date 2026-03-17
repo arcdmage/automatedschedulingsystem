@@ -37,12 +37,9 @@ $total_pages = max(1, ceil($total_records / $limit));
   <table class="faculty-table" id="faculty-data-table">
     <thead>
       <tr>
-        <th>ID</th>
         <th>Name</th>
         <th>Gender</th>
-        <th>Phone</th>
         <th>Address</th>
-        <th>Status</th>
         <th style="text-align:right;">Actions</th>
       </tr>
     </thead>
@@ -58,9 +55,6 @@ $total_pages = max(1, ceil($total_records / $limit));
             ?>
         <tr data-id="<?= (int) $row["faculty_id"] ?>">
 
-          <!-- ID -->
-          <td><span class="id-badge"><?= (int) $row["faculty_id"] ?></span></td>
-
           <!-- Name -->
           <td>
             <div class="name-cell">
@@ -68,9 +62,23 @@ $total_pages = max(1, ceil($total_records / $limit));
               <div style="min-width:0;">
                 <!-- View -->
                 <div class="v-name name-primary">
-                  <?= htmlspecialchars(
-                      $row["fname"] . " " . $row["mname"] . " " . $row["lname"],
-                  ) ?>
+                  <button type="button" class="name-toggle" onclick="toggleFacultyStatus(this)">
+                    <?= htmlspecialchars(
+                        $row["fname"] .
+                            " " .
+                            $row["mname"] .
+                            " " .
+                            $row["lname"],
+                    ) ?>
+                  </button>
+                </div>
+                <div class="name-status v-field" style="display:none;">
+                  <span class="status-label">Status:</span>
+                  <span class="status-badge <?= $statusEmpty ? "empty" : "" ?>">
+                    <?= $statusEmpty
+                        ? "No status"
+                        : htmlspecialchars($row["status"]) ?>
+                  </span>
                 </div>
                 <!-- Edit -->
                 <div class="e-name" style="display:none; flex-wrap:wrap; gap:4px;">
@@ -83,6 +91,14 @@ $total_pages = max(1, ceil($total_records / $limit));
                   <input class="edit-input" name="lname"  value="<?= htmlspecialchars(
                       $row["lname"],
                   ) ?>" placeholder="Last"   style="width:78px;">
+                </div>
+                <div class="e-field edit-extra" style="display:none;">
+                  <input class="edit-input" name="status" value="<?= htmlspecialchars(
+                      $row["status"] ?? "",
+                  ) ?>" placeholder="Status" style="width:160px;">
+                  <input class="edit-input" name="pnumber" value="<?= htmlspecialchars(
+                      $row["pnumber"] ?? "",
+                  ) ?>" placeholder="Phone" style="width:140px;">
                 </div>
               </div>
             </div>
@@ -106,16 +122,6 @@ $total_pages = max(1, ceil($total_records / $limit));
             </select>
           </td>
 
-          <!-- Phone -->
-          <td>
-            <span class="v-field"><?= htmlspecialchars(
-                $row["pnumber"] ?? "",
-            ) ?></span>
-            <input class="e-field edit-input" name="pnumber" value="<?= htmlspecialchars(
-                $row["pnumber"] ?? "",
-            ) ?>" placeholder="Phone" style="display:none;width:120px;">
-          </td>
-
           <!-- Address -->
           <td>
             <span class="v-field"><?= htmlspecialchars(
@@ -124,20 +130,6 @@ $total_pages = max(1, ceil($total_records / $limit));
             <input class="e-field edit-input" name="address" value="<?= htmlspecialchars(
                 $row["address"] ?? "",
             ) ?>" placeholder="Address" style="display:none;">
-          </td>
-
-          <!-- Status -->
-          <td>
-            <span class="v-field status-badge <?= $statusEmpty
-                ? "empty"
-                : "" ?>">
-              <?= $statusEmpty
-                  ? "No status"
-                  : htmlspecialchars($row["status"]) ?>
-            </span>
-            <input class="e-field edit-input" name="status" value="<?= htmlspecialchars(
-                $row["status"] ?? "",
-            ) ?>" placeholder="Status" style="display:none;width:110px;">
           </td>
 
           <!-- Actions -->
@@ -167,7 +159,7 @@ $total_pages = max(1, ceil($total_records / $limit));
         <?php
         endwhile; ?>
       <?php else: ?>
-        <tr><td colspan="7"><div class="empty-state">No faculty members found.</div></td></tr>
+        <tr><td colspan="4"><div class="empty-state">No faculty members found.</div></td></tr>
       <?php endif; ?>
     </tbody>
   </table>

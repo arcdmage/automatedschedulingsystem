@@ -105,6 +105,14 @@ function filterTable(q) {
   });
 }
 
+function toggleFacultyStatus(btn) {
+  const row = btn.closest('tr');
+  if (!row) return;
+  const status = row.querySelector('.name-status');
+  if (!status) return;
+  status.style.display = status.style.display === 'none' || status.style.display === '' ? 'block' : 'none';
+}
+
 /* ─────────────────────────────────────────
    INLINE EDIT
 ───────────────────────────────────────── */
