@@ -25,33 +25,37 @@ require_once __DIR__ . "/../db_connect.php"; ?>
 <div id="id02" class="modal">
   <form id="subject-form" class="modal-content animate" action="/mainscheduler/tabs/actions/subject_create.php" method="post">
     <div class="imgcontainer">
-      <span onclick="document.getElementById('id02').style.display='none'" class="close" title="Close">&times;</span>
-      <h2>Add Subject</h2>
+      <span onclick="closeSubjectModal()" class="close" title="Close">&times;</span>
+      <h2 id="subject-modal-title">Add Subject</h2>
     </div>
 
     <div class="container">
-      <label for="subject_name"><b>Subject Name</b></label>
-      <input type="text" placeholder="Subject Name" name="subject_name" required>
+      <!-- Hidden ID for edit operations -->
+      <input type="hidden" name="subject_id" id="subject_id" value="">
 
-      <label for="special"><b>In Specialization</b></label> <!--Make this a drop down outputting the choices as the list of teachers in the main faculty database.-->
-      <input type="text" placeholder="In Specialization" name="special" required>
+      <label for="subject_name"><b>Subject Name</b></label>
+      <input type="text" placeholder="Subject Name" name="subject_name" id="subject_name" required>
+
+      <label for="special"><b>In Specialization</b></label>
+      <input type="text" placeholder="In Specialization" name="special" id="special" required>
 
       <label><b>Grade Level</b></label><br>
-      <label><input type="radio" name="grade_level" value="11" required> Grade 11</label>
-      <label><input type="radio" name="grade_level" value="12"> Grade 12</label>
-      <br><br>
-      <label><b>Strand</b></label><br>
-      <label><input type="radio" name="strand" value="HUMMS" required> HUMMS</label>
-      <label><input type="radio" name="strand" value="STEM"> STEM</label>
-      <label><input type="radio" name="strand" value="ABM"> ABM</label>
-      <label><input type="radio" name="strand" value="GAS"> GAS</label>
+      <label><input type="radio" name="grade_level" value="11" id="grade_level_11" required> Grade 11</label>
+      <label><input type="radio" name="grade_level" value="12" id="grade_level_12"> Grade 12</label>
       <br><br>
 
-      <button type="submit">Create</button>
+      <label><b>Strand</b></label><br>
+      <label><input type="radio" name="strand" value="HUMMS" id="strand_humms" required> HUMMS</label>
+      <label><input type="radio" name="strand" value="STEM" id="strand_stem"> STEM</label>
+      <label><input type="radio" name="strand" value="ABM" id="strand_abm"> ABM</label>
+      <label><input type="radio" name="strand" value="GAS" id="strand_gas"> GAS</label>
+      <br><br>
+
+      <button type="submit" id="subject-form-submit">Create</button>
     </div>
 
     <div class="container" style="background-color:#f1f1f1">
-      <button type="button" onclick="document.getElementById('id02').style.display='none'" class="cancelbtn">Cancel</button>
+      <button type="button" onclick="closeSubjectModal()" class="cancelbtn">Cancel</button>
     </div>
   </form>
 </div>
@@ -80,36 +84,178 @@ document.addEventListener("DOMContentLoaded", function() {
       });
   }
 
-  // Handle form submission with AJAX
+  // Expose global loader so other code and inline actions can refresh the subject list.
+  // Mirrors the pattern used in the Faculty list.
+  // Expose globally so inline onclick handlers in the injected HTML can trigger a reload
+  window.loadSubjectPage = loadSubjectPage;
+
+  // Move inline edit handlers to the wrapper so they exist before the fragment is injected.
+  // These mirror the handlers previously defined inside the injected fragment so that
+  // inline Edit/Save/Delete work immediately after the fragment HTML is inserted.
+  window.filterSubjectTable = function(q) {
+    document.querySelectorAll('#subject-data-table tbody tr').forEach(row => {
+      row.style.display = row.textContent.toLowerCase().includes((q||'').toLowerCase()) ? '' : 'none';
+    });
+  };
+
+  /* Inline edit behavior for subjects (mirrors faculty inline editing) */
+  window.startEditSubject = function(btn) {
+    const row = btn.closest('tr');
+    row.classList.add('editing');
+    // hide view elements, show edit inputs/actions
+    row.querySelectorAll('.v-field, .v-name, .v-actions').forEach(el => el.style.display = 'none');
+    row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = '');
+    const nameDiv = row.querySelector('.e-name');
+    if (nameDiv) nameDiv.style.display = 'block';
+  };
+
+  window.cancelEditSubject = function(btn) {
+    const row = btn.closest('tr');
+    row.classList.remove('editing');
+    row.querySelectorAll('.v-field, .v-name, .v-actions').forEach(el => el.style.display = '');
+    row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = 'none');
+    const nameDiv = row.querySelector('.e-name');
+    if (nameDiv) nameDiv.style.display = 'none';
+  };
+
+  window.saveSubject = async function(btn) {
+    const row = btn.closest('tr');
+    const id = row.getAttribute('data-id');
+    const data = new FormData();
+    data.append('subject_id', id);
+
+    // collect editable inputs from the row
+    row.querySelectorAll('.e-field, .e-name input, .e-name select').forEach(el => {
+      if (el.name) data.append(el.name, el.value);
+    });
+
+    const orig = btn.innerHTML;
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+      const json = await res.json();
+      if (json && json.success) {
+        // reload listing (use rows-per-page selector or fallback)
+        if (typeof loadSubjectPage === 'function') {
+          const limit = document.getElementById('rows-per-page')?.value || 5;
+          loadSubjectPage(1, limit);
+        } else {
+          window.location.reload();
+        }
+      } else {
+        alert('Error: ' + (json && json.message ? json.message : 'Unknown error'));
+        btn.innerHTML = orig;
+        btn.disabled = false;
+      }
+    } catch (e) {
+      console.error('Save error:', e);
+      alert('Error saving subject.');
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  };
+
+  window.deleteSubject = async function(btn) {
+    if (!confirm('Delete this subject? This cannot be undone.')) return;
+    const row = btn.closest('tr');
+    const subjectId = row.getAttribute('data-id');
+    const data = new FormData();
+    data.append('subject_id', subjectId);
+    data.append('action', 'delete');
+
+    const orig = btn.innerHTML;
+    btn.textContent = 'Deleting…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+      const json = await res.json();
+      if (json && json.success) {
+        row.style.transition = 'opacity .2s, transform .2s';
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(8px)';
+        setTimeout(() => {
+          if (typeof loadSubjectPage === 'function') {
+            const limit = document.getElementById('rows-per-page')?.value || 5;
+            loadSubjectPage(1, limit);
+          } else {
+            window.location.reload();
+          }
+        }, 220);
+      } else {
+        alert('Delete failed: ' + (json && json.message ? json.message : 'Unknown'));
+        btn.innerHTML = orig;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      console.error('Delete error', err);
+      alert('Error deleting subject');
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  };
+
+  // Handle form submission with AJAX (supports both create and update)
   const form = document.getElementById('subject-form');
+
+  function closeSubjectModal() {
+    document.getElementById('id02').style.display = 'none';
+    form.reset();
+    document.getElementById('subject_id').value = '';
+    document.getElementById('subject-modal-title').textContent = 'Add Subject';
+    document.getElementById('subject-form-submit').textContent = 'Create';
+  }
 
   if (form) {
     form.addEventListener("submit", function(e) {
       e.preventDefault(); // Prevent page reload
-      e.stopPropagation(); // Stop event bubbling
-
-      console.log("Form submitted via AJAX");
+      e.stopPropagation();
 
       const formData = new FormData(form);
+      const subjectId = formData.get('subject_id');
+      const isEdit = subjectId && subjectId !== '';
 
-      fetch("/mainscheduler/tabs/actions/subject_create.php", {
-        method: "POST",
+      const endpoint = isEdit
+        ? '/mainscheduler/tabs/actions/subject_update.php'
+        : '/mainscheduler/tabs/actions/subject_create.php';
+
+      // Provide user feedback
+      const submitBtn = document.getElementById('subject-form-submit');
+      const origText = submitBtn ? submitBtn.textContent : null;
+      if (submitBtn) { submitBtn.textContent = isEdit ? 'Saving…' : 'Creating…'; submitBtn.disabled = true; }
+
+      fetch(endpoint, {
+        method: 'POST',
         body: formData
       })
-      .then(response => response.text())
-      .then(data => {
-        console.log("Subject added successfully:", data);
-        alert("Subject added successfully!");
-        document.getElementById('id02').style.display = 'none';
-        form.reset();
-        loadSubjectPage(1, defaultLimit);
+      .then(res => {
+        // prefer json response; if server returns text, try to parse
+        return res.json ? res.json() : res.text();
+      })
+      .then(resp => {
+        // If server returned plain text (legacy), consider it success
+        const success = resp && (resp.success === true || typeof resp === 'string');
+        if (success) {
+          alert(isEdit ? 'Subject updated successfully!' : 'Subject added successfully!');
+          closeSubjectModal();
+          // reload current listing page (use the JS default if the selector is missing)
+          loadSubjectPage(1, document.getElementById('rows-per-page')?.value || defaultLimit);
+        } else {
+          const msg = (resp && resp.message) ? resp.message : 'Unknown error';
+          alert('Error: ' + msg);
+        }
       })
       .catch(error => {
-        console.error("Error adding subject:", error);
-        alert("Error adding subject. Please try again.");
+        console.error('Error saving subject:', error);
+        alert('Error saving subject. Please try again.');
+      })
+      .finally(() => {
+        if (submitBtn) { submitBtn.textContent = origText; submitBtn.disabled = false; }
       });
 
-      return false; // Extra prevention
+      return false;
     });
   }
 

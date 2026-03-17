@@ -81,13 +81,20 @@ $total_pages = max(1, ceil($total_records / $limit));
     <tbody>
       <?php if ($result && $result->num_rows > 0): ?>
         <?php while ($row = $result->fetch_assoc()): ?>
-        <tr data-id="<?= (int) ($row["id"] ?? 0) ?>">
+        <tr data-id="<?= (int) ($row["subject_id"] ?? 0) ?>">
           <td>
             <div style="display:flex;align-items:center;gap:10px;">
               <div style="min-width:0;">
-                <div class="name-primary"><?= htmlspecialchars(
+                <!-- View -->
+                <div class="v-name name-primary"><?= htmlspecialchars(
                     $row["subject_name"] ?? "",
                 ) ?></div>
+                <!-- Edit -->
+                <div class="e-name" style="display:none;">
+                  <input class="edit-input" name="subject_name" value="<?= htmlspecialchars(
+                      $row["subject_name"] ?? "",
+                  ) ?>" placeholder="Subject name" style="width:240px;">
+                </div>
               </div>
             </div>
           </td>
@@ -96,18 +103,41 @@ $total_pages = max(1, ceil($total_records / $limit));
             <span class="v-field"><?= htmlspecialchars(
                 $row["special"] ?? "",
             ) ?></span>
+            <input class="e-field edit-input" name="special" value="<?= htmlspecialchars(
+                $row["special"] ?? "",
+            ) ?>" placeholder="Specialization" style="display:none;">
           </td>
 
           <td>
             <span class="v-field"><?= htmlspecialchars(
                 $row["grade_level"] ?? "",
             ) ?></span>
+            <select class="e-field edit-select" name="grade_level" style="display:none;">
+              <option value="" <?= ($row["grade_level"] ?? "") === ""
+                  ? "selected"
+                  : "" ?>>--</option>
+              <option value="11" <?= strpos(
+                  (string) ($row["grade_level"] ?? ""),
+                  "11",
+              ) !== false
+                  ? "selected"
+                  : "" ?>>11</option>
+              <option value="12" <?= strpos(
+                  (string) ($row["grade_level"] ?? ""),
+                  "12",
+              ) !== false
+                  ? "selected"
+                  : "" ?>>12</option>
+            </select>
           </td>
 
           <td>
             <span class="v-field"><?= htmlspecialchars(
                 $row["strand"] ?? "",
             ) ?></span>
+            <input class="e-field edit-input" name="strand" value="<?= htmlspecialchars(
+                $row["strand"] ?? "",
+            ) ?>" placeholder="Strand" style="display:none;">
           </td>
 
           <td>
@@ -120,6 +150,14 @@ $total_pages = max(1, ceil($total_records / $limit));
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
                 Delete
               </button>
+            </div>
+
+            <div class="e-actions action-group" style="display:none;">
+              <button class="action-btn action-btn-save" onclick="saveSubject(this)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Save
+              </button>
+              <button class="action-btn action-btn-cancel" onclick="cancelEditSubject(this)">Cancel</button>
             </div>
           </td>
         </tr>
@@ -170,29 +208,102 @@ function filterSubjectTable(q) {
   });
 }
 
-// Placeholder inline-edit / delete handlers (implement server endpoints as needed)
+/* Inline edit behavior for subjects (mirrors faculty inline editing) */
 function startEditSubject(btn) {
   const row = btn.closest('tr');
-  // For now just highlight row to indicate edit mode
   row.classList.add('editing');
-  // You can expand to show edit inputs like the faculty table
+  // hide view elements, show edit inputs/actions
+  row.querySelectorAll('.v-field, .v-name, .v-actions').forEach(el => el.style.display = 'none');
+  row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = '');
+  const nameDiv = row.querySelector('.e-name');
+  if (nameDiv) nameDiv.style.display = 'block';
 }
 
-function deleteSubject(btn) {
+function cancelEditSubject(btn) {
+  const row = btn.closest('tr');
+  row.classList.remove('editing');
+  row.querySelectorAll('.v-field, .v-name, .v-actions').forEach(el => el.style.display = '');
+  row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = 'none');
+  const nameDiv = row.querySelector('.e-name');
+  if (nameDiv) nameDiv.style.display = 'none';
+}
+
+async function saveSubject(btn) {
+  const row = btn.closest('tr');
+  const id = row.getAttribute('data-id');
+  const data = new FormData();
+  data.append('subject_id', id);
+
+  // collect editable inputs from the row
+  row.querySelectorAll('.e-field, .e-name input, .e-name select').forEach(el => {
+    if (el.name) data.append(el.name, el.value);
+  });
+
+  const orig = btn.innerHTML;
+  btn.textContent = 'Saving…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+    const json = await res.json();
+    if (json && json.success) {
+      // reload listing (use rows-per-page selector or fallback)
+      if (typeof loadSubjectPage === 'function') {
+        const limit = document.getElementById('rows-per-page')?.value || 5;
+        loadSubjectPage(1, limit);
+      } else {
+        window.location.reload();
+      }
+    } else {
+      alert('Error: ' + (json && json.message ? json.message : 'Unknown error'));
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  } catch (e) {
+    console.error('Save error:', e);
+    alert('Error saving subject.');
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
+}
+
+async function deleteSubject(btn) {
   if (!confirm('Delete this subject? This cannot be undone.')) return;
   const row = btn.closest('tr');
   const subjectId = row.getAttribute('data-id');
-  // Example AJAX call to delete endpoint (not implemented here)
-  // const data = new FormData(); data.append('subject_id', subjectId);
-  // fetch('/mainscheduler/tabs/actions/subject_delete.php', { method: 'POST', body: data })
-  //   .then(r => r.json()).then(j => { if (j.success) loadSubjectPage(1, document.getElementById('rows-per-page')?.value || <?= $default_limit ?>); else alert('Delete failed'); });
-  // For now remove row visually
-  row.style.transition = 'opacity .2s, transform .2s';
-  row.style.opacity = '0';
-  row.style.transform = 'translateX(8px)';
-  setTimeout(() => {
-    const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
-    if (typeof loadSubjectPage === 'function') loadSubjectPage(1, limit);
-  }, 220);
+  const data = new FormData();
+  data.append('subject_id', subjectId);
+  data.append('action', 'delete');
+
+  const orig = btn.innerHTML;
+  btn.textContent = 'Deleting…';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+    const json = await res.json();
+    if (json && json.success) {
+      row.style.transition = 'opacity .2s, transform .2s';
+      row.style.opacity = '0';
+      row.style.transform = 'translateX(8px)';
+      setTimeout(() => {
+        if (typeof loadSubjectPage === 'function') {
+          const limit = document.getElementById('rows-per-page')?.value || 5;
+          loadSubjectPage(1, limit);
+        } else {
+          window.location.reload();
+        }
+      }, 220);
+    } else {
+      alert('Delete failed: ' + (json && json.message ? json.message : 'Unknown'));
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  } catch (err) {
+    console.error('Delete error', err);
+    alert('Error deleting subject');
+    btn.innerHTML = orig;
+    btn.disabled = false;
+  }
 }
 </script>
