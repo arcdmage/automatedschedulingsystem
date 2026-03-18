@@ -1,5 +1,11 @@
 <?php
 
+function is_legacy_subject_duration($storedValue): bool
+{
+    $minutes = (int) $storedValue;
+    return $minutes > 0 && $minutes <= 20;
+}
+
 function normalize_subject_duration_minutes($storedValue): int
 {
     $minutes = (int) $storedValue;
@@ -50,7 +56,14 @@ function format_subject_duration_minutes($storedValue): string
 
 function weekly_subject_duration_minutes($storedValue): int
 {
-    return normalize_subject_duration_minutes($storedValue) * 5;
+    $minutes = normalize_subject_duration_minutes($storedValue);
+
+    // Older values were already stored as weekly hours.
+    if (is_legacy_subject_duration($storedValue)) {
+        return $minutes;
+    }
+
+    return $minutes * 5;
 }
 
 function minutes_between_times(?string $startTime, ?string $endTime): int
