@@ -215,7 +215,7 @@ if ($selected_section) {
       <p style="color:#666; margin:5px 0 0 0;">Fill in the details for the new section</p>
     </div>
 
-    <div style="padding:15px;">
+    <div style="padding:15px;"> 
       <form id="create-section-form">
         <div class="form-grid">
           <div class="form-group">
@@ -381,12 +381,12 @@ function handleSectionChange(value) {
 
 // Open create section modal
 function openCreateSectionModal() {
-  document.getElementById('create-section-modal').style.display = 'block';
+  document.getElementById('create-section-modal').classList.add('open');
 }
 
 // Close create section modal
 function closeCreateSectionModal() {
-  document.getElementById('create-section-modal').style.display = 'none';
+  document.getElementById('create-section-modal').classList.remove('open');
   document.getElementById('create-section-form').reset();
 }
 
