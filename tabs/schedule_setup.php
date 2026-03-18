@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
+require_once __DIR__ . "/../lib/subject_duration_helpers.php";
 
 // Get selected section from URL parameter - MUST BE DEFINED FIRST
 $selected_section = isset($_GET["section_id"])
@@ -48,6 +49,11 @@ if ($selected_section) {
     $stmt->execute();
     $requirements = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
+}
+
+function subject_duration_value(int $storedValue): array
+{
+    return split_subject_duration_minutes($storedValue);
 }
 ?>
 
@@ -136,8 +142,13 @@ if ($selected_section) {
       </div>
 
       <div class="form-group">
-        <label>Hours / Week <span style="color:red">*</span></label>
-        <input type="number" name="hours_per_week" min="1" max="20" value="1" required>
+        <label>Hour Per Subject <span style="color:red">*</span></label>
+        <input type="hidden" name="hours_per_week" id="quick_duration_total" value="60">
+        <div style="display:flex; gap:10px;">
+          <input type="number" id="quick_duration_hours" name="duration_hours" min="0" max="20" value="1" required style="flex:1;">
+          <input type="number" id="quick_duration_minutes" name="duration_minutes" min="0" max="59" value="0" required style="flex:1;">
+        </div>
+        <small style="color:#666;">Enter hours and minutes, for example 1 hour and 30 minutes.</small>
       </div>
     </div>
 
@@ -154,17 +165,24 @@ if ($selected_section) {
         <tr>
           <th>Subject</th>
           <th>Teacher</th>
-          <th>Hours/Week</th>
+          <th>Hour Per Subject</th>
           <th>Pattern Status</th>
           <th>Actions</th>
         </tr>
       </thead>
       <tbody>
         <?php foreach ($requirements as $req): ?>
+          <?php $req_duration = subject_duration_value(
+              (int) $req["hours_per_week"],
+          ); ?>
           <tr>
             <td><?php echo htmlspecialchars($req["subject_name"]); ?></td>
             <td><?php echo htmlspecialchars($req["teacher_name"]); ?></td>
-            <td><?php echo $req["hours_per_week"]; ?> hrs</td>
+                <td><?php echo htmlspecialchars(
+                    format_subject_duration_minutes(
+                        $req_duration["total_minutes"],
+                    ),
+                ); ?></td>
             <td>
               <?php if ($req["pattern_count"] > 0): ?>
                 <span style="color:#4CAF50;">✓ <?php echo $req[
@@ -181,7 +199,7 @@ if ($selected_section) {
                       ]; ?>, '<?php echo htmlspecialchars(
     $req["subject_name"],
     ENT_QUOTES,
-); ?>', <?php echo $req["hours_per_week"]; ?>, <?php echo $req[
+); ?>', <?php echo $req_duration["total_minutes"]; ?>, <?php echo $req[
     "faculty_id"
 ]; ?>)">
                 📅 Configure Pattern
@@ -287,7 +305,7 @@ if ($selected_section) {
     <div class="imgcontainer" style="padding:15px; border-bottom:1px solid #ddd;">
       <span onclick="closePatternModal()" class="close" style="float:right; cursor:pointer; font-size:28px;">&times;</span>
       <h2 id="pattern-modal-title">Configure Schedule Pattern</h2>
-      <p style="color:#666; margin:5px 0 0 0;">Select when this subject should be scheduled each week</p>
+      <p style="color:#666; margin:5px 0 0 0;">Select when this subject should be scheduled</p>
     </div>
 
     <div class="tab-buttons">
@@ -333,8 +351,12 @@ if ($selected_section) {
             </select>
           </div>
           <div class="form-group">
-            <label>Hours/Week *</label>
-            <input type="number" name="hours_per_week" id="update_hours" min="1" max="20" required>
+            <label>Hour Per Subject *</label>
+            <input type="hidden" name="hours_per_week" id="update_duration_total" value="60">
+            <div style="display:flex; gap:10px;">
+              <input type="number" name="duration_hours" id="update_hours" min="0" max="20" required style="flex:1;">
+              <input type="number" name="duration_minutes" id="update_minutes" min="0" max="59" required style="flex:1;">
+            </div>
           </div>
         </div>
         <button type="submit" class="btn btn-success">💾 Update Details</button>
@@ -346,11 +368,43 @@ if ($selected_section) {
 
 <script>
 let currentRequirementId = null;
-let currentRequiredHours = 0;
+let currentRequiredMinutes = 0;
+let currentPerSubjectMinutes = 0;
 let selectedSlots = new Set();
 let timeSlots = <?php echo $timeslots_result
     ? json_encode($timeslots_result->fetch_all(MYSQLI_ASSOC))
     : "[]"; ?>;
+
+function toWeeklyMinutes(minutesPerSubject) {
+  return Math.max(0, Number(minutesPerSubject || 0)) * 5;
+}
+
+function formatDuration(minutes) {
+  const totalMinutes = Math.max(0, Number(minutes || 0));
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  const parts = [];
+
+  if (hours > 0) parts.push(`${hours} hr${hours === 1 ? '' : 's'}`);
+  if (mins > 0) parts.push(`${mins} min`);
+
+  return parts.length ? parts.join(' ') : '0 min';
+}
+
+function getSelectedMinutes() {
+  return selectedSlots.size * currentPerSubjectMinutes;
+}
+
+function syncDurationInput(hoursId, minutesId, totalId) {
+  const hoursInput = document.getElementById(hoursId);
+  const minutesInput = document.getElementById(minutesId);
+  const totalInput = document.getElementById(totalId);
+  if (!hoursInput || !minutesInput || !totalInput) return;
+
+  const hours = Math.max(0, parseInt(hoursInput.value || '0', 10) || 0);
+  const minutes = Math.max(0, parseInt(minutesInput.value || '0', 10) || 0);
+  totalInput.value = (hours * 60) + minutes;
+}
 
 // Function to convert 24-hour time to 12-hour format
 function formatTime12Hour(time24) {
@@ -500,7 +554,8 @@ function deleteRequirement(id) {
 // Open pattern modal
 async function openPatternModal(requirementId, subjectName, hoursPerWeek, facultyId) {
   currentRequirementId = requirementId;
-  currentRequiredHours = hoursPerWeek;
+  currentPerSubjectMinutes = Math.max(0, Number(hoursPerWeek || 0));
+  currentRequiredMinutes = toWeeklyMinutes(hoursPerWeek);
   selectedSlots.clear();
 
   document.getElementById('pattern-modal-title').textContent = `Configure Pattern: ${subjectName}`;
@@ -510,7 +565,9 @@ async function openPatternModal(requirementId, subjectName, hoursPerWeek, facult
   document.getElementById('update_requirement_id').value = requirementId;
   document.getElementById('update_subject').value = subjectName;
   document.getElementById('update_faculty_id').value = facultyId;
-  document.getElementById('update_hours').value = hoursPerWeek;
+  document.getElementById('update_hours').value = Math.floor(hoursPerWeek / 60);
+  document.getElementById('update_minutes').value = hoursPerWeek % 60;
+  syncDurationInput('update_hours', 'update_minutes', 'update_duration_total');
 
   // Load existing pattern
   try {
@@ -600,10 +657,10 @@ function toggleSlot(key) {
 }
 
 function updateHoursSummary() {
-  const selected = selectedSlots.size;
-  const remaining = currentRequiredHours - selected;
+  const selected = getSelectedMinutes();
+  const remaining = currentRequiredMinutes - selected;
 
-  let html = `<strong>Selected:</strong> ${selected} slots | <strong>Required:</strong> ${currentRequiredHours} hrs | `;
+  let html = `<strong>Selected:</strong> ${formatDuration(selected)} | <strong>Required:</strong> ${formatDuration(currentRequiredMinutes)} | `;
 
   if (remaining > 0) {
     html += `<span style="color:#f44336;">⚠ Please select ${remaining} more slot(s)</span>`;
@@ -674,6 +731,7 @@ function switchTab(tab) {
 // Update form submission
 document.getElementById('update-form')?.addEventListener('submit', async function(e) {
   e.preventDefault();
+  syncDurationInput('update_hours', 'update_minutes', 'update_duration_total');
   const formData = new FormData(this);
 
   try {
@@ -705,6 +763,109 @@ window.onclick = function(event) {
     closeCreateSectionModal();
   }
 }
+
+function openPatternModal(requirementId, subjectName, hoursPerSubject, facultyId) {
+  currentRequirementId = requirementId;
+  currentPerSubjectMinutes = Math.max(0, Number(hoursPerSubject || 0));
+  currentRequiredMinutes = toWeeklyMinutes(hoursPerSubject);
+  selectedSlots.clear();
+
+  document.getElementById('pattern-modal-title').textContent = `Configure Pattern: ${subjectName}`;
+  document.getElementById('pattern-modal').style.display = 'block';
+  document.getElementById('update_requirement_id').value = requirementId;
+  document.getElementById('update_subject').value = subjectName;
+  document.getElementById('update_faculty_id').value = facultyId;
+  document.getElementById('update_hours').value = Math.floor(hoursPerSubject / 60);
+  document.getElementById('update_minutes').value = hoursPerSubject % 60;
+  syncDurationInput('update_hours', 'update_minutes', 'update_duration_total');
+
+  fetch(`/mainscheduler/tabs/actions/api_get_pattern.php?requirement_id=${requirementId}`)
+    .then(response => response.json())
+    .then(existingPattern => {
+      existingPattern.forEach(p => {
+        selectedSlots.add(`${p.day_of_week}-${p.time_slot_id}`);
+      });
+      renderPatternGrid();
+    })
+    .catch(error => {
+      console.error('Error loading pattern:', error);
+      renderPatternGrid();
+    });
+}
+
+function updateHoursSummary() {
+  const selected = getSelectedMinutes();
+  const remaining = currentRequiredMinutes - selected;
+
+  let html = `<strong>Selected:</strong> ${formatDuration(selected)} | <strong>Required:</strong> ${formatDuration(currentRequiredMinutes)} | `;
+
+  if (remaining > 0) {
+    html += `<span style="color:#f44336;">Please select ${formatDuration(remaining)} more</span>`;
+  } else if (remaining < 0) {
+    html += `<span style="color:#f44336;">You selected ${formatDuration(Math.abs(remaining))} too much</span>`;
+  } else {
+    html += `<span style="color:#4CAF50;">Perfect match!</span>`;
+  }
+
+  document.getElementById('hours-summary').innerHTML = html;
+}
+
+async function savePattern() {
+  if (selectedSlots.size === 0) {
+    alert('Please select at least one time slot');
+    return;
+  }
+
+  const selectedMinutes = getSelectedMinutes();
+  if (selectedMinutes !== currentRequiredMinutes) {
+    if (!confirm(`You selected ${formatDuration(selectedMinutes)} but need ${formatDuration(currentRequiredMinutes)}. Continue anyway?`)) {
+      return;
+    }
+  }
+
+  const pattern = Array.from(selectedSlots).map(key => {
+    const [day, slotId] = key.split('-');
+    return { day_of_week: day, time_slot_id: parseInt(slotId, 10) };
+  });
+
+  try {
+    const response = await fetch('/mainscheduler/tabs/actions/pattern_save.php', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        requirement_id: currentRequirementId,
+        pattern: pattern
+      })
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      alert('Pattern saved successfully!');
+      closePatternModal();
+      window.location.reload();
+    } else {
+      alert('Error: ' + data.message);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    alert('Error saving pattern');
+  }
+}
+
+['quick_duration_hours', 'quick_duration_minutes'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    syncDurationInput('quick_duration_hours', 'quick_duration_minutes', 'quick_duration_total');
+  });
+});
+
+['update_hours', 'update_minutes'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    syncDurationInput('update_hours', 'update_minutes', 'update_duration_total');
+  });
+});
+
+syncDurationInput('quick_duration_hours', 'quick_duration_minutes', 'quick_duration_total');
 </script>
 
 </body>

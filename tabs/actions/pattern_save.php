@@ -8,6 +8,7 @@
 ob_start();
 
 require_once __DIR__ . "/../../db_connect.php";
+require_once __DIR__ . "/../../lib/subject_duration_helpers.php";
 
 // Set error reporting but don't display errors (they break JSON)
 error_reporting(E_ALL);
@@ -110,9 +111,9 @@ try {
             " slots",
     );
 
-    // Get the section_id from the requirement
+    // Get the section_id and required duration from the requirement
     $section_query =
-        "SELECT section_id FROM subject_requirements WHERE requirement_id = ?";
+        "SELECT section_id, hours_per_week FROM subject_requirements WHERE requirement_id = ?";
     $stmt = $conn->prepare($section_query);
 
     if (!$stmt) {
@@ -135,6 +136,9 @@ try {
     }
 
     $section_id = $section_result["section_id"];
+    $required_minutes = weekly_subject_duration_minutes(
+        $section_result["hours_per_week"] ?? 0,
+    );
     error_log("Pattern Save - Section ID: $section_id");
 
     // Day name normalization map (accepts names or numeric days)
@@ -209,6 +213,10 @@ try {
     }
 
     // Validate that all time_slot_ids belong to this section and are not breaks
+    $per_subject_minutes = normalize_subject_duration_minutes(
+        $section_result["hours_per_week"] ?? 0,
+    );
+    $selected_minutes = 0;
     foreach ($pattern as $index => $slot) {
         // Validate slot structure
         if (!isset($slot["time_slot_id"])) {
@@ -278,6 +286,7 @@ try {
             $validate_result["start_time"] ?? null,
             $validate_result["end_time"] ?? null,
         );
+        $selected_minutes += $per_subject_minutes;
 
         // CHECK for pattern overlap with other saved patterns (same section/day/slot)
         $check_pattern_stmt->bind_param(
@@ -339,6 +348,16 @@ try {
                 "Conflict: {$conf_subject} in {$conf_section}{$conf_track} is already scheduled on {$day_of_week} at {$time_label}.",
             );
         }
+    }
+
+    if ($selected_minutes !== $required_minutes) {
+        throw new Exception(
+            "Pattern duration mismatch: selected " .
+                format_subject_duration_minutes($selected_minutes) .
+                " but this subject requires " .
+                format_subject_duration_minutes($required_minutes) .
+                ".",
+        );
     }
     $validate_stmt->close();
     $check_pattern_stmt->close();

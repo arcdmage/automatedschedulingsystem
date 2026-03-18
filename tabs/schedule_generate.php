@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/schedule_helpers.php";
+require_once __DIR__ . "/../lib/subject_duration_helpers.php";
 // Fetch all sections
 $sections_query = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.school_year, s.semester,
                    CONCAT(f.lname, ', ', f.fname) AS adviser_name
@@ -16,17 +17,21 @@ $selected_section = isset($_GET["section_id"])
 
 // Fetch subject requirements count for selected section
 $requirements_count = 0;
-$total_hours = 0;
+$total_minutes = 0;
 if ($selected_section) {
-    $count_query = "SELECT COUNT(*) as count, SUM(hours_per_week) as total_hours
+    $count_query = "SELECT hours_per_week
                   FROM subject_requirements
                   WHERE section_id = ?";
     $stmt = $conn->prepare($count_query);
     $stmt->bind_param("i", $selected_section);
     $stmt->execute();
-    $count_result = $stmt->get_result()->fetch_assoc();
-    $requirements_count = $count_result["count"];
-    $total_hours = $count_result["total_hours"] ?? 0;
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $requirements_count++;
+        $total_minutes += weekly_subject_duration_minutes(
+            $row["hours_per_week"] ?? 0,
+        );
+    }
     $stmt->close();
 }
 ?>
@@ -90,9 +95,11 @@ if ($selected_section) {
     </div>
 
     <div class="info-card">
-      <h3>Total Hours/Week</h3>
-      <div class="big-number"><?php echo $total_hours; ?></div>
-      <p>hours to schedule</p>
+      <h3>Total Time/Week</h3>
+      <div class="big-number"><?php echo htmlspecialchars(
+          format_subject_duration_minutes($total_minutes),
+      ); ?></div>
+      <p>time to schedule</p>
     </div>
 
     <div class="info-card warning">
@@ -125,7 +132,7 @@ if ($selected_section) {
           <strong style="font-size:15px;">🎲 Random Schedule Mode</strong><br>
           <span style="color:#666; font-size:13px; line-height:1.5;">
             Skip saved patterns and randomly distribute each subject across available
-            Mon&ndash;Fri time slots based on its <em>hours per week</em>. Useful for quickly
+            Mon&ndash;Fri time slots based on its <em>hour per subject</em>. Useful for quickly
             generating a draft or when patterns haven't been configured yet.
           </span>
         </span>

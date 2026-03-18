@@ -35,6 +35,7 @@ register_shutdown_function(function () {
 
 require_once __DIR__ . "/../../db_connect.php";
 require_once __DIR__ . "/action_helper.php";
+require_once __DIR__ . "/../../lib/subject_duration_helpers.php";
 ob_clean();
 if (!headers_sent()) {
     header("Content-Type: application/json");
@@ -57,6 +58,78 @@ function dlog($m)
 {
     global $debug_log;
     $debug_log[] = $m;
+}
+
+function random_pool_slot_duration_minutes(array $slot): int
+{
+    return minutes_between_times($slot["start"] ?? null, $slot["end"] ?? null);
+}
+
+function faculty_has_random_overlap(
+    array $prospective_schedules,
+    ?int $facultyId,
+    string $day,
+    string $startTime,
+    string $endTime,
+): bool {
+    if (!$facultyId) {
+        return false;
+    }
+
+    foreach ($prospective_schedules as $schedule) {
+        if (
+            (int) ($schedule["p_faculty_id"] ?? 0) !== $facultyId ||
+            ($schedule["day_of_week"] ?? "") !== $day
+        ) {
+            continue;
+        }
+
+        if (
+            ($schedule["start_time"] ?? "") < $endTime &&
+            ($schedule["end_time"] ?? "") > $startTime
+        ) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function find_random_slot_combination(
+    array $candidates,
+    int $targetMinutes,
+    int $index = 0,
+    array $current = [],
+    int $currentMinutes = 0,
+): ?array {
+    if ($currentMinutes === $targetMinutes) {
+        return $current;
+    }
+
+    if ($currentMinutes > $targetMinutes || $index >= count($candidates)) {
+        return null;
+    }
+
+    for ($i = $index; $i < count($candidates); $i++) {
+        $candidate = $candidates[$i];
+        $duration = (int) ($candidate["duration_minutes"] ?? 0);
+        if ($duration <= 0) {
+            continue;
+        }
+
+        $result = find_random_slot_combination(
+            $candidates,
+            $targetMinutes,
+            $i + 1,
+            array_merge($current, [$candidate]),
+            $currentMinutes + $duration,
+        );
+        if ($result !== null) {
+            return $result;
+        }
+    }
+
+    return null;
 }
 
 $days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
@@ -252,11 +325,41 @@ try {
         }
     }
 
-    $total_slots_available = count($pool);
-    $total_hours_needed = array_sum(array_column($reqs, "hours_per_week"));
+    $total_minutes_available = 0;
+    foreach ($pool as $pool_entry) {
+        $total_minutes_available += random_pool_slot_duration_minutes(
+            $pool_entry,
+        );
+    }
+
+    $total_minutes_needed = 0;
+    foreach ($reqs as &$req) {
+        $req["required_minutes"] = weekly_subject_duration_minutes(
+            $req["hours_per_week"] ?? 0,
+        );
+        $total_minutes_needed += $req["required_minutes"];
+    }
+    unset($req);
+
     dlog(
-        "Pool size: $total_slots_available | Hours needed: $total_hours_needed",
+        "Pool time: " .
+            format_subject_duration_minutes($total_minutes_available) .
+            " | Required: " .
+            format_subject_duration_minutes($total_minutes_needed),
     );
+
+    if ($total_minutes_needed > $total_minutes_available) {
+        throw new Exception(
+            "Not enough available time: need " .
+                format_subject_duration_minutes($total_minutes_needed) .
+                " but only " .
+                format_subject_duration_minutes($total_minutes_available) .
+                " is available. Reduce hour per subject or add more time slots.",
+        );
+    }
+
+    $total_hours_needed = 0;
+    $total_slots_available = PHP_INT_MAX;
 
     if ($total_hours_needed > $total_slots_available) {
         throw new Exception(
@@ -330,6 +433,109 @@ try {
 
     $current_pool_index = 0;
     $total_skipped_from_insufficient_slots = 0;
+    $internal_conflict_details = [];
+
+    foreach ($reqs as $req) {
+        $req["required_minutes"] = weekly_subject_duration_minutes(
+            $req["hours_per_week"] ?? 0,
+        );
+        $subj = (int) $req["subject_id"];
+        $fac = (int) ($req["faculty_id"] ?? 0);
+        $required_minutes = (int) $req["required_minutes"];
+        $subj_name = $req["subject_name"];
+
+        dlog(
+            "Subject: $subj_name | needs " .
+                format_subject_duration_minutes($required_minutes) .
+                " | faculty='$fac'",
+        );
+
+        $candidate_pool = [];
+        foreach ($pool as $entry) {
+            $day = $entry["day"];
+            $slot = (int) $entry["slot_id"];
+            $internal_key = "$day|$slot";
+
+            if (isset($internal_slot_usage[$internal_key])) {
+                continue;
+            }
+
+            if (
+                faculty_has_random_overlap(
+                    $prospective_schedules,
+                    $fac ?: null,
+                    $day,
+                    $entry["start"],
+                    $entry["end"],
+                )
+            ) {
+                continue;
+            }
+
+            $entry["duration_minutes"] = random_pool_slot_duration_minutes(
+                $entry,
+            );
+            if ($entry["duration_minutes"] <= 0) {
+                continue;
+            }
+            $candidate_pool[] = $entry;
+        }
+
+        shuffle($candidate_pool);
+        $selected_combination = find_random_slot_combination(
+            $candidate_pool,
+            $required_minutes,
+        );
+
+        if ($selected_combination === null) {
+            $total_skipped_from_insufficient_slots++;
+            $internal_conflict_details[] =
+                $subj_name .
+                " could not be placed for " .
+                format_subject_duration_minutes($required_minutes) .
+                " with the currently available time slots.";
+            dlog(
+                "  UNPLACED: No exact time combination found for $subj_name (" .
+                    format_subject_duration_minutes($required_minutes) .
+                    ").",
+            );
+            continue;
+        }
+
+        foreach ($selected_combination as $entry) {
+            $day = $entry["day"];
+            $slot = (int) $entry["slot_id"];
+            $ts = $entry["start"];
+            $te = $entry["end"];
+            $note = "Auto-generated";
+            $sdate = $sentinels[$day];
+            $room_id = null;
+            $internal_key = "$day|$slot";
+
+            $prospective_schedules[] = [
+                "p_faculty_id" => $fac ?: null,
+                "p_section_id" => $section_id,
+                "p_schedule_date" => $sdate,
+                "p_time_slot_id" => $slot,
+                "p_room_id" => $room_id,
+                "subject_id" => $subj,
+                "start_time" => $ts,
+                "end_time" => $te,
+                "day_of_week" => $day,
+                "notes" => $note,
+            ];
+            $internal_slot_usage[$internal_key] = true;
+            dlog(
+                "  ASSIGNED (internally): $day slot=$slot for $subj_name (" .
+                    format_subject_duration_minutes(
+                        $entry["duration_minutes"] ?? 0,
+                    ) .
+                    ")",
+            );
+        }
+    }
+
+    $reqs = [];
 
     foreach ($reqs as $req) {
         $subj = (int) $req["subject_id"];
@@ -456,6 +662,7 @@ try {
                     "Conflicts detected. Review the conflicts and confirm to proceed with replacing auto-generated schedules.",
                 "conflict_details" => $external_conflict_details,
                 "internal_conflicts_count" => $total_skipped_from_insufficient_slots,
+                "internal_conflict_details" => $internal_conflict_details,
                 "confirmation_instructions" =>
                     "Resubmit this request with POST parameter 'confirm_force' = '1' to proceed and replace existing auto-generated schedules.",
                 "debug_log" => $debug_log,
@@ -480,7 +687,7 @@ try {
                 $total_skipped_from_insufficient_slots +
                 $total_external_conflicts;
             dlog(
-                "After confirmation rechecked conflicts; ${total_external_conflicts} external remain.",
+                "After confirmation rechecked conflicts; {$total_external_conflicts} external remain.",
             );
             if (empty($prospective_schedules)) {
                 throw new Exception(
