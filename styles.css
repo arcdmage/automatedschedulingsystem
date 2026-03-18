@@ -262,11 +262,7 @@ ul.tabs li[data-tab-target="#subject_list"] {
     text-decoration: underline;
 }
 
-#home,
-#faculty_members,
-#subject_list,
-#sections_list,
-#schedule {
+#home {
     background-image: url(images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg);
     background-size: cover;
     background-position: center;
@@ -274,6 +270,43 @@ ul.tabs li[data-tab-target="#subject_list"] {
     background-attachment: fixed;
     background-color: rgba(0, 0, 0, 0.4);
 }
+#faculty_members{
+    background-image: url(images/IMG20260212065046.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+#subject_list{
+    background-image: url(images/IMG20260212065248.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+#sections_list{
+    background-image: url(images/IMG20260212065313.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+#schedule{
+    background-image: url(images/IMG20260212064923.jpg);
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    background-color: rgba(0, 0, 0, 0.4);
+}
+
+
+
+
+
 
 .home-title {
     text-align: center;
