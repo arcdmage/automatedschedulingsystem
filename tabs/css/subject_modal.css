@@ -71,6 +71,10 @@ input:focus {
     margin: 6px 0 14px;
 }
 
+select.faculty-multi.faculty-multi-enhanced {
+    display: none !important;
+}
+
 .faculty-picker-trigger {
     display: flex;
     align-items: center;

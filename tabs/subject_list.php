@@ -129,6 +129,10 @@ document.addEventListener("DOMContentLoaded", function() {
 
     const wrapper = document.createElement('div');
     wrapper.className = 'faculty-picker';
+    if (select.classList.contains('e-field')) {
+      wrapper.classList.add('e-field');
+      wrapper.style.display = 'none';
+    }
     wrapper.innerHTML = `
       <button type="button" class="faculty-picker-trigger">
         <span class="faculty-picker-trigger-text"></span>
@@ -200,6 +204,7 @@ document.addEventListener("DOMContentLoaded", function() {
       });
     });
 
+    select.classList.add('faculty-multi-enhanced');
     select.style.display = 'none';
     select.insertAdjacentElement('afterend', wrapper);
     select.dataset.searchablePickerReady = '1';
@@ -419,6 +424,8 @@ document.addEventListener("DOMContentLoaded", function() {
     document.getElementById('subject-modal-title').textContent = 'Add Subject';
     document.getElementById('subject-form-submit').textContent = 'Create';
   }
+
+  window.closeSubjectModal = closeSubjectModal;
 
   if (form) {
     form.addEventListener("submit", function(e) {
