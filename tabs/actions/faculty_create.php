@@ -21,6 +21,27 @@ try {
         throw new Exception("First name and last name are required");
     }
 
+    $duplicateStmt = $conn->prepare(
+        "SELECT faculty_id
+         FROM faculty
+         WHERE LOWER(TRIM(fname)) = LOWER(TRIM(?))
+           AND LOWER(TRIM(mname)) = LOWER(TRIM(?))
+           AND LOWER(TRIM(lname)) = LOWER(TRIM(?))
+         LIMIT 1",
+    );
+    if (!$duplicateStmt) {
+        throw new Exception("Database error while checking duplicates");
+    }
+    $duplicateStmt->bind_param("sss", $fname, $mname, $lname);
+    $duplicateStmt->execute();
+    $duplicateResult = $duplicateStmt->get_result();
+    if ($duplicateResult && $duplicateResult->num_rows > 0) {
+        throw new Exception(
+            "A faculty member with the same full name already exists",
+        );
+    }
+    $duplicateStmt->close();
+
     $stmt = $conn->prepare(
         "INSERT INTO faculty (fname, mname, lname, gender, pnumber, address, status)
          VALUES (?, ?, ?, ?, ?, ?, ?)",
