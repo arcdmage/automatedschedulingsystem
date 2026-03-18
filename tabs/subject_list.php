@@ -48,7 +48,7 @@ if ($faculty_query) {
       <input type="text" placeholder="Subject Name" name="subject_name" id="subject_name" required>
 
       <label for="special"><b>Faculty</b></label>
-      <select name="special" id="special" multiple required>
+      <select name="special" id="special" class="faculty-multi" multiple required>
         <option value="">-- Select Faculty --</option>
         <?php foreach ($faculty_options as $faculty_name): ?>
           <option value="<?= htmlspecialchars(
@@ -76,9 +76,175 @@ if ($faculty_query) {
 document.addEventListener("DOMContentLoaded", function() {
   const tableContent = document.getElementById("subject-table-content");
   const defaultLimit = 5;
+  let subjectSearchTerm = '';
+  let subjectSearchTimer = null;
+  let shouldRestoreSubjectSearchFocus = false;
 
-  function loadSubjectPage(page = 1, limit = defaultLimit) {
-    const url = `/mainscheduler/tabs/subject_table.php?page=${page}&limit=${limit}`;
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function closeFacultyPickerPopup(wrapper) {
+    if (!wrapper) return;
+    wrapper.classList.remove('open');
+  }
+
+  function closeAllFacultyPickerPopups(exceptWrapper = null) {
+    document.querySelectorAll('.faculty-picker.open').forEach(wrapper => {
+      if (wrapper !== exceptWrapper) {
+        closeFacultyPickerPopup(wrapper);
+      }
+    });
+  }
+
+  function syncFacultyPickerSummary(wrapper, count) {
+    const summary = wrapper.querySelector('.faculty-picker-summary');
+    const triggerText = wrapper.querySelector('.faculty-picker-trigger-text');
+    if (!summary) return;
+    const text = count > 0
+      ? `${count} faculty selected`
+      : 'No faculty selected';
+    summary.textContent = text;
+    if (triggerText) {
+      triggerText.textContent = text;
+    }
+  }
+
+  function buildSearchableFacultyPicker(select) {
+    if (!select || select.dataset.searchablePickerReady === '1') {
+      return;
+    }
+
+    const options = Array.from(select.options)
+      .filter(option => option.value !== '')
+      .map(option => ({
+        value: option.value,
+        label: option.textContent.trim()
+      }));
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'faculty-picker';
+    wrapper.innerHTML = `
+      <button type="button" class="faculty-picker-trigger">
+        <span class="faculty-picker-trigger-text"></span>
+        <span class="faculty-picker-trigger-caret">v</span>
+      </button>
+      <div class="faculty-picker-popup">
+        <input type="text" class="faculty-picker-search" placeholder="Search faculty...">
+        <div class="faculty-picker-summary"></div>
+        <div class="faculty-picker-list"></div>
+      </div>
+    `;
+
+    const list = wrapper.querySelector('.faculty-picker-list');
+    list.innerHTML = options.map(option => `
+      <label class="faculty-picker-item" data-label="${escapeHtml(option.label.toLowerCase())}">
+        <input type="checkbox" value="${escapeHtml(option.value)}">
+        <span>${escapeHtml(option.label)}</span>
+      </label>
+    `).join('');
+
+    const syncFromSelect = () => {
+      const selectedValues = new Set(
+        Array.from(select.selectedOptions)
+          .map(option => option.value)
+          .filter(Boolean)
+      );
+
+      wrapper.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = selectedValues.has(checkbox.value);
+      });
+
+      syncFacultyPickerSummary(wrapper, selectedValues.size);
+    };
+
+    wrapper.addEventListener('change', event => {
+      if (event.target.matches('input[type="checkbox"]')) {
+        const selectedValues = new Set(
+          Array.from(wrapper.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(checkbox => checkbox.value)
+        );
+
+        Array.from(select.options).forEach(option => {
+          option.selected = option.value !== '' && selectedValues.has(option.value);
+        });
+
+        syncFacultyPickerSummary(wrapper, selectedValues.size);
+      }
+    });
+
+    const trigger = wrapper.querySelector('.faculty-picker-trigger');
+    const searchInput = wrapper.querySelector('.faculty-picker-search');
+
+    trigger.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const willOpen = !wrapper.classList.contains('open');
+      closeAllFacultyPickerPopups(wrapper);
+      wrapper.classList.toggle('open', willOpen);
+      if (willOpen && searchInput) {
+        searchInput.focus();
+      }
+    });
+
+    searchInput.addEventListener('input', event => {
+      const query = event.target.value.trim().toLowerCase();
+      wrapper.querySelectorAll('.faculty-picker-item').forEach(item => {
+        const haystack = item.getAttribute('data-label') || '';
+        item.style.display = query !== '' && !haystack.includes(query) ? 'none' : 'flex';
+      });
+    });
+
+    select.style.display = 'none';
+    select.insertAdjacentElement('afterend', wrapper);
+    select.dataset.searchablePickerReady = '1';
+    select._syncFacultyPicker = syncFromSelect;
+    syncFromSelect();
+  }
+
+  function initSearchableFacultyPickers(scope = document) {
+    scope.querySelectorAll('select[multiple].faculty-multi').forEach(buildSearchableFacultyPicker);
+  }
+
+  function refreshSearchableFacultyPickers(scope = document) {
+    scope.querySelectorAll('select[multiple].faculty-multi').forEach(select => {
+      if (typeof select._syncFacultyPicker === 'function') {
+        select._syncFacultyPicker();
+      }
+      const search = select.parentElement?.querySelector('.faculty-picker-search')
+        || select.nextElementSibling?.querySelector?.('.faculty-picker-search');
+      if (search) {
+        search.value = '';
+      }
+      const picker = select.nextElementSibling;
+      if (picker && picker.classList.contains('faculty-picker')) {
+        picker.querySelectorAll('.faculty-picker-item').forEach(item => {
+          item.style.display = 'flex';
+        });
+        closeFacultyPickerPopup(picker);
+      }
+    });
+  }
+
+  window.initSearchableFacultyPickers = initSearchableFacultyPickers;
+  window.refreshSearchableFacultyPickers = refreshSearchableFacultyPickers;
+  window.closeAllFacultyPickerPopups = closeAllFacultyPickerPopups;
+
+  function loadSubjectPage(page = 1, limit = defaultLimit, search = subjectSearchTerm) {
+    subjectSearchTerm = search || '';
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit)
+    });
+    if (subjectSearchTerm) {
+      params.set('search', subjectSearchTerm);
+    }
+    const url = `/mainscheduler/tabs/subject_table.php?${params.toString()}`;
 
     fetch(url)
       .then(response => {
@@ -89,10 +255,22 @@ document.addEventListener("DOMContentLoaded", function() {
       })
       .then(data => {
         tableContent.innerHTML = data;
+        initSearchableFacultyPickers(tableContent);
+        if (shouldRestoreSubjectSearchFocus) {
+          const searchInput = document.getElementById('subject-search-input');
+          if (searchInput) {
+            const cursorPos = searchInput.value.length;
+            searchInput.focus();
+            searchInput.setSelectionRange(cursorPos, cursorPos);
+          }
+        }
       })
       .catch(error => {
         console.error("Error loading data:", error);
         tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading subject data. Please try again later.</p>";
+      })
+      .finally(() => {
+        shouldRestoreSubjectSearchFocus = false;
       });
   }
 
@@ -104,10 +282,16 @@ document.addEventListener("DOMContentLoaded", function() {
   // Move inline edit handlers to the wrapper so they exist before the fragment is injected.
   // These mirror the handlers previously defined inside the injected fragment so that
   // inline Edit/Save/Delete work immediately after the fragment HTML is inserted.
-  window.filterSubjectTable = function(q) {
-    document.querySelectorAll('#subject-data-table tbody tr').forEach(row => {
-      row.style.display = row.textContent.toLowerCase().includes((q||'').toLowerCase()) ? '' : 'none';
-    });
+  window.handleSubjectSearch = function(q) {
+    subjectSearchTerm = (q || '').trim();
+    const limit = document.getElementById('rows-per-page')?.value || defaultLimit;
+    if (subjectSearchTimer) {
+      clearTimeout(subjectSearchTimer);
+    }
+    subjectSearchTimer = setTimeout(() => {
+      shouldRestoreSubjectSearchFocus = true;
+      loadSubjectPage(1, limit, subjectSearchTerm);
+    }, 300);
   };
 
   window.toggleSubjectFaculty = function(btn) {
@@ -127,6 +311,7 @@ document.addEventListener("DOMContentLoaded", function() {
     row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = '');
     const nameDiv = row.querySelector('.e-name');
     if (nameDiv) nameDiv.style.display = 'block';
+    refreshSearchableFacultyPickers(row);
   };
 
   window.cancelEditSubject = function(btn) {
@@ -229,6 +414,7 @@ document.addEventListener("DOMContentLoaded", function() {
   function closeSubjectModal() {
     document.getElementById('id02').style.display = 'none';
     form.reset();
+    refreshSearchableFacultyPickers(form);
     document.getElementById('subject_id').value = '';
     document.getElementById('subject-modal-title').textContent = 'Add Subject';
     document.getElementById('subject-form-submit').textContent = 'Create';
@@ -243,6 +429,10 @@ document.addEventListener("DOMContentLoaded", function() {
       const specialSelect = form.querySelector('#special');
       if (specialSelect && specialSelect.multiple) {
         const values = Array.from(specialSelect.selectedOptions).map(opt => opt.value).filter(v => v);
+        if (values.length === 0) {
+          alert('Please select at least one faculty.');
+          return;
+        }
         formData.set('special', values.join(', '));
       }
       const subjectId = formData.get('subject_id');
@@ -295,7 +485,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const pageNum = event.target.getAttribute("data-page");
       const limit = document.getElementById('rows-per-page').value;
       if (pageNum) {
-        loadSubjectPage(pageNum, limit);
+        loadSubjectPage(pageNum, limit, subjectSearchTerm);
       }
     }
   });
@@ -303,11 +493,18 @@ document.addEventListener("DOMContentLoaded", function() {
   tableContent.addEventListener('change', function(event) {
     if (event.target.matches('#rows-per-page')) {
       const newLimit = event.target.value;
-      loadSubjectPage(1, newLimit);
+      loadSubjectPage(1, newLimit, subjectSearchTerm);
     }
   });
 
   loadSubjectPage(1, defaultLimit);
+  initSearchableFacultyPickers(document);
+
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.faculty-picker')) {
+      closeAllFacultyPickerPopups();
+    }
+  });
 });
 
 window.onclick = function(event) {

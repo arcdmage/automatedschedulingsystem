@@ -9,15 +9,45 @@ $limit =
         ? (int) $_GET["limit"]
         : $default_limit;
 $page = isset($_GET["page"]) ? max(1, (int) $_GET["page"]) : 1;
+$search = isset($_GET["search"]) ? trim((string) $_GET["search"]) : "";
 $offset = ($page - 1) * $limit;
 
-$result = $conn->query(
-    "SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset",
-);
-$total_records = $conn
-    ->query("SELECT COUNT(*) as total FROM faculty")
-    ->fetch_assoc()["total"];
+$where_sql = "";
+$search_param = "";
+
+if ($search !== "") {
+    $where_sql =
+        "WHERE CONCAT_WS(' ', fname, mname, lname, gender, pnumber, address, email, status) LIKE ?";
+    $search_param = "%" . $search . "%";
+}
+
+if ($where_sql !== "") {
+    $stmt = $conn->prepare(
+        "SELECT * FROM faculty $where_sql ORDER BY faculty_id ASC LIMIT ? OFFSET ?",
+    );
+    $stmt->bind_param("sii", $search_param, $limit, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    $count_stmt = $conn->prepare(
+        "SELECT COUNT(*) as total FROM faculty $where_sql",
+    );
+    $count_stmt->bind_param("s", $search_param);
+    $count_stmt->execute();
+    $total_records =
+        (int) ($count_stmt->get_result()->fetch_assoc()["total"] ?? 0);
+} else {
+    $result = $conn->query(
+        "SELECT * FROM faculty ORDER BY faculty_id ASC LIMIT $limit OFFSET $offset",
+    );
+    $total_records =
+        (int) ($conn
+            ->query("SELECT COUNT(*) as total FROM faculty")
+            ->fetch_assoc()["total"] ?? 0);
+}
+
 $total_pages = max(1, ceil($total_records / $limit));
+$page = min($page, $total_pages);
 ?>
 
 <!-- Toolbar -->
@@ -27,7 +57,9 @@ $total_pages = max(1, ceil($total_records / $limit));
     <span style="font-size:12px;color:#9ca3af;"><?= $total_records ?> total</span>
   </div>
   <div class="table-toolbar-right">
-    <input type="text" class="search-input" placeholder="Search faculty…" oninput="filterTable(this.value)" style="width:150px;">
+    <input type="text" id="faculty-search-input" class="search-input" placeholder="Search faculty…" value="<?= htmlspecialchars(
+        $search,
+    ) ?>" oninput="handleFacultySearch(this.value)" style="width:200px;">
     <button class="add-faculty-btn" onclick="openAddModal()">+ Add Faculty</button>
   </div>
 </div>
@@ -159,7 +191,11 @@ $total_pages = max(1, ceil($total_records / $limit));
         <?php
         endwhile; ?>
       <?php else: ?>
-        <tr><td colspan="4"><div class="empty-state">No faculty members found.</div></td></tr>
+        <tr><td colspan="4"><div class="empty-state"><?= $search !== ""
+            ? "No faculty members found for \"" .
+                htmlspecialchars($search) .
+                "\"."
+            : "No faculty members found." ?></div></td></tr>
       <?php endif; ?>
     </tbody>
   </table>

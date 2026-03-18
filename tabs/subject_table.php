@@ -10,12 +10,30 @@ $limit =
         ? (int) $_GET["limit"]
         : $default_limit;
 $page = isset($_GET["page"]) ? max(1, (int) $_GET["page"]) : 1;
+$search = isset($_GET["search"]) ? trim((string) $_GET["search"]) : "";
 $offset = ($page - 1) * $limit;
 
 // Fetch subjects and totals
-$result = $conn->query(
-    "SELECT * FROM subjects ORDER BY subject_name ASC LIMIT $limit OFFSET $offset",
-);
+$where_sql = "";
+$search_param = "";
+if ($search !== "") {
+    $where_sql =
+        "WHERE CONCAT_WS(' ', subject_name, special, grade_level) LIKE ?";
+    $search_param = "%" . $search . "%";
+}
+
+if ($where_sql !== "") {
+    $stmt = $conn->prepare(
+        "SELECT * FROM subjects $where_sql ORDER BY subject_name ASC LIMIT ? OFFSET ?",
+    );
+    $stmt->bind_param("sii", $search_param, $limit, $offset);
+    $stmt->execute();
+    $result = $stmt->get_result();
+} else {
+    $result = $conn->query(
+        "SELECT * FROM subjects ORDER BY subject_name ASC LIMIT $limit OFFSET $offset",
+    );
+}
 $faculty_options = [];
 $faculty_query = $conn->query(
     "SELECT DISTINCT lname AS name FROM faculty WHERE lname <> '' ORDER BY lname",
@@ -25,9 +43,21 @@ if ($faculty_query) {
         $faculty_options[] = $faculty["name"];
     }
 }
-$total_records = $conn
-    ->query("SELECT COUNT(*) as total FROM subjects")
-    ->fetch_assoc()["total"];
+$total_records = 0;
+if ($where_sql !== "") {
+    $count_stmt = $conn->prepare(
+        "SELECT COUNT(*) as total FROM subjects $where_sql",
+    );
+    $count_stmt->bind_param("s", $search_param);
+    $count_stmt->execute();
+    $total_records =
+        (int) ($count_stmt->get_result()->fetch_assoc()["total"] ?? 0);
+} else {
+    $total_records =
+        (int) ($conn
+            ->query("SELECT COUNT(*) as total FROM subjects")
+            ->fetch_assoc()["total"] ?? 0);
+}
 $total_pages = max(1, ceil($total_records / $limit));
 ?>
 
@@ -70,7 +100,9 @@ $total_pages = max(1, ceil($total_records / $limit));
   </div>
 
   <div class="table-toolbar-right">
-    <input type="text" class="search-input" placeholder="Search subject…" oninput="filterSubjectTable(this.value)">
+    <input type="text" id="subject-search-input" class="search-input" placeholder="Search subject…" value="<?= htmlspecialchars(
+        $search,
+    ) ?>" oninput="handleSubjectSearch(this.value)">
     <button class="add-subject-btn" onclick="document.getElementById('id02').style.display='block'">+ Add Subject</button>
   </div>
 </div>
@@ -195,7 +227,9 @@ $total_pages = max(1, ceil($total_records / $limit));
         </tr>
         <?php endwhile; ?>
       <?php else: ?>
-        <tr><td colspan="4"><div class="empty-state">No subjects found.</div></td></tr>
+        <tr><td colspan="4"><div class="empty-state"><?= $search !== ""
+            ? "No subjects found for \"" . htmlspecialchars($search) . "\"."
+            : "No subjects found." ?></div></td></tr>
       <?php endif; ?>
     </tbody>
   </table>
@@ -235,9 +269,9 @@ $total_pages = max(1, ceil($total_records / $limit));
    but include small helpers so search and inline actions feel consistent. */
 
 function filterSubjectTable(q) {
-  document.querySelectorAll('#subject-data-table tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
-  });
+  if (typeof window.handleSubjectSearch === 'function') {
+    window.handleSubjectSearch(q);
+  }
 }
 
 /* Inline edit behavior for subjects (mirrors faculty inline editing) */
@@ -249,6 +283,9 @@ function startEditSubject(btn) {
   row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = '');
   const nameDiv = row.querySelector('.e-name');
   if (nameDiv) nameDiv.style.display = 'block';
+  if (typeof window.refreshSearchableFacultyPickers === 'function') {
+    window.refreshSearchableFacultyPickers(row);
+  }
 }
 
 function cancelEditSubject(btn) {
@@ -268,7 +305,13 @@ async function saveSubject(btn) {
 
   // collect editable inputs from the row
   row.querySelectorAll('.e-field, .e-name input, .e-name select').forEach(el => {
-    if (el.name) data.append(el.name, el.value);
+    if (!el.name) return;
+    if (el.tagName === 'SELECT' && el.multiple) {
+      const values = Array.from(el.selectedOptions).map(opt => opt.value).filter(v => v);
+      data.append(el.name, values.join(', '));
+      return;
+    }
+    data.append(el.name, el.value);
   });
 
   const orig = btn.innerHTML;

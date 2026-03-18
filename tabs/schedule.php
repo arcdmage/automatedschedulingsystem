@@ -380,6 +380,10 @@ $sections_result = $conn->query($sections_query);
     return getIframeForMode('setup');
   }
 
+  function getViewIframe() {
+    return getIframeForMode('view');
+  }
+
   function getSetupSectionId() {
     const iframe = getSetupIframe();
     if (!iframe || !iframe.src || iframe.src === 'about:blank') {
@@ -488,6 +492,25 @@ $sections_result = $conn->query($sections_query);
     updateSetupDropdownUI();
     const setupButton = document.querySelector('#setup-tab-group .mode-tab[data-mode="setup"]');
     window.switchMode('setup', setupButton);
+  };
+
+  window.openScheduleViewForSection = function (sectionId) {
+    const viewButton = document.querySelector('.mode-tab[data-mode="view"]');
+    window.switchMode('view', viewButton);
+
+    const iframe = getViewIframe();
+    if (!iframe) return;
+
+    const baseSrc = iframe.getAttribute('data-src') || '/mainscheduler/tabs/schedule_view.php';
+    const url = new URL(baseSrc, window.location.origin);
+    if (sectionId) {
+      url.searchParams.set('section_id', sectionId);
+    }
+
+    iframe.src = 'about:blank';
+    setTimeout(function () {
+      iframe.src = url.pathname + url.search;
+    }, 50);
   };
 
   // Make switchMode globally available

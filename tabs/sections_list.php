@@ -10,20 +10,34 @@ $limit =
         ? (int) $_GET["limit"]
         : $default_limit;
 $page = isset($_GET["page"]) ? max(1, (int) $_GET["page"]) : 1;
+$search = isset($_GET["search"]) ? trim((string) $_GET["search"]) : "";
 $offset = ($page - 1) * $limit;
+$where_sql = "";
+$search_param = "";
+
+if ($search !== "") {
+    $where_sql =
+        "WHERE CONCAT_WS(' ', s.section_name, s.grade_level, s.track, CONCAT(f.lname, ', ', f.fname)) LIKE ?";
+    $search_param = "%" . $search . "%";
+}
 
 // Fetch sections with adviser name (if any)
 $sql = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.adviser_id,
         CONCAT(f.lname, ', ', f.fname) AS adviser_name
         FROM sections s
         LEFT JOIN faculty f ON s.adviser_id = f.faculty_id
+        $where_sql
         ORDER BY s.grade_level, s.section_name
         LIMIT ? OFFSET ?";
 $stmt = $conn->prepare($sql);
 
 if ($stmt) {
     // prepared statement succeeded — bind and execute
-    $stmt->bind_param("ii", $limit, $offset);
+    if ($search !== "") {
+        $stmt->bind_param("sii", $search_param, $limit, $offset);
+    } else {
+        $stmt->bind_param("ii", $limit, $offset);
+    }
     $stmt->execute();
     $result = $stmt->get_result();
 } else {
@@ -31,10 +45,17 @@ if ($stmt) {
     // Fallback to a non-prepared query using safely cast integer values.
     $safeLimit = (int) $limit;
     $safeOffset = (int) $offset;
+    $safeSearch =
+        $search !== "" ? $conn->real_escape_string($search_param) : "";
+    $fallbackWhere =
+        $search !== ""
+            ? "WHERE CONCAT_WS(' ', s.section_name, s.grade_level, s.track, CONCAT(f.lname, ', ', f.fname)) LIKE '{$safeSearch}'"
+            : "";
     $rawSql = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.adviser_id,
                       CONCAT(f.lname, ', ', f.fname) AS adviser_name
                FROM sections s
                LEFT JOIN faculty f ON s.adviser_id = f.faculty_id
+               {$fallbackWhere}
                ORDER BY s.grade_level, s.section_name
                LIMIT {$safeLimit} OFFSET {$safeOffset}";
 
@@ -47,10 +68,33 @@ if ($stmt) {
 }
 
 // Total count
-$total_records = (int) $conn
-    ->query("SELECT COUNT(*) as total FROM sections")
-    ->fetch_assoc()["total"];
+if ($search !== "") {
+    $count_sql = "SELECT COUNT(*) as total
+                  FROM sections s
+                  LEFT JOIN faculty f ON s.adviser_id = f.faculty_id
+                  $where_sql";
+    $count_stmt = $conn->prepare($count_sql);
+    if ($count_stmt) {
+        $count_stmt->bind_param("s", $search_param);
+        $count_stmt->execute();
+        $total_records =
+            (int) ($count_stmt->get_result()->fetch_assoc()["total"] ?? 0);
+    } else {
+        $safeSearch = $conn->real_escape_string($search_param);
+        $count_result = $conn->query("SELECT COUNT(*) as total
+                                      FROM sections s
+                                      LEFT JOIN faculty f ON s.adviser_id = f.faculty_id
+                                      WHERE CONCAT_WS(' ', s.section_name, s.grade_level, s.track, CONCAT(f.lname, ', ', f.fname)) LIKE '{$safeSearch}'");
+        $total_records = (int) ($count_result->fetch_assoc()["total"] ?? 0);
+    }
+} else {
+    $total_records = (int) $conn
+        ->query("SELECT COUNT(*) as total FROM sections")
+        ->fetch_assoc()["total"];
+}
 $total_pages = max(1, ceil($total_records / $limit));
+$is_fragment = isset($_GET["fragment"]) && $_GET["fragment"] === "1";
+ob_start();
 ?>
 <div class="sections-card">
   <div class="table-toolbar">
@@ -60,7 +104,9 @@ $total_pages = max(1, ceil($total_records / $limit));
   </div>
 
   <div class="table-toolbar-right">
-    <input type="text" class="search-input" id="sections-search" placeholder="Search section..." oninput="filterSectionsTable(this.value)">
+    <input type="text" class="search-input" id="sections-search" placeholder="Search section..." value="<?= htmlspecialchars(
+        $search,
+    ) ?>" oninput="handleSectionsSearch(this.value)">
     <button class="add-subject-btn" id="open-create-btn">+ Add Section</button>
   </div>
 </div>
@@ -186,7 +232,9 @@ $total_pages = max(1, ceil($total_records / $limit));
         </tr>
         <?php endwhile; ?>
       <?php else: ?>
-        <tr><td colspan="5"><div class="empty-state">No sections found.</div></td></tr>
+        <tr><td colspan="5"><div class="empty-state"><?= $search !== ""
+            ? "No sections found for \"" . htmlspecialchars($search) . "\"."
+            : "No sections found." ?></div></td></tr>
       <?php endif; ?>
     </tbody>
   </table>
@@ -220,6 +268,13 @@ $total_pages = max(1, ceil($total_records / $limit));
   </div>
   </div>
 </div>
+<?php
+$sections_fragment = ob_get_clean();
+echo $sections_fragment;
+if ($is_fragment) {
+    return;
+}
+?>
 
 <!-- Create / Edit Section Modal -->
 <div id="id03" class="modal">
@@ -274,6 +329,9 @@ $total_pages = max(1, ceil($total_records / $limit));
 
 <script>
 // Client-side behaviors for Sections List page
+let sectionsSearchTerm = <?= json_encode($search) ?>;
+let sectionsSearchTimer = null;
+let shouldRestoreSectionsSearchFocus = false;
 
 function retainSectionsTab() {
   try {
@@ -283,33 +341,83 @@ function retainSectionsTab() {
   }
 }
 
-function filterSectionsTable(q) {
-  document.querySelectorAll('#sections-data-table tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
+function loadSectionsPage(page = 1, limit = <?= $default_limit ?>, search = sectionsSearchTerm) {
+  sectionsSearchTerm = search || '';
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit),
+    fragment: '1'
   });
+  if (sectionsSearchTerm) {
+    params.set('search', sectionsSearchTerm);
+  }
+
+  const host = document.getElementById('sections_list');
+  if (!host) return;
+
+  fetch(`/mainscheduler/tabs/sections_list.php?${params.toString()}`)
+    .then(r => {
+      if (!r.ok) throw new Error('Status ' + r.status);
+      return r.text();
+    })
+    .then(html => {
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html;
+      const nextCard = wrapper.querySelector('.sections-card');
+      const currentCard = host.querySelector('.sections-card');
+      if (nextCard && currentCard) {
+        currentCard.replaceWith(nextCard);
+      } else if (nextCard) {
+        host.prepend(nextCard);
+      }
+
+      if (shouldRestoreSectionsSearchFocus) {
+        const searchInput = document.getElementById('sections-search');
+        if (searchInput) {
+          const cursorPos = searchInput.value.length;
+          searchInput.focus();
+          searchInput.setSelectionRange(cursorPos, cursorPos);
+        }
+      }
+    })
+    .catch(err => {
+      console.error('Error loading sections:', err);
+    })
+    .finally(() => {
+      shouldRestoreSectionsSearchFocus = false;
+    });
 }
 
-// Pagination buttons -> reload page with selected page
-document.querySelectorAll('.page-btn').forEach(btn => {
-  btn.addEventListener('click', function() {
-    const page = this.getAttribute('data-page');
-    const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
-    const params = new URLSearchParams(window.location.search);
-    params.set('page', page);
-    params.set('limit', limit);
+window.loadSectionsPage = loadSectionsPage;
+
+function handleSectionsSearch(q) {
+  sectionsSearchTerm = (q || '').trim();
+  const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
+  if (sectionsSearchTimer) {
+    clearTimeout(sectionsSearchTimer);
+  }
+  sectionsSearchTimer = setTimeout(() => {
+    shouldRestoreSectionsSearchFocus = true;
+    loadSectionsPage(1, limit, sectionsSearchTerm);
+  }, 300);
+}
+
+document.addEventListener('click', function(event) {
+  const pageBtn = event.target.closest('.page-btn');
+  if (!pageBtn) return;
+  const page = pageBtn.getAttribute('data-page');
+  const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
+  if (page) {
     retainSectionsTab();
-    window.location.search = params.toString();
-  });
+    loadSectionsPage(page, limit, sectionsSearchTerm);
+  }
 });
 
-// Rows-per-page change -> navigate
-document.getElementById('rows-per-page').addEventListener('change', function() {
-  const limit = this.value;
-  const params = new URLSearchParams(window.location.search);
-  params.set('page', 1);
-  params.set('limit', limit);
-  retainSectionsTab();
-  window.location.search = params.toString();
+document.addEventListener('change', function(event) {
+  if (event.target.matches('#rows-per-page')) {
+    retainSectionsTab();
+    loadSectionsPage(1, event.target.value, sectionsSearchTerm);
+  }
 });
 
 // Open create modal
@@ -430,7 +538,8 @@ function deleteSection(btn) {
         row.style.transform = 'translateX(8px)';
         setTimeout(() => {
           retainSectionsTab();
-          window.location.reload();
+          const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
+          loadSectionsPage(1, limit, sectionsSearchTerm);
         }, 220);
       } else {
         alert('Delete failed: ' + (json && json.message ? json.message : 'Unknown'));
@@ -485,7 +594,7 @@ async function saveSection(btn) {
       // refresh row listing using location reload or global loader if present
       if (typeof window.loadSectionsPage === 'function') {
         const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
-        window.loadSectionsPage(1, limit);
+        window.loadSectionsPage(1, limit, sectionsSearchTerm);
       } else {
         // fallback: update the visible cells from returned data if provided,
         // otherwise reload the page to show changes.

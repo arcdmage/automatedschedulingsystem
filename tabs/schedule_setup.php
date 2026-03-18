@@ -55,8 +55,8 @@ if ($selected_section) {
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="css/schedule.css">
-<link rel="stylesheet" href="css/schedule_setup.css">
+<link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
+<link rel="stylesheet" href="/mainscheduler/tabs/css/schedule_setup.css">
 </head>
 <body>
 
@@ -72,7 +72,7 @@ if ($selected_section) {
 <!-- Section Selector -->
 <div class="card-section">
   <label for="section-select">Select Section</label>
-  <select id="section-select" onchange="handleSectionChange(this.value)">
+  <select id="section-select">
     <option value="">-- Choose a Section --</option>
     <option value="__create_new">+ Create New Section</option>
     <?php
@@ -215,7 +215,7 @@ if ($selected_section) {
       <p style="color:#666; margin:5px 0 0 0;">Fill in the details for the new section</p>
     </div>
 
-    <div style="padding:15px;"> 
+    <div style="padding:15px;">
       <form id="create-section-form">
         <div class="form-grid">
           <div class="form-group">
@@ -381,14 +381,29 @@ function handleSectionChange(value) {
 
 // Open create section modal
 function openCreateSectionModal() {
-  document.getElementById('create-section-modal').classList.add('open');
+  const modal = document.getElementById('create-section-modal');
+  if (!modal) return;
+  modal.classList.add('open');
+  modal.style.display = 'flex';
 }
 
 // Close create section modal
 function closeCreateSectionModal() {
-  document.getElementById('create-section-modal').classList.remove('open');
-  document.getElementById('create-section-form').reset();
+  const modal = document.getElementById('create-section-modal');
+  const form = document.getElementById('create-section-form');
+  if (modal) {
+    modal.classList.remove('open');
+    modal.style.display = 'none';
+  }
+  if (form) {
+    form.reset();
+  }
 }
+
+const sectionSelect = document.getElementById('section-select');
+sectionSelect?.addEventListener('change', function() {
+  handleSectionChange(this.value);
+});
 
 // Quick add form submission
 document.getElementById('quick-add-form')?.addEventListener('submit', async function(e) {

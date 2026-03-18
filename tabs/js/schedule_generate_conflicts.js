@@ -1,4 +1,24 @@
 (function () {
+  window.openGeneratedSchedules = function (sectionId) {
+    try {
+      if (
+        window.parent &&
+        window.parent !== window &&
+        typeof window.parent.openScheduleViewForSection === "function"
+      ) {
+        window.parent.openScheduleViewForSection(sectionId);
+        return false;
+      }
+    } catch (err) {
+      console.error("Unable to access parent schedule view handler:", err);
+    }
+
+    window.location.href =
+      "/mainscheduler/tabs/schedule_view.php?section_id=" +
+      encodeURIComponent(sectionId || "");
+    return false;
+  };
+
   // Helper to query and allow graceful degradation if an element is missing
   function $id(id) {
     return document.getElementById(id);
@@ -260,7 +280,7 @@
               <h3>Success</h3>
               <p><strong>${json.schedules_created || 0}</strong> schedules created successfully.</p>
               ${json.conflicts_found ? `<p>⚠️ ${json.conflicts_found} conflict(s) were skipped.</p>` : ""}
-              <p><a href="/mainscheduler/tabs/schedule_view.php?section_id=${sectionId}" style="color:#155724; text-decoration:underline; font-weight:bold;">View Generated Schedules →</a></p>
+              <p><a href="#" onclick="return openGeneratedSchedules('${sectionId}')" style="color:#155724; text-decoration:underline; font-weight:bold;">View Generated Schedules →</a></p>
             </div>
           `;
         }
