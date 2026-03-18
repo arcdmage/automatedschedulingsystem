@@ -76,6 +76,9 @@ if ($faculty_query) {
 document.addEventListener("DOMContentLoaded", function() {
   const tableContent = document.getElementById("subject-table-content");
   const defaultLimit = 5;
+  let subjectSearchTerm = '';
+  let subjectSearchTimer = null;
+  let shouldRestoreSubjectSearchFocus = false;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -232,8 +235,16 @@ document.addEventListener("DOMContentLoaded", function() {
   window.refreshSearchableFacultyPickers = refreshSearchableFacultyPickers;
   window.closeAllFacultyPickerPopups = closeAllFacultyPickerPopups;
 
-  function loadSubjectPage(page = 1, limit = defaultLimit) {
-    const url = `/mainscheduler/tabs/subject_table.php?page=${page}&limit=${limit}`;
+  function loadSubjectPage(page = 1, limit = defaultLimit, search = subjectSearchTerm) {
+    subjectSearchTerm = search || '';
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit)
+    });
+    if (subjectSearchTerm) {
+      params.set('search', subjectSearchTerm);
+    }
+    const url = `/mainscheduler/tabs/subject_table.php?${params.toString()}`;
 
     fetch(url)
       .then(response => {
@@ -245,10 +256,21 @@ document.addEventListener("DOMContentLoaded", function() {
       .then(data => {
         tableContent.innerHTML = data;
         initSearchableFacultyPickers(tableContent);
+        if (shouldRestoreSubjectSearchFocus) {
+          const searchInput = document.getElementById('subject-search-input');
+          if (searchInput) {
+            const cursorPos = searchInput.value.length;
+            searchInput.focus();
+            searchInput.setSelectionRange(cursorPos, cursorPos);
+          }
+        }
       })
       .catch(error => {
         console.error("Error loading data:", error);
         tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading subject data. Please try again later.</p>";
+      })
+      .finally(() => {
+        shouldRestoreSubjectSearchFocus = false;
       });
   }
 
@@ -260,10 +282,16 @@ document.addEventListener("DOMContentLoaded", function() {
   // Move inline edit handlers to the wrapper so they exist before the fragment is injected.
   // These mirror the handlers previously defined inside the injected fragment so that
   // inline Edit/Save/Delete work immediately after the fragment HTML is inserted.
-  window.filterSubjectTable = function(q) {
-    document.querySelectorAll('#subject-data-table tbody tr').forEach(row => {
-      row.style.display = row.textContent.toLowerCase().includes((q||'').toLowerCase()) ? '' : 'none';
-    });
+  window.handleSubjectSearch = function(q) {
+    subjectSearchTerm = (q || '').trim();
+    const limit = document.getElementById('rows-per-page')?.value || defaultLimit;
+    if (subjectSearchTimer) {
+      clearTimeout(subjectSearchTimer);
+    }
+    subjectSearchTimer = setTimeout(() => {
+      shouldRestoreSubjectSearchFocus = true;
+      loadSubjectPage(1, limit, subjectSearchTerm);
+    }, 300);
   };
 
   window.toggleSubjectFaculty = function(btn) {
@@ -457,7 +485,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const pageNum = event.target.getAttribute("data-page");
       const limit = document.getElementById('rows-per-page').value;
       if (pageNum) {
-        loadSubjectPage(pageNum, limit);
+        loadSubjectPage(pageNum, limit, subjectSearchTerm);
       }
     }
   });
@@ -465,7 +493,7 @@ document.addEventListener("DOMContentLoaded", function() {
   tableContent.addEventListener('change', function(event) {
     if (event.target.matches('#rows-per-page')) {
       const newLimit = event.target.value;
-      loadSubjectPage(1, newLimit);
+      loadSubjectPage(1, newLimit, subjectSearchTerm);
     }
   });
 

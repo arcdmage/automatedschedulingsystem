@@ -60,18 +60,44 @@ require_once __DIR__ . "/../db_connect.php"; ?>
 <script>
 const tableContent = document.getElementById('faculty-table-content');
 const defaultLimit = 5;
+let facultySearchTerm = '';
+let facultySearchTimer = null;
+let shouldRestoreFacultySearchFocus = false;
 
 /* ─────────────────────────────────────────
    TABLE LOADING
 ───────────────────────────────────────── */
-function loadFacultyPage(page = 1, limit = defaultLimit) {
+function loadFacultyPage(page = 1, limit = defaultLimit, search = facultySearchTerm) {
+  facultySearchTerm = search || '';
   tableContent.innerHTML = '<p style="text-align:center;padding:20px;color:#9ca3af;">Loading…</p>';
-  fetch(`/mainscheduler/tabs/faculty_table.php?page=${page}&limit=${limit}`)
+  const params = new URLSearchParams({
+    page: String(page),
+    limit: String(limit)
+  });
+  if (facultySearchTerm) {
+    params.set('search', facultySearchTerm);
+  }
+
+  fetch(`/mainscheduler/tabs/faculty_table.php?${params.toString()}`)
     .then(r => { if (!r.ok) throw new Error('Status ' + r.status); return r.text(); })
-    .then(html => { tableContent.innerHTML = html; })
+    .then(html => {
+      tableContent.innerHTML = html;
+
+      if (shouldRestoreFacultySearchFocus) {
+        const searchInput = document.getElementById('faculty-search-input');
+        if (searchInput) {
+          const cursorPos = searchInput.value.length;
+          searchInput.focus();
+          searchInput.setSelectionRange(cursorPos, cursorPos);
+        }
+      }
+    })
     .catch(err => {
       console.error('Load error:', err);
       tableContent.innerHTML = "<p style='color:red;text-align:center;padding:20px;'>Error loading faculty data.</p>";
+    })
+    .finally(() => {
+      shouldRestoreFacultySearchFocus = false;
     });
 }
 
@@ -86,23 +112,31 @@ tableContent.addEventListener('click', function(e) {
   if (e.target.matches('.page-btn')) {
     const page  = e.target.getAttribute('data-page');
     const limit = document.getElementById('rows-per-page')?.value || defaultLimit;
-    if (page) loadFacultyPage(page, limit);
+    if (page) loadFacultyPage(page, limit, facultySearchTerm);
   }
 });
 
 tableContent.addEventListener('change', function(e) {
   if (e.target.matches('#rows-per-page')) {
-    loadFacultyPage(1, e.target.value);
+    loadFacultyPage(1, e.target.value, facultySearchTerm);
   }
 });
 
 /* ─────────────────────────────────────────
    SEARCH FILTER
 ───────────────────────────────────────── */
-function filterTable(q) {
-  document.querySelectorAll('#faculty-data-table tbody tr').forEach(row => {
-    row.style.display = row.textContent.toLowerCase().includes(q.toLowerCase()) ? '' : 'none';
-  });
+function handleFacultySearch(q) {
+  facultySearchTerm = (q || '').trim();
+  const limit = document.getElementById('rows-per-page')?.value || defaultLimit;
+
+  if (facultySearchTimer) {
+    clearTimeout(facultySearchTimer);
+  }
+
+  facultySearchTimer = setTimeout(() => {
+    shouldRestoreFacultySearchFocus = true;
+    loadFacultyPage(1, limit, facultySearchTerm);
+  }, 300);
 }
 
 function toggleFacultyStatus(btn) {
