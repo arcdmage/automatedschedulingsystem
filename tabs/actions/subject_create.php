@@ -1,92 +1,60 @@
 <?php
-session_start();
-require_once "../../db_connect.php";
+header("Content-Type: application/json");
 
-// Detect AJAX / fetch JSON expectation
-$isAjax =
-    (!empty($_SERVER["HTTP_X_REQUESTED_WITH"]) &&
-        strtolower($_SERVER["HTTP_X_REQUESTED_WITH"]) === "xmlhttprequest") ||
-    (isset($_SERVER["HTTP_ACCEPT"]) &&
-        strpos($_SERVER["HTTP_ACCEPT"], "application/json") !== false);
+try {
+    if ($_SERVER["REQUEST_METHOD"] !== "POST") {
+        throw new Exception("Invalid request method. Use POST.");
+    }
 
-if ($_SERVER["REQUEST_METHOD"] == "POST") {
-    $subject_name = $_POST["subject_name"] ?? "";
+    require_once __DIR__ . "/../../db_connect.php";
+
+    $subject_name = isset($_POST["subject_name"])
+        ? trim($_POST["subject_name"])
+        : "";
     $special = $_POST["special"] ?? "";
-    $grade_level = $_POST["grade_level"] ?? "";
-    $strand = $_POST["strand"] ?? "";
+    $grade_level = isset($_POST["grade_level"])
+        ? trim($_POST["grade_level"])
+        : "";
+    $strand = isset($_POST["strand"]) ? trim($_POST["strand"]) : "";
 
     if (is_array($special)) {
         $special = implode(", ", array_filter(array_map("trim", $special)));
+    } else {
+        $special = trim((string) $special);
     }
 
-    // Validate required fields
-    if (empty($subject_name) || empty($grade_level)) {
-        if ($isAjax) {
-            header("Content-Type: application/json");
-            echo json_encode([
-                "success" => false,
-                "message" =>
-                    "Missing required fields (subject_name, grade_level)",
-            ]);
-            exit();
-        } else {
-            die("Error: Missing required fields (subject_name, grade_level)");
-        }
+    if ($subject_name === "" || $grade_level === "") {
+        throw new Exception(
+            "Missing required fields (subject_name, grade_level).",
+        );
     }
 
-    // Use prepared statement
     $stmt = $conn->prepare(
         "INSERT INTO subjects (subject_name, special, grade_level, strand) VALUES (?, ?, ?, ?)",
     );
 
     if (!$stmt) {
-        if ($isAjax) {
-            header("Content-Type: application/json");
-            echo json_encode([
-                "success" => false,
-                "message" => "Prepare failed: " . $conn->error,
-            ]);
-            exit();
-        } else {
-            die("Prepare failed: " . $conn->error);
-        }
+        throw new Exception("Prepare failed: " . $conn->error);
     }
 
     $stmt->bind_param("ssss", $subject_name, $special, $grade_level, $strand);
 
-    if ($stmt->execute()) {
-        // Get inserted id
-        $newId = $conn->insert_id;
-        $stmt->close();
-        $conn->close();
-
-        if ($isAjax) {
-            header("Content-Type: application/json");
-            echo json_encode([
-                "success" => true,
-                "message" => "Subject created",
-                "subject_id" => (int) $newId,
-            ]);
-            exit();
-        } else {
-            header("Location: /mainscheduler/index.php?tab=subject_list");
-            exit();
-        }
-    } else {
-        $error = htmlspecialchars($stmt->error);
-        $stmt->close();
-        $conn->close();
-
-        if ($isAjax) {
-            header("Content-Type: application/json");
-            echo json_encode([
-                "success" => false,
-                "message" => "Error: " . $error,
-            ]);
-            exit();
-        } else {
-            echo "Error: " . $error;
-        }
+    if (!$stmt->execute()) {
+        throw new Exception("Failed to create subject: " . $stmt->error);
     }
+
+    echo json_encode([
+        "success" => true,
+        "message" => "Subject created successfully.",
+        "subject_id" => (int) $conn->insert_id,
+    ]);
+    exit();
+} catch (Exception $e) {
+    http_response_code(400);
+    echo json_encode([
+        "success" => false,
+        "message" => $e->getMessage(),
+    ]);
+    exit();
 }
 ?>
