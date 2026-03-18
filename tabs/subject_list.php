@@ -196,7 +196,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const query = event.target.value.trim().toLowerCase();
       wrapper.querySelectorAll('.faculty-picker-item').forEach(item => {
         const haystack = item.getAttribute('data-label') || '';
-        item.hidden = query !== '' && !haystack.includes(query);
+        item.style.display = query !== '' && !haystack.includes(query) ? 'none' : 'flex';
       });
     });
 
@@ -224,7 +224,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const picker = select.nextElementSibling;
       if (picker && picker.classList.contains('faculty-picker')) {
         picker.querySelectorAll('.faculty-picker-item').forEach(item => {
-          item.hidden = false;
+          item.style.display = 'flex';
         });
         closeFacultyPickerPopup(picker);
       }
