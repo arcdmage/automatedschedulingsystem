@@ -468,8 +468,15 @@ document.addEventListener("DOMContentLoaded", function() {
         if (success) {
           alert(isEdit ? 'Subject updated successfully!' : 'Subject added successfully!');
           closeSubjectModal();
-          // reload current listing page (use the JS default if the selector is missing)
-          loadSubjectPage(1, document.getElementById('rows-per-page')?.value || defaultLimit);
+          const limit = parseInt(document.getElementById('rows-per-page')?.value || defaultLimit, 10);
+          if (!isEdit && resp && typeof resp === 'object') {
+            subjectSearchTerm = '';
+            const subjectPosition = parseInt(resp.subject_position || 1, 10);
+            const targetPage = subjectPosition > 0 ? Math.ceil(subjectPosition / limit) : 1;
+            loadSubjectPage(targetPage, limit, '');
+          } else {
+            loadSubjectPage(1, limit, subjectSearchTerm);
+          }
         } else {
           const msg = (resp && resp.message) ? resp.message : 'Unknown error';
           alert('Error: ' + msg);

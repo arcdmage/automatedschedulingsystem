@@ -43,10 +43,34 @@ try {
         throw new Exception("Failed to create subject: " . $stmt->error);
     }
 
+    $new_subject_id = (int) $conn->insert_id;
+    $position_stmt = $conn->prepare(
+        "SELECT COUNT(*) AS position
+         FROM subjects
+         WHERE subject_name < ?
+            OR (subject_name = ? AND subject_id <= ?)",
+    );
+    if (!$position_stmt) {
+        throw new Exception(
+            "Failed to determine new subject position: " . $conn->error,
+        );
+    }
+    $position_stmt->bind_param(
+        "ssi",
+        $subject_name,
+        $subject_name,
+        $new_subject_id,
+    );
+    $position_stmt->execute();
+    $position_result = $position_stmt->get_result()->fetch_assoc();
+    $subject_position = (int) ($position_result["position"] ?? 1);
+    $position_stmt->close();
+
     echo json_encode([
         "success" => true,
         "message" => "Subject created successfully.",
-        "subject_id" => (int) $conn->insert_id,
+        "subject_id" => $new_subject_id,
+        "subject_position" => $subject_position,
     ]);
     exit();
 } catch (Exception $e) {
