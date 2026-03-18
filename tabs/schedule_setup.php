@@ -66,9 +66,6 @@ if ($selected_section) {
       <h1>Subject Setup</h1>
       <p>Configure subjects, teachers, and schedule patterns</p>
     </div>
-    <a href="/mainscheduler/tabs/manage_timeslots.php" class="btn btn-secondary" style="text-decoration:none;">
-      ⏰ Manage Time Slots
-    </a>
   </div>
 </div>
 

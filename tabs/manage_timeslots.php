@@ -32,7 +32,9 @@ if ($selected_section) {
 
 <!-- Top bar with back button -->
 <div class="ts-topbar">
-  <a href="javascript:history.back()" class="btn-back">
+  <a href="/mainscheduler/tabs/schedule_setup.php<?php echo $selected_section
+      ? "?section_id=" . $selected_section
+      : ""; ?>" class="btn-back">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 18 9 12 15 6"></polyline>
     </svg>

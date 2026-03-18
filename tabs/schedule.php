@@ -32,9 +32,11 @@ $sections_result = $conn->query($sections_query);
   display: flex;
   background: white;
   border-radius: 8px;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   margin-bottom: 20px;
+  position: relative;
+  z-index: 20;
 }
 
 .mode-tab {
@@ -61,6 +63,67 @@ $sections_result = $conn->query($sections_query);
 .mode-tab.active {
   background: #4CAF50;
   color: white;
+}
+
+.mode-tab-group {
+  position: relative;
+  flex: 1;
+}
+
+.mode-tab-group .mode-tab {
+  width: 100%;
+  border-right: 1px solid #eee;
+}
+
+.mode-tab-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.mode-tab-caret {
+  font-size: 12px;
+  transition: transform 0.2s ease;
+}
+
+.mode-tab-group.open .mode-tab-caret {
+  transform: rotate(180deg);
+}
+
+.mode-dropdown {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid #dfe5ec;
+  border-radius: 10px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+  overflow: hidden;
+}
+
+.mode-tab-group.open .mode-dropdown {
+  display: block;
+}
+
+.mode-dropdown-item {
+  display: block;
+  width: 100%;
+  padding: 12px 16px;
+  border: 0;
+  background: #ffffff;
+  color: #475569;
+  text-align: left;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mode-dropdown-item:hover,
+.mode-dropdown-item.active {
+  background: #f0fdf4;
+  color: #15803d;
 }
 
 .mode-content {
@@ -190,7 +253,18 @@ $sections_result = $conn->query($sections_query);
 
 <div class="schedule-mode-tabs" role="tablist" aria-label="Schedule modes">
   <button class="mode-tab active" data-mode="manual" onclick="switchMode('manual', this)" role="tab" aria-selected="true">Calendar</button>
-  <button class="mode-tab" data-mode="setup" onclick="switchMode('setup', this)" role="tab">Setup</button>
+  <div class="mode-tab-group" id="setup-tab-group">
+    <button class="mode-tab" data-mode="setup" onclick="toggleSetupDropdown(event)" role="tab" aria-haspopup="true" aria-expanded="false">
+      <span class="mode-tab-trigger">
+        <span id="setup-tab-label">Setup</span>
+        <span class="mode-tab-caret">v</span>
+      </span>
+    </button>
+    <div class="mode-dropdown" id="setup-mode-dropdown">
+      <button class="mode-dropdown-item active" type="button" data-setup-view="subject" onclick="selectSetupView('subject', event)">Subject Setup</button>
+      <button class="mode-dropdown-item" type="button" data-setup-view="timeslots" onclick="selectSetupView('timeslots', event)">Manage Time Slots</button>
+    </div>
+  </div>
   <button class="mode-tab" data-mode="generate" onclick="switchMode('generate', this)" role="tab">Generate</button>
   <button class="mode-tab" data-mode="view" onclick="switchMode('view', this)" role="tab">Schedules</button>
 </div>
@@ -211,7 +285,12 @@ $sections_result = $conn->query($sections_query);
 
 <!-- Setup Mode -->
 <div id="mode-setup" class="mode-content" data-mode-id="setup">
-  <iframe data-src="/mainscheduler/tabs/schedule_setup.php" src="about:blank" loading="lazy" title="Schedule Setup"></iframe>
+  <iframe
+    data-src-subject="/mainscheduler/tabs/schedule_setup.php"
+    data-src-timeslots="/mainscheduler/tabs/manage_timeslots.php"
+    src="about:blank"
+    loading="lazy"
+    title="Schedule Setup"></iframe>
 </div>
 
 <!-- Generate Mode -->
@@ -287,18 +366,87 @@ $sections_result = $conn->query($sections_query);
 
 <script>
 (function () {
+  var currentSetupView = 'subject';
+  var lastSetupSectionId = '';
+
   // Expose a handful of functions to the global scope because the markup uses inline onclick attributes.
   // Attach to window explicitly so that other scripts can call them as well.
   function getIframeForMode(mode) {
     const container = document.getElementById('mode-' + mode);
-    return container ? container.querySelector('iframe[data-src]') : null;
+    return container ? container.querySelector('iframe') : null;
+  }
+
+  function getSetupIframe() {
+    return getIframeForMode('setup');
+  }
+
+  function getSetupSectionId() {
+    const iframe = getSetupIframe();
+    if (!iframe || !iframe.src || iframe.src === 'about:blank') {
+      return lastSetupSectionId;
+    }
+    try {
+      const url = new URL(iframe.src, window.location.origin);
+      const sectionId = url.searchParams.get('section_id') || '';
+      if (sectionId) {
+        lastSetupSectionId = sectionId;
+      }
+      return sectionId;
+    } catch (err) {
+      return lastSetupSectionId;
+    }
+  }
+
+  function buildSetupUrl(view) {
+    const iframe = getSetupIframe();
+    if (!iframe) return 'about:blank';
+
+    const baseSrc = view === 'timeslots'
+      ? iframe.getAttribute('data-src-timeslots')
+      : iframe.getAttribute('data-src-subject');
+
+    if (!baseSrc) return 'about:blank';
+
+    const sectionId = getSetupSectionId();
+    if (!sectionId) {
+      return baseSrc;
+    }
+
+    const url = new URL(baseSrc, window.location.origin);
+    url.searchParams.set('section_id', sectionId);
+    return url.pathname + url.search;
+  }
+
+  function closeSetupDropdown() {
+    const group = document.getElementById('setup-tab-group');
+    if (!group) return;
+    group.classList.remove('open');
+    const trigger = group.querySelector('.mode-tab[data-mode="setup"]');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', 'false');
+    }
+  }
+
+  function updateSetupDropdownUI() {
+    const label = document.getElementById('setup-tab-label');
+    if (label) {
+      label.textContent = currentSetupView === 'timeslots' ? 'Setup: Time Slots' : 'Setup';
+    }
+
+    document.querySelectorAll('.mode-dropdown-item[data-setup-view]').forEach(function (item) {
+      item.classList.toggle('active', item.getAttribute('data-setup-view') === currentSetupView);
+    });
+
+    closeSetupDropdown();
   }
 
   function setModeIframe(mode, load) {
     const iframe = getIframeForMode(mode);
     if (!iframe) return;
     if (load) {
-      const src = iframe.getAttribute('data-src');
+      const src = mode === 'setup'
+        ? buildSetupUrl(currentSetupView)
+        : iframe.getAttribute('data-src');
       // If iframe already has the src but we want to reload, do a quick blank->src cycle
       if (!iframe.src || iframe.src === 'about:blank') {
         iframe.src = src;
@@ -308,9 +456,39 @@ $sections_result = $conn->query($sections_query);
       }
     } else {
       // clear the iframe to free memory
+      if (mode === 'setup') {
+        getSetupSectionId();
+      }
       iframe.src = 'about:blank';
     }
   }
+
+  window.toggleSetupDropdown = function (event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    const group = document.getElementById('setup-tab-group');
+    if (!group) return;
+    const isOpen = group.classList.toggle('open');
+    const trigger = group.querySelector('.mode-tab[data-mode="setup"]');
+    if (trigger) {
+      trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+    }
+  };
+
+  window.selectSetupView = function (view, event) {
+    if (event) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+
+    currentSetupView = view === 'timeslots' ? 'timeslots' : 'subject';
+    updateSetupDropdownUI();
+    const setupButton = document.querySelector('#setup-tab-group .mode-tab[data-mode="setup"]');
+    window.switchMode('setup', setupButton);
+  };
 
   // Make switchMode globally available
   window.switchMode = function (mode, el) {
@@ -319,6 +497,11 @@ $sections_result = $conn->query($sections_query);
       const prevMode = prev ? prev.getAttribute('data-mode-id') : null;
 
       if (prev && prevMode === mode) {
+        if (mode === 'setup') {
+          document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.remove('active'); });
+          if (el && el.classList) el.classList.add('active');
+          setModeIframe('setup', true);
+        }
         return;
       }
 
@@ -451,8 +634,15 @@ $sections_result = $conn->query($sections_query);
     try {
       var now = new Date();
       var currentMonth = now.toISOString().slice(0, 7);
+      updateSetupDropdownUI();
       bindFormHandlers();
       bindCalendarEventClicks();
+      const setupIframe = getSetupIframe();
+      if (setupIframe) {
+        setupIframe.addEventListener('load', function () {
+          getSetupSectionId();
+        });
+      }
 
       // If the schedule tab (container) is active in the page, do initial loads.
       var scheduleContainer = document.getElementById('schedule');
@@ -518,6 +708,14 @@ $sections_result = $conn->query($sections_query);
       });
     } catch (initErr) {
       console.error('schedule fragment init error', initErr);
+    }
+  });
+
+  document.addEventListener('click', function (event) {
+    const group = document.getElementById('setup-tab-group');
+    if (!group || !group.classList.contains('open')) return;
+    if (!group.contains(event.target)) {
+      closeSetupDropdown();
     }
   });
 })();
