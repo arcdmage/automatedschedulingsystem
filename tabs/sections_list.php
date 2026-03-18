@@ -462,9 +462,21 @@ document.getElementById('create-section-form').addEventListener('submit', functi
     .then(r => r.json())
     .then(json => {
       if (json && json.success) {
-        // refresh the page or reload listing
         retainSectionsTab();
-        window.location.reload();
+        if (!isEdit && typeof window.loadSectionsPage === 'function') {
+          sectionsSearchTerm = '';
+          const limit = parseInt(document.getElementById('rows-per-page')?.value || <?= $default_limit ?>, 10);
+          const totalRecords = parseInt(json.total_records || 0, 10);
+          const targetPage = totalRecords > 0 ? Math.ceil(totalRecords / limit) : 1;
+          closeCreateSectionModal();
+          window.loadSectionsPage(targetPage, limit, '');
+        } else if (typeof window.loadSectionsPage === 'function') {
+          const limit = document.getElementById('rows-per-page')?.value || <?= $default_limit ?>;
+          closeCreateSectionModal();
+          window.loadSectionsPage(1, limit, sectionsSearchTerm);
+        } else {
+          window.location.reload();
+        }
       } else {
         alert('Error: ' + (json && json.message ? json.message : 'Unknown error'));
       }

@@ -258,7 +258,11 @@ document.getElementById('add-faculty-form').addEventListener('submit', async fun
     const json = await res.json();
     if (json.success) {
       closeAddModal();
-      loadFacultyPage(1, defaultLimit);
+      facultySearchTerm = '';
+      const limit = parseInt(document.getElementById('rows-per-page')?.value || defaultLimit, 10);
+      const totalRecords = parseInt(json.total_records || 0, 10);
+      const targetPage = totalRecords > 0 ? Math.ceil(totalRecords / limit) : 1;
+      loadFacultyPage(targetPage, limit, '');
     } else {
       alert('Error: ' + json.message);
     }
