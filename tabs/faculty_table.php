@@ -83,6 +83,7 @@ $page = min($page, $total_pages);
                 substr($row["fname"], 0, 1) . substr($row["lname"], 0, 1),
             );
             $gClass = "gender-" . strtolower($row["gender"] ?? "other");
+            $phoneEmpty = empty(trim($row["pnumber"] ?? ""));
             $statusEmpty = empty(trim($row["status"] ?? ""));
             ?>
         <tr data-id="<?= (int) $row["faculty_id"] ?>">
@@ -105,12 +106,20 @@ $page = min($page, $total_pages);
                   </button>
                 </div>
                 <div class="name-status v-field" style="display:none;">
+                  <div class="name-meta-line">
+                    <span class="status-label">Phone:</span>
+                    <span><?= $phoneEmpty
+                        ? "No phone number"
+                        : htmlspecialchars($row["pnumber"]) ?></span>
+                  </div>
+                  <div class="name-meta-line">
                   <span class="status-label">Status:</span>
                   <span class="status-badge <?= $statusEmpty ? "empty" : "" ?>">
                     <?= $statusEmpty
                         ? "No status"
                         : htmlspecialchars($row["status"]) ?>
                   </span>
+                  </div>
                 </div>
                 <!-- Edit -->
                 <div class="e-name" style="display:none; flex-wrap:wrap; gap:4px;">

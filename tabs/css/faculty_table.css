@@ -212,6 +212,18 @@ h1 + p {
     color: #6b7280;
 }
 
+.name-meta-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.name-meta-line:first-child {
+    margin-top: 0;
+}
+
 .name-status .status-label {
     margin-right: 6px;
     font-weight: 600;
