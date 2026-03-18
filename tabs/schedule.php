@@ -306,8 +306,9 @@ $sections_result = $conn->query($sections_query);
 <div id="event-modal" class="modal" aria-hidden="true">
   <div class="modal-content">
     <span onclick="closeEventModal()" class="close" title="Close">&times;</span>
-    <h2>Add Event/Meeting</h2>
+    <h2 id="event-modal-title">Add Event/Meeting</h2>
     <form id="event-form">
+      <input type="hidden" name="event_id" id="event_id">
       <div style="display:flex;flex-direction:column;gap:8px;">
         <label for="event_title"><b>Event Title</b></label>
         <input type="text" name="event_title" id="event_title" placeholder="e.g., Faculty Meeting" required>
@@ -338,29 +339,12 @@ $sections_result = $conn->query($sections_query);
         <textarea name="event_description" id="event_description" rows="3" placeholder="Event details..."></textarea>
 
         <div style="display:flex;gap:8px;margin-top:8px;">
-          <button type="submit" class="btn btn-secondary">Create Event</button>
+          <button type="submit" class="btn btn-secondary" id="event-submit-btn">Create Event</button>
+          <button type="button" id="event-delete-btn" onclick="deleteEvent()" class="btn" style="background:#dc2626;display:none;">Delete Event</button>
           <button type="button" onclick="closeEventModal()" class="btn">Cancel</button>
         </div>
       </div>
     </form>
-  </div>
-</div>
-
-<div id="event-view-modal" class="modal" aria-hidden="true">
-  <div class="modal-content">
-    <span onclick="closeEventViewModal()" class="close" title="Close">&times;</span>
-    <h2 id="event-view-title">Event Details</h2>
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-      <div><b>Type:</b> <span id="event-view-type">-</span></div>
-      <div><b>Date:</b> <span id="event-view-date">-</span></div>
-      <div><b>Time:</b> <span id="event-view-time">-</span></div>
-      <div><b>Location:</b> <span id="event-view-location">-</span></div>
-      <div><b>Description:</b></div>
-      <div id="event-view-description" style="white-space:pre-wrap;">-</div>
-      <div style="margin-top:12px;">
-        <button type="button" onclick="closeEventViewModal()" class="btn">Close</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -577,29 +561,56 @@ $sections_result = $conn->query($sections_query);
   };
 
   // Simple modal open/close functions
-  window.openEventModal = function () {
+  function resetEventForm() {
+    var form = document.getElementById('event-form');
+    if (form) form.reset();
+    var eventId = document.getElementById('event_id');
+    if (eventId) eventId.value = '';
+    var title = document.getElementById('event-modal-title');
+    if (title) title.textContent = 'Add Event/Meeting';
+    var submitBtn = document.getElementById('event-submit-btn');
+    if (submitBtn) submitBtn.textContent = 'Create Event';
+    var deleteBtn = document.getElementById('event-delete-btn');
+    if (deleteBtn) deleteBtn.style.display = 'none';
+  }
+
+  window.openEventModal = function (data) {
+    resetEventForm();
     var m = document.getElementById('event-modal');
-    if (m) m.setAttribute('aria-hidden', 'false');
+    if (!m) return;
+
+    if (data && data.eventId) {
+      var eventId = document.getElementById('event_id');
+      var title = document.getElementById('event_title');
+      var type = document.getElementById('event_type');
+      var date = document.getElementById('event_date');
+      var start = document.getElementById('event_start_time');
+      var end = document.getElementById('event_end_time');
+      var location = document.getElementById('event_location');
+      var description = document.getElementById('event_description');
+      var modalTitle = document.getElementById('event-modal-title');
+      var submitBtn = document.getElementById('event-submit-btn');
+      var deleteBtn = document.getElementById('event-delete-btn');
+
+      if (eventId) eventId.value = data.eventId || '';
+      if (title) title.value = data.title || '';
+      if (type) type.value = data.type || '';
+      if (date) date.value = data.date || '';
+      if (start) start.value = data.startTime || '';
+      if (end) end.value = data.endTime || '';
+      if (location) location.value = data.location || '';
+      if (description) description.value = data.description || '';
+      if (modalTitle) modalTitle.textContent = 'Edit Event/Meeting';
+      if (submitBtn) submitBtn.textContent = 'Save Changes';
+      if (deleteBtn) deleteBtn.style.display = 'inline-block';
+    }
+
+    m.setAttribute('aria-hidden', 'false');
   };
   window.closeEventModal = function () {
     var m = document.getElementById('event-modal');
     if (m) m.setAttribute('aria-hidden', 'true');
-  };
-
-  window.openEventViewModal = function (data) {
-    var m = document.getElementById('event-view-modal');
-    if (!m) return;
-    document.getElementById('event-view-title').textContent = data.title || 'Event Details';
-    document.getElementById('event-view-type').textContent = data.type || '-';
-    document.getElementById('event-view-date').textContent = data.date || '-';
-    document.getElementById('event-view-time').textContent = data.time || '-';
-    document.getElementById('event-view-location').textContent = data.location || '-';
-    document.getElementById('event-view-description').textContent = data.description || '-';
-    m.setAttribute('aria-hidden', 'false');
-  };
-  window.closeEventViewModal = function () {
-    var m = document.getElementById('event-view-modal');
-    if (m) m.setAttribute('aria-hidden', 'true');
+    resetEventForm();
   };
 
   // Wire up simple form handlers to prevent page navigation and close the modal on submit.
@@ -618,18 +629,45 @@ $sections_result = $conn->query($sections_query);
           .then(function (resp) { return resp.json(); })
           .then(function (json) {
             if (!json || !json.success) {
-              throw new Error(json && json.message ? json.message : 'Failed to create event');
+              throw new Error(json && json.message ? json.message : 'Failed to save event');
             }
             closeEventModal();
             setTimeout(loadCalendar, 200);
           })
           .catch(function (err) {
-            console.error('Event create failed:', err);
-            alert(err.message || 'Failed to create event');
+            console.error('Event save failed:', err);
+            alert(err.message || 'Failed to save event');
           });
       });
     }
   }
+
+  window.deleteEvent = function () {
+    var eventId = document.getElementById('event_id');
+    if (!eventId || !eventId.value) return;
+    if (!window.confirm('Delete this event?')) return;
+
+    var formData = new FormData();
+    formData.append('event_id', eventId.value);
+
+    fetch('/mainscheduler/tabs/actions/event_delete.php', {
+      method: 'POST',
+      body: formData,
+      credentials: 'same-origin'
+    })
+      .then(function (resp) { return resp.json(); })
+      .then(function (json) {
+        if (!json || !json.success) {
+          throw new Error(json && json.message ? json.message : 'Failed to delete event');
+        }
+        closeEventModal();
+        setTimeout(loadCalendar, 200);
+      })
+      .catch(function (err) {
+        console.error('Event delete failed:', err);
+        alert(err.message || 'Failed to delete event');
+      });
+  };
 
   function bindCalendarEventClicks() {
     var container = document.getElementById('calendar-container');
@@ -640,14 +678,17 @@ $sections_result = $conn->query($sections_query);
       var item = target.closest ? target.closest('.event-item') : null;
       if (!item) return;
       var data = {
+        eventId: item.getAttribute('data-event-id') || '',
         title: item.getAttribute('data-title') || '',
         type: item.getAttribute('data-type') || '',
         date: item.getAttribute('data-date') || '',
         time: item.getAttribute('data-time') || '',
+        startTime: item.getAttribute('data-start-time') || '',
+        endTime: item.getAttribute('data-end-time') || '',
         location: item.getAttribute('data-location') || '',
         description: item.getAttribute('data-description') || ''
       };
-      window.openEventViewModal(data);
+      window.openEventModal(data);
     });
   }
 

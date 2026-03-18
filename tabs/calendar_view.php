@@ -242,7 +242,16 @@ $conn->close();
                             $timeRange ?? "",
                             ENT_QUOTES,
                         );
-                        echo "<div class='event-item' title='{$safeTitle}' data-title='{$safeTitle}' data-type='{$safeType}' data-date='{$safeDate}' data-time='{$safeTime}' data-location='{$safeLocation}' data-description='{$safeDescription}'>";
+                        $safeEventId = (int) ($event["event_id"] ?? 0);
+                        $safeStart = htmlspecialchars(
+                            substr((string) ($event["start_time"] ?? ""), 0, 5),
+                            ENT_QUOTES,
+                        );
+                        $safeEnd = htmlspecialchars(
+                            substr((string) ($event["end_time"] ?? ""), 0, 5),
+                            ENT_QUOTES,
+                        );
+                        echo "<div class='event-item' title='{$safeTitle}' data-event-id='{$safeEventId}' data-title='{$safeTitle}' data-type='{$safeType}' data-date='{$safeDate}' data-time='{$safeTime}' data-start-time='{$safeStart}' data-end-time='{$safeEnd}' data-location='{$safeLocation}' data-description='{$safeDescription}'>";
                         echo "<span class='item-time'>$timeRange</span> ";
                         echo "<span class='item-subject'>{$safeTitle}</span>";
                         echo "</div>";
