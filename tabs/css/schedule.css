@@ -109,11 +109,25 @@ select:focus, input:focus, textarea:focus {
   cursor: pointer;
 }
 
-.btn-primary, .btn-generate {
+.btn-primary {
   color: #fff;
   background-color: #28a745;
   border-color: #28a745;
   box-shadow: 0 2px 4px rgba(0,123,255,0.2);
+  
+}
+.btn-generate{
+  background: #10b981;
+    border: none;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+    box-shadow: 0 10px 20px rgba(16, 185, 129, 0.35);
 }
 .btn-primary:hover, .btn-generate:hover { background-color: #2ba147; transform: translateY(-1px); }
 
