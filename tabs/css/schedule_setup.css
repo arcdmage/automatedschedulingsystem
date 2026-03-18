@@ -77,7 +77,6 @@
 }
 
 .modal {
-<<<<<<< HEAD
     display: none;
     position: fixed;
     z-index: 1000;
@@ -87,16 +86,6 @@
     height: 100%;
     overflow: auto;
     background-color: rgba(0, 0, 0, 0.4);
-=======
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
->>>>>>> 8ea582a4ab3472dfe6ccce78ee0ae6099c1be905
 }
 
 .modal-content-large {
@@ -146,7 +135,6 @@
 }
 
 .tab-content.active {
-<<<<<<< HEAD
     display: block;
 }
 
@@ -157,7 +145,4 @@
 
 .page-header > div[style*="justify-content:space-between"] > a.btn-secondary {
     display: none !important;
-=======
-  display: block;
->>>>>>> 8ea582a4ab3472dfe6ccce78ee0ae6099c1be905
 }
