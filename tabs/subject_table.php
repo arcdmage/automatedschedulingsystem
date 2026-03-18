@@ -249,6 +249,9 @@ function startEditSubject(btn) {
   row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = '');
   const nameDiv = row.querySelector('.e-name');
   if (nameDiv) nameDiv.style.display = 'block';
+  if (typeof window.refreshSearchableFacultyPickers === 'function') {
+    window.refreshSearchableFacultyPickers(row);
+  }
 }
 
 function cancelEditSubject(btn) {
@@ -268,7 +271,13 @@ async function saveSubject(btn) {
 
   // collect editable inputs from the row
   row.querySelectorAll('.e-field, .e-name input, .e-name select').forEach(el => {
-    if (el.name) data.append(el.name, el.value);
+    if (!el.name) return;
+    if (el.tagName === 'SELECT' && el.multiple) {
+      const values = Array.from(el.selectedOptions).map(opt => opt.value).filter(v => v);
+      data.append(el.name, values.join(', '));
+      return;
+    }
+    data.append(el.name, el.value);
   });
 
   const orig = btn.innerHTML;

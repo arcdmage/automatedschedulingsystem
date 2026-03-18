@@ -378,3 +378,10 @@
 [17-Mar-2026 17:41:00 Europe/Berlin] Pattern Save - Deleted 5 existing patterns
 [17-Mar-2026 17:41:00 Europe/Berlin] Pattern Save - Inserted 5 new patterns
 [17-Mar-2026 17:41:00 Europe/Berlin] Pattern Save - Transaction committed successfully
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Raw Input: {"requirement_id":50,"pattern":[{"day_of_week":"Monday","time_slot_id":86},{"day_of_week":"Tuesday","time_slot_id":86},{"day_of_week":"Wednesday","time_slot_id":86},{"day_of_week":"Thursday","time_slot_id":86},{"day_of_week":"Friday","time_slot_id":86}]}
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Processing requirement_id: 50 with 5 slots
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Section ID: 19
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Transaction started
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Deleted 0 existing patterns
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Inserted 5 new patterns
+[18-Mar-2026 02:54:48 Europe/Berlin] Pattern Save - Transaction committed successfully
