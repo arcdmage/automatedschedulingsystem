@@ -10,6 +10,7 @@ try {
     }
 
     require_once __DIR__ . "/../../db_connect.php";
+    require_once __DIR__ . "/../../lib/scheduler_staff_helpers.php";
 
     // Read and sanitize inputs
     $section_name = isset($_POST["section_name"])
@@ -100,6 +101,10 @@ try {
         );
     }
     $checkStmt->close();
+
+    if ($adviser_id !== null && faculty_on_leave_today($conn, $adviser_id)) {
+        throw new Exception("Selected advisor is currently on leave and cannot be assigned.");
+    }
 
     // Prepare insert statement. adviser_id may be null.
     $sql = "INSERT INTO sections (section_name, grade_level, track, school_year, semester, adviser_id, created_at, updated_at)

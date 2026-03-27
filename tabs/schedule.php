@@ -1,148 +1,119 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
-
-// Fetch all faculty members for dropdown
-$faculty_query =
-    "SELECT faculty_id, fname, mname, lname FROM faculty ORDER BY lname, fname";
-$faculty_result = $conn->query($faculty_query);
-
-// Fetch all subjects for dropdown
-$subjects_query =
-    "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name";
-$subjects_result = $conn->query($subjects_query);
-
-// Fetch all sections for automation (kept in case other fragments use them)
-$sections_query =
-    "SELECT section_id, section_name, grade_level, track, school_year, semester FROM sections ORDER BY grade_level, section_name";
-$sections_result = $conn->query($sections_query);
 ?>
-
-<!--
-  Fragment: schedule.php
-  - This file is intended to be included inside a parent page (no DOCTYPE/head/body here)
-  - It exports a small UI for the Schedule tab and exposes a handful of global functions:
-    switchMode, loadCalendar, openEventModal, closeEventModal
--->
-
 <link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
 
 <style>
-/* Local styles retained for schedule UI */
-.schedule-mode-tabs {
+.schedule-shell {
   display: flex;
-  background: white;
-  border-radius: 8px;
-  overflow: visible;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  margin-bottom: 20px;
-  position: relative;
-  z-index: 20;
+  flex-direction: column;
+  gap: 16px;
 }
-
-.mode-tab {
-  flex: 1;
-  padding: 15px;
-  text-align: center;
-  cursor: pointer;
-  border: none;
-  background: white;
-  font-weight: bold;
-  color: #666;
-  transition: all 0.3s;
-  border-right: 1px solid #eee;
-}
-
-.mode-tab:last-child {
-  border-right: none;
-}
-
-.mode-tab:hover {
-  background: #f5f5f5;
-}
-
-.mode-tab.active {
-  background: #4CAF50;
-  color: white;
-}
-
-.mode-tab-group {
-  position: relative;
-  flex: 1;
-}
-
-.mode-tab-group .mode-tab {
-  width: 100%;
-  border-right: 1px solid #eee;
-}
-
-.mode-tab-trigger {
+.schedule-primary-bar,
+.schedule-secondary-bar {
   display: flex;
+  gap: 12px;
   align-items: center;
-  justify-content: center;
-  gap: 8px;
+  flex-wrap: nowrap;
+  overflow: visible;
+  background: #ffffff;
+  border-radius: 10px;
+  padding: 14px 16px;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.08);
 }
-
-.mode-tab-caret {
-  font-size: 12px;
-  transition: transform 0.2s ease;
+.schedule-primary-bar label {
+  font-weight: 700;
+  color: #0f172a;
 }
-
-.mode-tab-group.open .mode-tab-caret {
-  transform: rotate(180deg);
+.schedule-primary-bar select {
+  min-width: 220px;
+  max-width: 220px;
+  padding: 10px 12px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-weight: 600;
+  flex: 0 0 auto;
 }
-
-.mode-dropdown {
+.secondary-dropdown {
+  position: relative;
+  flex: 1 1 0;
+}
+.secondary-dropdown > .secondary-btn {
+  width: 100%;
+}
+.secondary-group {
+  display: none;
+  gap: 10px;
+  flex-wrap: nowrap;
+  align-items: center;
+  width: 100%;
+}
+.secondary-group.active {
+  display: flex;
+}
+.secondary-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 11px 12px;
+  background: #e2e8f0;
+  color: #334155;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  flex: 1 1 0;
+}
+.secondary-btn.active {
+  background: #16a34a;
+  color: #ffffff;
+}
+.secondary-dropdown {
+  position: relative;
+}
+.secondary-dropdown-menu {
   display: none;
   position: absolute;
   top: calc(100% + 8px);
   left: 0;
-  right: 0;
+  min-width: 220px;
   background: #ffffff;
-  border: 1px solid #dfe5ec;
+  border: 1px solid #dbe2ea;
   border-radius: 10px;
   box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
-  overflow: hidden;
+  padding: 8px;
+  z-index: 20;
 }
-
-.mode-tab-group.open .mode-dropdown {
+.secondary-dropdown.open .secondary-dropdown-menu {
   display: block;
 }
-
-.mode-dropdown-item {
-  display: block;
+.secondary-dropdown-menu button {
   width: 100%;
-  padding: 12px 16px;
   border: 0;
   background: #ffffff;
-  color: #475569;
-  text-align: left;
+  color: #334155;
   font-weight: 600;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 8px;
   cursor: pointer;
 }
-
-.mode-dropdown-item:hover,
-.mode-dropdown-item.active {
+.secondary-dropdown-menu button.active,
+.secondary-dropdown-menu button:hover {
   background: #f0fdf4;
   color: #15803d;
 }
-
-.mode-content {
+.schedule-pane {
   display: none;
 }
-
-.mode-content.active {
+.schedule-pane.active {
   display: block;
 }
-
-/* keep iframes visually consistent */
-.mode-content iframe {
+.schedule-pane iframe {
   width: 100%;
-  height: 800px;
-  border: none;
-  border-radius: 8px;
+  height: 840px;
+  border: 0;
+  border-radius: 10px;
+  background: #ffffff;
 }
-
-/* simple card layout used in the page */
 .card-section {
   background: white;
   padding: 16px;
@@ -150,86 +121,17 @@ $sections_result = $conn->query($sections_query);
   margin-bottom: 16px;
   box-shadow: 0 1px 2px rgba(0,0,0,0.03);
 }
-
 .calendar-controls {
   display: flex;
   gap: 15px;
   flex-wrap: wrap;
 }
-
-@media print {
-  [data-tab-content] {
-    opacity: 0 !important;
-    visibility: hidden !important;
-    pointer-events: none !important;
-  }
-
-  #schedule {
-    opacity: 1 !important;
-    visibility: visible !important;
-    pointer-events: auto !important;
-  }
-
-  ul.tabs,
-  .schedule-mode-tabs,
-  .calendar-controls,
-  .btn,
-  .card-section:not(#calendar-container) {
-    display: none !important;
-  }
-
-  #mode-manual {
-    display: block !important;
-  }
-
-  #schedule {
-    position: static !important;
-    inset: auto !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    overflow: visible !important;
-    background: #ffffff !important;
-    color: #000000 !important;
-  }
-
-  .tab-content {
-    margin: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    box-shadow: none !important;
-  }
-
-  #calendar-container {
-    box-shadow: none;
-    border: none;
-    margin: 0;
-    padding: 0;
-    overflow: visible !important;
-    display: block !important;
-    visibility: visible !important;
-  }
-
-  #calendar-container * {
-    visibility: visible !important;
-  }
-
-  body {
-    background: #ffffff !important;
-  }
-}
-
-/* Basic modal styles (kept small) */
-.modal[aria-hidden="true"] {
-  display: none;
-}
+.modal[aria-hidden="true"] { display: none; }
 .modal[aria-hidden="false"] {
   display: block;
   position: fixed;
   z-index: 10000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
+  inset: 0;
   overflow: auto;
   background-color: rgba(0,0,0,0.4);
 }
@@ -251,56 +153,75 @@ $sections_result = $conn->query($sections_query);
 }
 </style>
 
-<div class="schedule-mode-tabs" role="tablist" aria-label="Schedule modes">
-  <button class="mode-tab active" data-mode="manual" onclick="switchMode('manual', this)" role="tab" aria-selected="true">Calendar</button>
-  <div class="mode-tab-group" id="setup-tab-group">
-    <button class="mode-tab" data-mode="setup" onclick="toggleSetupDropdown(event)" role="tab" aria-haspopup="true" aria-expanded="false">
-      <span class="mode-tab-trigger">
-        <span id="setup-tab-label">Setup</span>
-        <span class="mode-tab-caret">v</span>
-      </span>
-    </button>
-    <div class="mode-dropdown" id="setup-mode-dropdown">
-      <button class="mode-dropdown-item active" type="button" data-setup-view="subject" onclick="selectSetupView('subject', event)">Subject Setup</button>
-      <button class="mode-dropdown-item" type="button" data-setup-view="timeslots" onclick="selectSetupView('timeslots', event)">Manage Time Slots</button>
+<div class="schedule-shell">
+  <div class="schedule-primary-bar">
+    <label for="schedule-primary-mode">Schedule Mode</label>
+    <select id="schedule-primary-mode" onchange="switchPrimaryMode(this.value)">
+      <option value="manual">Manual</option>
+      <option value="automated">Automated</option>
+    </select>
+  </div>
+
+  <div class="schedule-secondary-bar">
+    <div id="secondary-manual" class="secondary-group active">
+      <button class="secondary-btn active" data-primary="manual" data-secondary="calendar" onclick="switchSecondaryMode('manual','calendar', this)">Calendar</button>
+      <div class="secondary-dropdown" id="manual-setup-dropdown">
+        <button class="secondary-btn" type="button" onclick="toggleManualSetupDropdown(event)" id="manual-setup-trigger">Setup</button>
+        <div class="secondary-dropdown-menu">
+          <button type="button" class="active" data-setup-view="subject" onclick="selectManualSetupView('subject', event)">Subject Setup</button>
+          <button type="button" data-setup-view="timeslots" onclick="selectManualSetupView('timeslots', event)">Manage Time Slots</button>
+        </div>
+      </div>
+      <button class="secondary-btn" data-primary="manual" data-secondary="generate" onclick="switchSecondaryMode('manual','generate', this)">Generate</button>
+      <button class="secondary-btn" data-primary="manual" data-secondary="view" onclick="switchSecondaryMode('manual','view', this)">Schedules</button>
+    </div>
+
+    <div id="secondary-automated" class="secondary-group">
+      <button class="secondary-btn active" data-primary="automated" data-secondary="setup" onclick="switchSecondaryMode('automated','setup', this)">Setup</button>
+      <button class="secondary-btn" data-primary="automated" data-secondary="generate" onclick="switchSecondaryMode('automated','generate', this)">Generate</button>
+      <button class="secondary-btn" data-primary="automated" data-secondary="view" onclick="switchSecondaryMode('automated','view', this)">Schedules</button>
     </div>
   </div>
-  <button class="mode-tab" data-mode="generate" onclick="switchMode('generate', this)" role="tab">Generate</button>
-  <button class="mode-tab" data-mode="view" onclick="switchMode('view', this)" role="tab">Schedules</button>
-</div>
 
-<!-- Manual Entry Mode (Calendar) -->
-<div id="mode-manual" class="mode-content active" data-mode-id="manual">
-  <div class="card-section">
-    <div class="calendar-controls">
-      <button type="button" onclick="openEventModal()" class="btn btn-success" style="flex: 1;">+ Add Event/Meeting</button>
-      <button type="button" onclick="window.print()" class="btn btn-primary" style="flex: 1;">Print Calendar</button>
+  <div id="pane-manual-calendar" class="schedule-pane active">
+    <div class="card-section">
+      <div class="calendar-controls">
+        <button type="button" onclick="openEventModal()" class="btn btn-success" style="flex: 1;">+ Add Event/Meeting</button>
+        <button type="button" onclick="window.print()" class="btn btn-primary" style="flex: 1;">Print Calendar</button>
+      </div>
     </div>
+    <div id="calendar-container" class="card-section" style="padding: 0; overflow: hidden;"></div>
   </div>
 
-  <div id="calendar-container" class="card-section" style="padding: 0; overflow: hidden;">
-    <!-- calendar content injected via AJAX by loadCalendar() -->
+  <div id="pane-manual-setup" class="schedule-pane">
+    <iframe
+      id="manual-setup-iframe"
+      data-src-subject="/mainscheduler/tabs/schedule_setup.php"
+      data-src-timeslots="/mainscheduler/tabs/manage_timeslots.php"
+      src="about:blank"
+      loading="lazy"
+      title="Manual Setup"></iframe>
   </div>
-</div>
 
-<!-- Setup Mode -->
-<div id="mode-setup" class="mode-content" data-mode-id="setup">
-  <iframe
-    data-src-subject="/mainscheduler/tabs/schedule_setup.php"
-    data-src-timeslots="/mainscheduler/tabs/manage_timeslots.php"
-    src="about:blank"
-    loading="lazy"
-    title="Schedule Setup"></iframe>
-</div>
+  <div id="pane-manual-generate" class="schedule-pane">
+    <iframe id="manual-generate-iframe" data-src="/mainscheduler/tabs/schedule_generate.php" src="about:blank" loading="lazy" title="Manual Generate"></iframe>
+  </div>
 
-<!-- Generate Mode -->
-<div id="mode-generate" class="mode-content" data-mode-id="generate">
-  <iframe data-src="/mainscheduler/tabs/schedule_generate.php" src="about:blank" loading="lazy" title="Auto Generate"></iframe>
-</div>
+  <div id="pane-manual-view" class="schedule-pane">
+    <iframe id="manual-view-iframe" data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Manual Schedule View"></iframe>
+  </div>
 
-<!-- Weekly View Mode -->
-<div id="mode-view" class="mode-content" data-mode-id="view">
-  <iframe data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Schedules View"></iframe>
+  <div id="pane-automated-setup" class="schedule-pane">
+    <iframe id="automated-setup-iframe" data-src="/mainscheduler/tabs/automated_setup.php" src="about:blank" loading="lazy" title="Automated Setup"></iframe>
+  </div>
+
+  <div id="pane-automated-generate" class="schedule-pane">
+    <iframe id="automated-generate-iframe" data-src="/mainscheduler/tabs/automated_generate.php" src="about:blank" loading="lazy" title="Automated Generate"></iframe>
+  </div>
+
+  <div id="pane-automated-view" class="schedule-pane">
+    <iframe id="automated-view-iframe" data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Automated Schedule View"></iframe>
+  </div>
 </div>
 
 <div id="event-modal" class="modal" aria-hidden="true">
@@ -350,201 +271,178 @@ $sections_result = $conn->query($sections_query);
 
 <script>
 (function () {
-  var currentSetupView = 'subject';
-  var lastSetupSectionId = '';
+  var currentPrimaryMode = 'manual';
+  var currentManualSecondary = 'calendar';
+  var currentAutomatedSecondary = 'setup';
+  var currentManualSetupView = 'subject';
+  var lastManualSetupSectionId = '';
 
-  // Expose a handful of functions to the global scope because the markup uses inline onclick attributes.
-  // Attach to window explicitly so that other scripts can call them as well.
-  function getIframeForMode(mode) {
-    const container = document.getElementById('mode-' + mode);
-    return container ? container.querySelector('iframe') : null;
+  function paneId(primary, secondary) {
+    return 'pane-' + primary + '-' + secondary;
   }
 
-  function getSetupIframe() {
-    return getIframeForMode('setup');
+  function iframeId(primary, secondary) {
+    return primary + '-' + secondary + '-iframe';
   }
 
-  function getViewIframe() {
-    return getIframeForMode('view');
+  function getIframe(primary, secondary) {
+    return document.getElementById(iframeId(primary, secondary));
   }
 
-  function getSetupSectionId() {
-    const iframe = getSetupIframe();
+  function getActiveSecondary(primary) {
+    return primary === 'manual' ? currentManualSecondary : currentAutomatedSecondary;
+  }
+
+  function getManualSetupSectionId() {
+    const iframe = getIframe('manual', 'setup');
     if (!iframe || !iframe.src || iframe.src === 'about:blank') {
-      return lastSetupSectionId;
+      return lastManualSetupSectionId;
     }
     try {
       const url = new URL(iframe.src, window.location.origin);
       const sectionId = url.searchParams.get('section_id') || '';
-      if (sectionId) {
-        lastSetupSectionId = sectionId;
-      }
+      if (sectionId) lastManualSetupSectionId = sectionId;
       return sectionId;
     } catch (err) {
-      return lastSetupSectionId;
+      return lastManualSetupSectionId;
     }
   }
 
-  function buildSetupUrl(view) {
-    const iframe = getSetupIframe();
-    if (!iframe) return 'about:blank';
+  function loadIframe(primary, secondary, forceUrl) {
+    const iframe = getIframe(primary, secondary);
+    if (!iframe) return;
 
-    const baseSrc = view === 'timeslots'
-      ? iframe.getAttribute('data-src-timeslots')
-      : iframe.getAttribute('data-src-subject');
-
-    if (!baseSrc) return 'about:blank';
-
-    const sectionId = getSetupSectionId();
-    if (!sectionId) {
-      return baseSrc;
+    let src = forceUrl || iframe.getAttribute('data-src');
+    if (primary === 'manual' && secondary === 'setup') {
+      src = currentManualSetupView === 'timeslots'
+        ? iframe.getAttribute('data-src-timeslots')
+        : iframe.getAttribute('data-src-subject');
+      const sectionId = getManualSetupSectionId();
+      if (sectionId) {
+        const url = new URL(src, window.location.origin);
+        url.searchParams.set('section_id', sectionId);
+        src = url.pathname + url.search;
+      }
     }
 
-    const url = new URL(baseSrc, window.location.origin);
-    url.searchParams.set('section_id', sectionId);
-    return url.pathname + url.search;
-  }
-
-  function closeSetupDropdown() {
-    const group = document.getElementById('setup-tab-group');
-    if (!group) return;
-    group.classList.remove('open');
-    const trigger = group.querySelector('.mode-tab[data-mode="setup"]');
-    if (trigger) {
-      trigger.setAttribute('aria-expanded', 'false');
+    if (!src) return;
+    if (!iframe.src || iframe.src === 'about:blank') {
+      iframe.src = src;
+    } else if (iframe.src !== new URL(src, window.location.origin).href) {
+      iframe.src = src;
     }
   }
 
-  function updateSetupDropdownUI() {
-    const label = document.getElementById('setup-tab-label');
-    if (label) {
-      label.textContent = currentSetupView === 'timeslots' ? 'Setup: Time Slots' : 'Setup';
+  function unloadIframe(primary, secondary) {
+    const iframe = getIframe(primary, secondary);
+    if (!iframe) return;
+    if (primary === 'manual' && secondary === 'setup') {
+      getManualSetupSectionId();
     }
+    iframe.src = 'about:blank';
+  }
 
-    document.querySelectorAll('.mode-dropdown-item[data-setup-view]').forEach(function (item) {
-      item.classList.toggle('active', item.getAttribute('data-setup-view') === currentSetupView);
+  function refreshSecondaryButtons(primary, secondary) {
+    document.querySelectorAll('.secondary-btn[data-primary="' + primary + '"]').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-secondary') === secondary);
     });
-
-    closeSetupDropdown();
+    if (primary === 'manual') {
+      document.getElementById('manual-setup-trigger').classList.toggle('active', secondary === 'setup');
+    }
   }
 
-  function setModeIframe(mode, load) {
-    const iframe = getIframeForMode(mode);
-    if (!iframe) return;
-    if (load) {
-      const src = mode === 'setup'
-        ? buildSetupUrl(currentSetupView)
-        : iframe.getAttribute('data-src');
-      // If iframe already has the src but we want to reload, do a quick blank->src cycle
-      if (!iframe.src || iframe.src === 'about:blank') {
-        iframe.src = src;
-      } else {
-        iframe.src = 'about:blank';
-        setTimeout(function () { iframe.src = src; }, 50);
-      }
+  function activatePane(primary, secondary, options) {
+    options = options || {};
+    document.querySelectorAll('.schedule-pane').forEach(function (pane) {
+      pane.classList.remove('active');
+    });
+    const pane = document.getElementById(paneId(primary, secondary));
+    if (pane) pane.classList.add('active');
+
+    if (primary === 'manual') {
+      currentManualSecondary = secondary;
     } else {
-      // clear the iframe to free memory
-      if (mode === 'setup') {
-        getSetupSectionId();
-      }
-      iframe.src = 'about:blank';
+      currentAutomatedSecondary = secondary;
     }
+    refreshSecondaryButtons(primary, secondary);
+
+    if (primary === 'manual' && secondary === 'calendar') {
+      loadCalendar();
+      return;
+    }
+
+    loadIframe(primary, secondary, options.forceUrl || null);
   }
 
-  window.toggleSetupDropdown = function (event) {
+  window.switchPrimaryMode = function (mode) {
+    currentPrimaryMode = mode === 'automated' ? 'automated' : 'manual';
+    const select = document.getElementById('schedule-primary-mode');
+    if (select) select.value = currentPrimaryMode;
+
+    document.querySelectorAll('.secondary-group').forEach(function (group) {
+      group.classList.remove('active');
+    });
+    const activeGroup = document.getElementById('secondary-' + currentPrimaryMode);
+    if (activeGroup) activeGroup.classList.add('active');
+
+    activatePane(currentPrimaryMode, getActiveSecondary(currentPrimaryMode));
+  };
+
+  window.switchSecondaryMode = function (primary, secondary, el) {
+    if (primary !== currentPrimaryMode) {
+      switchPrimaryMode(primary);
+    }
+    closeManualSetupDropdown();
+    activatePane(primary, secondary);
+  };
+
+  window.toggleManualSetupDropdown = function (event) {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-
-    const group = document.getElementById('setup-tab-group');
-    if (!group) return;
-    const isOpen = group.classList.toggle('open');
-    const trigger = group.querySelector('.mode-tab[data-mode="setup"]');
-    if (trigger) {
-      trigger.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-    }
+    const dropdown = document.getElementById('manual-setup-dropdown');
+    if (dropdown) dropdown.classList.toggle('open');
   };
 
-  window.selectSetupView = function (view, event) {
+  function closeManualSetupDropdown() {
+    const dropdown = document.getElementById('manual-setup-dropdown');
+    if (dropdown) dropdown.classList.remove('open');
+  }
+
+  function refreshManualSetupDropdown() {
+    document.querySelectorAll('#manual-setup-dropdown [data-setup-view]').forEach(function (btn) {
+      btn.classList.toggle('active', btn.getAttribute('data-setup-view') === currentManualSetupView);
+    });
+    document.getElementById('manual-setup-trigger').textContent = currentManualSetupView === 'timeslots' ? 'Setup: Time Slots' : 'Setup';
+  }
+
+  window.selectManualSetupView = function (view, event) {
     if (event) {
       event.preventDefault();
       event.stopPropagation();
     }
-
-    currentSetupView = view === 'timeslots' ? 'timeslots' : 'subject';
-    updateSetupDropdownUI();
-    const setupButton = document.querySelector('#setup-tab-group .mode-tab[data-mode="setup"]');
-    window.switchMode('setup', setupButton);
+    currentManualSetupView = view === 'timeslots' ? 'timeslots' : 'subject';
+    refreshManualSetupDropdown();
+    closeManualSetupDropdown();
+    switchSecondaryMode('manual', 'setup');
   };
 
-  window.openScheduleViewForSection = function (sectionId) {
-    const viewButton = document.querySelector('.mode-tab[data-mode="view"]');
-    window.switchMode('view', viewButton);
-
-    const iframe = getViewIframe();
+  window.openScheduleViewForSection = function (sectionId, preferredMode) {
+    const primary = preferredMode === 'manual' ? 'manual' : 'automated';
+    switchPrimaryMode(primary);
+    const iframe = getIframe(primary, 'view');
     if (!iframe) return;
-
     const baseSrc = iframe.getAttribute('data-src') || '/mainscheduler/tabs/schedule_view.php';
     const url = new URL(baseSrc, window.location.origin);
-    if (sectionId) {
-      url.searchParams.set('section_id', sectionId);
-    }
-
-    iframe.src = 'about:blank';
-    setTimeout(function () {
-      iframe.src = url.pathname + url.search;
-    }, 50);
+    if (sectionId) url.searchParams.set('section_id', sectionId);
+    activatePane(primary, 'view', { forceUrl: url.pathname + url.search });
   };
 
-  // Make switchMode globally available
-  window.switchMode = function (mode, el) {
-    try {
-      const prev = document.querySelector('.mode-content.active');
-      const prevMode = prev ? prev.getAttribute('data-mode-id') : null;
-
-      if (prev && prevMode === mode) {
-        if (mode === 'setup') {
-          document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.remove('active'); });
-          if (el && el.classList) el.classList.add('active');
-          setModeIframe('setup', true);
-        }
-        return;
-      }
-
-      if (prev) {
-        prev.classList.remove('active');
-        if (prevMode) setModeIframe(prevMode, false);
-      }
-
-      document.querySelectorAll('.mode-tab').forEach(function (t) { t.classList.remove('active'); });
-      if (el && el.classList) el.classList.add('active');
-
-      const target = document.getElementById('mode-' + mode);
-      if (!target) return;
-      target.classList.add('active');
-
-      // load iframe for the shown mode (if any)
-      setModeIframe(mode, true);
-
-      if (mode === 'manual') {
-        // when switching to calendar mode, reload calendar
-        loadCalendar();
-      }
-    } catch (err) {
-      // don't throw; just log
-      console.error('switchMode error', err);
-    }
-  };
-
-  // Calendar loader via AJAX (returns HTML fragment inserted into #calendar-container)
   window.loadCalendar = function () {
     var now = new Date();
     var month = now.toISOString().slice(0, 7);
-    var params = new URLSearchParams({ month: month });
-
-    var url = '/mainscheduler/tabs/calendar_view.php?' + params.toString();
-    fetch(url, { credentials: 'same-origin' })
+    fetch('/mainscheduler/tabs/calendar_view.php?month=' + encodeURIComponent(month), { credentials: 'same-origin' })
       .then(function (response) {
         if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
         return response.text();
@@ -554,13 +452,12 @@ $sections_result = $conn->query($sections_query);
         if (container) container.innerHTML = html;
       })
       .catch(function (err) {
-        console.error('Error loading calendar:', err);
         var container = document.getElementById('calendar-container');
-        if (container) container.innerHTML = '<div style="padding:16px;color:#a00;">Error loading calendar. Check console for details.</div>';
+        if (container) container.innerHTML = '<div style="padding:16px;color:#a00;">Error loading calendar.</div>';
+        console.error(err);
       });
   };
 
-  // Simple modal open/close functions
   function resetEventForm() {
     var form = document.getElementById('event-form');
     if (form) form.reset();
@@ -576,210 +473,72 @@ $sections_result = $conn->query($sections_query);
 
   window.openEventModal = function (data) {
     resetEventForm();
-    var m = document.getElementById('event-modal');
-    if (!m) return;
-
+    var modal = document.getElementById('event-modal');
+    if (!modal) return;
     if (data && data.eventId) {
-      var eventId = document.getElementById('event_id');
-      var title = document.getElementById('event_title');
-      var type = document.getElementById('event_type');
-      var date = document.getElementById('event_date');
-      var start = document.getElementById('event_start_time');
-      var end = document.getElementById('event_end_time');
-      var location = document.getElementById('event_location');
-      var description = document.getElementById('event_description');
-      var modalTitle = document.getElementById('event-modal-title');
-      var submitBtn = document.getElementById('event-submit-btn');
-      var deleteBtn = document.getElementById('event-delete-btn');
-
-      if (eventId) eventId.value = data.eventId || '';
-      if (title) title.value = data.title || '';
-      if (type) type.value = data.type || '';
-      if (date) date.value = data.date || '';
-      if (start) start.value = data.startTime || '';
-      if (end) end.value = data.endTime || '';
-      if (location) location.value = data.location || '';
-      if (description) description.value = data.description || '';
-      if (modalTitle) modalTitle.textContent = 'Edit Event/Meeting';
-      if (submitBtn) submitBtn.textContent = 'Save Changes';
-      if (deleteBtn) deleteBtn.style.display = 'inline-block';
+      document.getElementById('event_id').value = data.eventId || '';
+      document.getElementById('event_title').value = data.title || '';
+      document.getElementById('event_type').value = data.type || '';
+      document.getElementById('event_date').value = data.date || '';
+      document.getElementById('event_start_time').value = data.startTime || '';
+      document.getElementById('event_end_time').value = data.endTime || '';
+      document.getElementById('event_location').value = data.location || '';
+      document.getElementById('event_description').value = data.description || '';
+      document.getElementById('event-modal-title').textContent = 'Edit Event/Meeting';
+      document.getElementById('event-submit-btn').textContent = 'Save Changes';
+      document.getElementById('event-delete-btn').style.display = 'inline-block';
     }
-
-    m.setAttribute('aria-hidden', 'false');
+    modal.setAttribute('aria-hidden', 'false');
   };
+
   window.closeEventModal = function () {
-    var m = document.getElementById('event-modal');
-    if (m) m.setAttribute('aria-hidden', 'true');
+    var modal = document.getElementById('event-modal');
+    if (modal) modal.setAttribute('aria-hidden', 'true');
     resetEventForm();
   };
 
-  // Wire up simple form handlers to prevent page navigation and close the modal on submit.
-  // You can replace these with real AJAX submissions later.
-  function bindFormHandlers() {
+  window.deleteEvent = function () {
+    var eventId = document.getElementById('event_id');
+    if (!eventId || !eventId.value || !window.confirm('Delete this event?')) return;
+    var formData = new FormData();
+    formData.append('event_id', eventId.value);
+    fetch('/mainscheduler/tabs/actions/event_delete.php', { method: 'POST', body: formData, credentials: 'same-origin' })
+      .then(function (response) { return response.json(); })
+      .then(function (json) {
+        if (!json || !json.success) throw new Error(json && json.message ? json.message : 'Delete failed');
+        closeEventModal();
+        setTimeout(loadCalendar, 200);
+      })
+      .catch(function (err) { alert(err.message || 'Delete failed'); });
+  };
+
+  document.addEventListener('DOMContentLoaded', function () {
+    refreshManualSetupDropdown();
     var eventForm = document.getElementById('event-form');
     if (eventForm) {
       eventForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
-        var formData = new FormData(eventForm);
-        fetch('/mainscheduler/tabs/actions/event_create.php', {
-          method: 'POST',
-          body: formData,
-          credentials: 'same-origin'
-        })
-          .then(function (resp) { return resp.json(); })
+        fetch('/mainscheduler/tabs/actions/event_create.php', { method: 'POST', body: new FormData(eventForm), credentials: 'same-origin' })
+          .then(function (response) { return response.json(); })
           .then(function (json) {
-            if (!json || !json.success) {
-              throw new Error(json && json.message ? json.message : 'Failed to save event');
-            }
+            if (!json || !json.success) throw new Error(json && json.message ? json.message : 'Save failed');
             closeEventModal();
             setTimeout(loadCalendar, 200);
           })
-          .catch(function (err) {
-            console.error('Event save failed:', err);
-            alert(err.message || 'Failed to save event');
-          });
+          .catch(function (err) { alert(err.message || 'Save failed'); });
       });
     }
-  }
-
-  window.deleteEvent = function () {
-    var eventId = document.getElementById('event_id');
-    if (!eventId || !eventId.value) return;
-    if (!window.confirm('Delete this event?')) return;
-
-    var formData = new FormData();
-    formData.append('event_id', eventId.value);
-
-    fetch('/mainscheduler/tabs/actions/event_delete.php', {
-      method: 'POST',
-      body: formData,
-      credentials: 'same-origin'
-    })
-      .then(function (resp) { return resp.json(); })
-      .then(function (json) {
-        if (!json || !json.success) {
-          throw new Error(json && json.message ? json.message : 'Failed to delete event');
-        }
-        closeEventModal();
-        setTimeout(loadCalendar, 200);
-      })
-      .catch(function (err) {
-        console.error('Event delete failed:', err);
-        alert(err.message || 'Failed to delete event');
-      });
-  };
-
-  function bindCalendarEventClicks() {
-    var container = document.getElementById('calendar-container');
-    if (!container) return;
-    container.addEventListener('click', function (ev) {
-      var target = ev.target;
-      if (!target) return;
-      var item = target.closest ? target.closest('.event-item') : null;
-      if (!item) return;
-      var data = {
-        eventId: item.getAttribute('data-event-id') || '',
-        title: item.getAttribute('data-title') || '',
-        type: item.getAttribute('data-type') || '',
-        date: item.getAttribute('data-date') || '',
-        time: item.getAttribute('data-time') || '',
-        startTime: item.getAttribute('data-start-time') || '',
-        endTime: item.getAttribute('data-end-time') || '',
-        location: item.getAttribute('data-location') || '',
-        description: item.getAttribute('data-description') || ''
-      };
-      window.openEventModal(data);
-    });
-  }
-
-  // Initialization on DOMContentLoaded: set current month, initial calendar load if this fragment is active,
-  // and prepare iframes according to which mode is active.
-  document.addEventListener('DOMContentLoaded', function () {
-    try {
-      var now = new Date();
-      var currentMonth = now.toISOString().slice(0, 7);
-      updateSetupDropdownUI();
-      bindFormHandlers();
-      bindCalendarEventClicks();
-      const setupIframe = getSetupIframe();
-      if (setupIframe) {
-        setupIframe.addEventListener('load', function () {
-          getSetupSectionId();
-        });
-      }
-
-      // If the schedule tab (container) is active in the page, do initial loads.
-      var scheduleContainer = document.getElementById('schedule');
-      var fragmentActive = scheduleContainer ? scheduleContainer.classList.contains('active') : true;
-
-      // Load calendar only when the schedule fragment is active
-      if (fragmentActive) {
-        loadCalendar();
-      }
-
-      // Load iframe for whichever mode-content is active
-      document.querySelectorAll('.mode-content').forEach(function (c) {
-        var mode = c.getAttribute('data-mode-id');
-        if (!mode) return;
-        if (c.classList.contains('active')) {
-          if (mode !== 'manual') setModeIframe(mode, true);
-        } else {
-          if (mode !== 'manual') setModeIframe(mode, false);
-        }
-      });
-
-      // Listen for custom events dispatched by the global tab switcher (if present)
-      if (scheduleContainer) {
-        scheduleContainer.addEventListener('tab-hidden', function () {
-          document.querySelectorAll('.mode-content').forEach(function (c) {
-            var mode = c.getAttribute('data-mode-id');
-            if (mode && mode !== 'manual') setModeIframe(mode, false);
-          });
-          var calContainer = document.getElementById('calendar-container');
-          if (calContainer) calContainer.innerHTML = '';
-        });
-
-        scheduleContainer.addEventListener('tab-shown', function () {
-          var active = document.querySelector('.mode-content.active');
-          if (active) {
-            var mode = active.getAttribute('data-mode-id');
-            if (mode && mode !== 'manual') setModeIframe(mode, true);
-            if (mode === 'manual') loadCalendar();
-          }
-        });
-      }
-
-      // Also attach to any element that might receive the tab events (fallback)
-      document.querySelectorAll('[data-tab-content]').forEach(function (el) {
-        el.addEventListener('tab-hidden', function (ev) {
-          if (ev && ev.detail && ev.detail.id && ev.detail.id === 'schedule') {
-            document.querySelectorAll('.mode-content').forEach(function (c) {
-              var mode = c.getAttribute('data-mode-id');
-              if (mode && mode !== 'manual') setModeIframe(mode, false);
-            });
-          }
-        });
-        el.addEventListener('tab-shown', function (ev) {
-          if (ev && ev.detail && ev.detail.id && ev.detail.id === 'schedule') {
-            var active = document.querySelector('.mode-content.active');
-            if (active) {
-              var mode = active.getAttribute('data-mode-id');
-              if (mode && mode !== 'manual') setModeIframe(mode, true);
-              if (mode === 'manual') loadCalendar();
-            }
-          }
-        });
-      });
-    } catch (initErr) {
-      console.error('schedule fragment init error', initErr);
+    const manualSetupIframe = getIframe('manual', 'setup');
+    if (manualSetupIframe) {
+      manualSetupIframe.addEventListener('load', function () { getManualSetupSectionId(); });
     }
+    switchPrimaryMode('manual');
   });
 
   document.addEventListener('click', function (event) {
-    const group = document.getElementById('setup-tab-group');
-    if (!group || !group.classList.contains('open')) return;
-    if (!group.contains(event.target)) {
-      closeSetupDropdown();
+    const dropdown = document.getElementById('manual-setup-dropdown');
+    if (dropdown && dropdown.classList.contains('open') && !dropdown.contains(event.target)) {
+      closeManualSetupDropdown();
     }
   });
 })();

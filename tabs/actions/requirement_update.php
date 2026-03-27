@@ -1,14 +1,21 @@
 <?php
 require_once __DIR__ . "/../../db_connect.php";
 require_once __DIR__ . "/../../lib/subject_duration_helpers.php";
+require_once __DIR__ . "/../../lib/scheduler_staff_helpers.php";
 header("Content-Type: application/json");
 
 try {
+    ensure_subject_requirements_auto_assign($conn);
     $requirement_id = intval($_POST["requirement_id"]);
-    $faculty_id = intval($_POST["faculty_id"]);
+    $faculty_id = intval($_POST["faculty_id"] ?? 0);
+    $faculty_id = $faculty_id > 0 ? $faculty_id : null;
     $hours_per_week = read_subject_duration_minutes_from_request($_POST);
 
-    if (!$requirement_id || !$faculty_id || !$hours_per_week) {
+    if ($faculty_id !== null && faculty_on_leave_today($conn, $faculty_id)) {
+        throw new Exception("Selected teacher is currently on leave and cannot be assigned.");
+    }
+
+    if (!$requirement_id || !$hours_per_week) {
         throw new Exception("Missing required fields");
     }
 

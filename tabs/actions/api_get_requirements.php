@@ -2,18 +2,19 @@
 require_once(__DIR__ . '/../../db_connect.php');
 header('Content-Type: application/json');
 
-$section_id = intval($_GET['section_id']);
+$section_id = intval($_GET['section_id'] ?? 0);
 
 if (!$section_id) {
     echo json_encode([]);
     exit;
 }
 
-$query = "SELECT sr.*, s.subject_name, CONCAT(f.lname, ', ', f.fname) AS teacher_name,
+$query = "SELECT sr.*, s.subject_name,
+          COALESCE(CONCAT(f.lname, ', ', f.fname), 'Auto-assign in Quick Generate') AS teacher_name,
           (SELECT COUNT(*) FROM schedule_patterns WHERE requirement_id = sr.requirement_id) as pattern_count
           FROM subject_requirements sr
           JOIN subjects s ON sr.subject_id = s.subject_id
-          JOIN faculty f ON sr.faculty_id = f.faculty_id
+          LEFT JOIN faculty f ON sr.faculty_id = f.faculty_id
           WHERE sr.section_id = ?
           ORDER BY s.subject_name";
 

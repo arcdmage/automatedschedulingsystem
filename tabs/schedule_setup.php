@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/subject_duration_helpers.php";
+require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
 
 // Get selected section from URL parameter - MUST BE DEFINED FIRST
 $selected_section = isset($_GET["section_id"])
@@ -18,9 +19,7 @@ $subjects_query =
 $subjects_result = $conn->query($subjects_query);
 
 // Fetch faculty
-$faculty_query =
-    "SELECT faculty_id, fname, lname FROM faculty ORDER BY lname, fname";
-$faculty_result = $conn->query($faculty_query);
+$faculty_rows = available_faculty_rows($conn);
 
 // Fetch time slots for the selected section
 $timeslots_result = null;
@@ -37,11 +36,11 @@ if ($selected_section) {
 // Fetch requirements if section is selected
 $requirements = [];
 if ($selected_section) {
-    $req_query = "SELECT sr.*, s.subject_name, CONCAT(f.lname, ', ', f.fname) AS teacher_name,
+    $req_query = "SELECT sr.*, s.subject_name, COALESCE(CONCAT(f.lname, ', ', f.fname), 'Auto-assign in Quick Generate') AS teacher_name,
                 (SELECT COUNT(*) FROM schedule_patterns WHERE requirement_id = sr.requirement_id) as pattern_count
                 FROM subject_requirements sr
                 JOIN subjects s ON sr.subject_id = s.subject_id
-                JOIN faculty f ON sr.faculty_id = f.faculty_id
+                LEFT JOIN faculty f ON sr.faculty_id = f.faculty_id
                 WHERE sr.section_id = ?
                 ORDER BY s.subject_name";
     $stmt = $conn->prepare($req_query);
@@ -127,16 +126,15 @@ function subject_duration_value(int $storedValue): array
       </div>
 
       <div class="form-group">
-        <label>Teacher <span style="color:red">*</span></label>
-        <select name="faculty_id" required>
-          <option value="">-- Select Teacher --</option>
+        <label>Teacher</label>
+        <select name="faculty_id">
+          <option value="0">Auto-assign in Quick Generate</option>
           <?php
-          $faculty_result->data_seek(0);
-          while ($f = $faculty_result->fetch_assoc()): ?>
+          foreach ($faculty_rows as $f): ?>
             <option value="<?php echo $f["faculty_id"]; ?>">
               <?php echo htmlspecialchars($f["lname"] . ", " . $f["fname"]); ?>
             </option>
-          <?php endwhile;
+          <?php endforeach;
           ?>
         </select>
       </div>
@@ -148,7 +146,7 @@ function subject_duration_value(int $storedValue): array
           <input type="number" id="quick_duration_hours" name="duration_hours" min="0" max="20" value="1" required style="flex:1;">
           <input type="number" id="quick_duration_minutes" name="duration_minutes" min="0" max="59" value="0" required style="flex:1;">
         </div>
-        <small style="color:#666;">Enter hours and minutes, for example 1 hour and 30 minutes.</small>
+        <small style="color:#666;">Enter hours and minutes, for example 1 hour and 30 minutes. Leave teacher on auto-assign to let Quick Generate pick from the Subject List specialists.</small>
       </div>
     </div>
 
@@ -176,8 +174,8 @@ function subject_duration_value(int $storedValue): array
               (int) $req["hours_per_week"],
           ); ?>
           <tr>
-            <td><?php echo htmlspecialchars($req["subject_name"]); ?></td>
-            <td><?php echo htmlspecialchars($req["teacher_name"]); ?></td>
+            <td><?php echo htmlspecialchars($req["subject_name"] ?? "Unknown subject"); ?></td>
+            <td><?php echo htmlspecialchars($req["teacher_name"] ?? "Auto-assign in Quick Generate"); ?></td>
                 <td><?php echo htmlspecialchars(
                     format_subject_duration_minutes(
                         $req_duration["total_minutes"],
@@ -193,17 +191,21 @@ function subject_duration_value(int $storedValue): array
               <?php endif; ?>
             </td>
             <td>
-              <button class="btn btn-primary" style="padding:5px 10px; font-size:12px;"
-                      onclick="openPatternModal(<?php echo $req[
-                          "requirement_id"
-                      ]; ?>, '<?php echo htmlspecialchars(
+              <?php if ((int) $req["faculty_id"] > 0): ?>
+                <button class="btn btn-primary" style="padding:5px 10px; font-size:12px;"
+                        onclick="openPatternModal(<?php echo $req[
+                            "requirement_id"
+                        ]; ?>, '<?php echo htmlspecialchars(
     $req["subject_name"],
     ENT_QUOTES,
 ); ?>', <?php echo $req_duration["total_minutes"]; ?>, <?php echo $req[
     "faculty_id"
 ]; ?>)">
-                📅 Configure Pattern
-              </button>
+                  Configure Pattern
+                </button>
+              <?php else: ?>
+                <span style="display:inline-block;padding:6px 10px;background:#fff7ed;color:#9a3412;border-radius:6px;font-size:12px;font-weight:600;">Quick Generate only</span>
+              <?php endif; ?>
               <button class="btn btn-danger" style="padding:5px 10px; font-size:12px;"
                       onclick="deleteRequirement(<?php echo $req[
                           "requirement_id"
@@ -260,14 +262,13 @@ function subject_duration_value(int $storedValue): array
             <select name="adviser_id" id="adviser_id">
               <option value="">-- Select Advisor --</option>
               <?php
-              $faculty_result->data_seek(0);
-              while ($f = $faculty_result->fetch_assoc()): ?>
+              foreach ($faculty_rows as $f): ?>
                 <option value="<?php echo $f["faculty_id"]; ?>">
                   <?php echo htmlspecialchars(
                       $f["lname"] . ", " . $f["fname"],
                   ); ?>
                 </option>
-              <?php endwhile;
+              <?php endforeach;
               ?>
             </select>
           </div>
@@ -277,14 +278,13 @@ function subject_duration_value(int $storedValue): array
             <select name="co_adviser_id" id="co_adviser_id">
               <option value="">-- Select Co-Advisor --</option>
               <?php
-              $faculty_result->data_seek(0);
-              while ($f2 = $faculty_result->fetch_assoc()): ?>
+              foreach ($faculty_rows as $f2): ?>
                 <option value="<?php echo $f2["faculty_id"]; ?>">
                   <?php echo htmlspecialchars(
                       $f2["lname"] . ", " . $f2["fname"],
                   ); ?>
                 </option>
-              <?php endwhile;
+              <?php endforeach;
               ?>
             </select>
           </div>
@@ -335,18 +335,17 @@ function subject_duration_value(int $storedValue): array
             <input type="text" id="update_subject" disabled style="background:#f5f5f5;">
           </div>
           <div class="form-group">
-            <label>Teacher *</label>
-            <select name="faculty_id" id="update_faculty_id" required>
-              <option value="">-- Select Teacher --</option>
+            <label>Teacher</label>
+            <select name="faculty_id" id="update_faculty_id">
+              <option value="0">Auto-assign in Quick Generate</option>
               <?php
-              $faculty_result->data_seek(0);
-              while ($f = $faculty_result->fetch_assoc()): ?>
+              foreach ($faculty_rows as $f): ?>
                 <option value="<?php echo $f["faculty_id"]; ?>">
                   <?php echo htmlspecialchars(
                       $f["lname"] . ", " . $f["fname"],
                   ); ?>
                 </option>
-              <?php endwhile;
+              <?php endforeach;
               ?>
             </select>
           </div>
@@ -870,3 +869,4 @@ syncDurationInput('quick_duration_hours', 'quick_duration_minutes', 'quick_durat
 
 </body>
 </html>
+

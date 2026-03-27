@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Mar 18, 2026 at 01:55 AM
+-- Generation Time: Mar 27, 2026 at 04:33 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -151,13 +151,6 @@ CREATE TABLE `events` (
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
---
--- Dumping data for table `events`
---
-
-INSERT INTO `events` (`event_id`, `event_title`, `event_type`, `event_date`, `start_time`, `end_time`, `location`, `description`, `created_at`, `updated_at`) VALUES
-(1, 'Day Remembrance', 'meeting', '2026-03-20', '06:00:00', '09:00:00', 'Conference Room', 'ExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExampleExample', '2026-03-17 14:33:04', '2026-03-17 14:33:04');
-
 -- --------------------------------------------------------
 
 --
@@ -181,7 +174,7 @@ CREATE TABLE `faculty` (
 --
 
 INSERT INTO `faculty` (`faculty_id`, `fname`, `mname`, `lname`, `gender`, `pnumber`, `address`, `email`, `status`) VALUES
-(100031, 'Aileen', 'M.', 'Santos', 'female', 9171234567, 'Bagong Sikat, San Jose', '', 'Married'),
+(100031, 'Aileen', 'M.', 'Santos', 'female', 0, 'Bagong Sikat, San Jose', '', ''),
 (100032, 'Mark', 'D.', 'Reyes', 'male', 9281234567, 'Poblacion, San Jose', '', 'Single'),
 (100033, 'Liza', 'Q.', 'Garcia', 'female', 9091230001, 'Labangan, San Jose', '', 'Single'),
 (100034, 'John', 'P.', 'Cruz', 'male', 9181230002, 'San Agustin, San Jose', '', 'Married'),
@@ -229,7 +222,8 @@ INSERT INTO `faculty` (`faculty_id`, `fname`, `mname`, `lname`, `gender`, `pnumb
 (100076, 'Omar', 'F.', 'Lucero', 'male', 9397778890, 'Camburay, San Jose', '', ''),
 (100077, 'Pia', 'R.', 'Valdez', 'female', 9178889901, 'Mangarin, San Jose', '', 'Single'),
 (100078, 'Ken', 'S.', 'Batista', 'male', 9289990012, 'Bubog, San Jose', '', 'Single'),
-(100079, 'Zara', 'T.', 'Morales', 'female', 9390001123, 'Poblacion, San Jose', '', 'Single');
+(100079, 'Zara', 'T.', 'Morales', 'female', 9390001123, 'Poblacion, San Jose', '', 'Single'),
+(100080, 'Mark Andrie', 'B.', 'Santos', 'male', 0, '', '', '');
 
 -- --------------------------------------------------------
 
@@ -248,6 +242,59 @@ CREATE TABLE `faculty_availability` (
   `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `relieve_assignments`
+--
+
+CREATE TABLE `relieve_assignments` (
+  `assignment_id` int(11) NOT NULL,
+  `relieve_id` int(11) NOT NULL,
+  `original_schedule_id` int(11) DEFAULT NULL,
+  `replacement_faculty_id` int(11) NOT NULL,
+  `assigned_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `notes` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `relieve_assignments`
+--
+
+INSERT INTO `relieve_assignments` (`assignment_id`, `relieve_id`, `original_schedule_id`, `replacement_faculty_id`, `assigned_at`, `notes`) VALUES
+(1, 1, 6243, 100036, '2026-03-27 12:54:23', 'Created from faculty schedule view'),
+(2, 2, 6222, 100036, '2026-03-27 12:55:11', 'Created from faculty schedule view');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `relieve_requests`
+--
+
+CREATE TABLE `relieve_requests` (
+  `relieve_id` int(11) NOT NULL,
+  `faculty_id` int(11) NOT NULL,
+  `subject_id` int(11) DEFAULT NULL,
+  `section_id` int(11) DEFAULT NULL,
+  `request_date` date NOT NULL,
+  `leave_until_date` date DEFAULT NULL,
+  `day_of_week` enum('Monday','Tuesday','Wednesday','Thursday','Friday','Saturday') DEFAULT NULL,
+  `start_time` time NOT NULL,
+  `end_time` time NOT NULL,
+  `reason` varchar(255) DEFAULT NULL,
+  `status` enum('Pending','Assigned','Completed','Cancelled') NOT NULL DEFAULT 'Pending',
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `relieve_requests`
+--
+
+INSERT INTO `relieve_requests` (`relieve_id`, `faculty_id`, `subject_id`, `section_id`, `request_date`, `leave_until_date`, `day_of_week`, `start_time`, `end_time`, `reason`, `status`, `created_at`, `updated_at`) VALUES
+(1, 100073, 31, 13, '2026-03-27', NULL, 'Friday', '07:30:00', '08:30:00', '', 'Assigned', '2026-03-27 12:54:23', '2026-03-27 12:54:23'),
+(2, 100073, 31, 13, '2026-03-24', NULL, 'Tuesday', '07:30:00', '08:30:00', '', 'Assigned', '2026-03-27 12:55:11', '2026-03-27 12:55:11');
 
 -- --------------------------------------------------------
 
@@ -307,41 +354,46 @@ CREATE TABLE `schedules` (
 --
 
 INSERT INTO `schedules` (`schedule_id`, `section_id`, `faculty_id`, `subject_id`, `schedule_date`, `day_of_week`, `time_slot_id`, `start_time`, `end_time`, `room`, `room_id`, `notes`, `is_auto_generated`, `created_at`, `updated_at`) VALUES
-(5935, 13, 100073, 31, '2026-03-16', 'Monday', 76, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5936, 13, 100049, 34, '2026-03-16', 'Monday', 77, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5937, 13, 100068, 32, '2026-03-16', 'Monday', 79, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5938, 13, 100048, 26, '2026-03-16', 'Monday', 80, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5939, 13, 100078, 24, '2026-03-16', 'Monday', 82, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5940, 13, 100051, 25, '2026-03-16', 'Monday', 83, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5941, 13, 100066, 30, '2026-03-16', 'Monday', 85, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5942, 13, 100073, 31, '2026-03-17', 'Tuesday', 76, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5943, 13, 100049, 34, '2026-03-17', 'Tuesday', 77, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5944, 13, 100068, 32, '2026-03-17', 'Tuesday', 79, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5945, 13, 100048, 26, '2026-03-17', 'Tuesday', 80, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5946, 13, 100078, 24, '2026-03-17', 'Tuesday', 82, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5947, 13, 100051, 25, '2026-03-17', 'Tuesday', 83, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5948, 13, 100066, 30, '2026-03-17', 'Tuesday', 85, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5949, 13, 100073, 31, '2026-03-18', 'Wednesday', 76, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5950, 13, 100049, 34, '2026-03-18', 'Wednesday', 77, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5951, 13, 100068, 32, '2026-03-18', 'Wednesday', 79, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5952, 13, 100048, 26, '2026-03-18', 'Wednesday', 80, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5953, 13, 100078, 24, '2026-03-18', 'Wednesday', 82, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5954, 13, 100051, 25, '2026-03-18', 'Wednesday', 83, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5955, 13, 100066, 30, '2026-03-18', 'Wednesday', 85, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5956, 13, 100073, 31, '2026-03-19', 'Thursday', 76, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5957, 13, 100049, 34, '2026-03-19', 'Thursday', 77, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5958, 13, 100068, 32, '2026-03-19', 'Thursday', 79, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5959, 13, 100048, 26, '2026-03-19', 'Thursday', 80, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5960, 13, 100078, 24, '2026-03-19', 'Thursday', 82, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5961, 13, 100051, 25, '2026-03-19', 'Thursday', 83, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5962, 13, 100066, 30, '2026-03-19', 'Thursday', 85, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5963, 13, 100073, 31, '2026-03-20', 'Friday', 76, '07:30:00', '08:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5964, 13, 100049, 34, '2026-03-20', 'Friday', 77, '08:30:00', '09:30:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5965, 13, 100068, 32, '2026-03-20', 'Friday', 79, '09:45:00', '10:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5966, 13, 100048, 26, '2026-03-20', 'Friday', 80, '10:45:00', '11:45:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5967, 13, 100078, 24, '2026-03-20', 'Friday', 82, '13:00:00', '14:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5968, 13, 100051, 25, '2026-03-20', 'Friday', 83, '14:00:00', '15:00:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06'),
-(5969, 13, 100066, 30, '2026-03-20', 'Friday', 85, '15:15:00', '16:15:00', NULL, NULL, 'Auto-generated', 1, '2026-03-17 16:41:06', '2026-03-17 16:41:06');
+(6355, 17, 100035, 27, '2026-03-23', 'Monday', 96, '07:30:00', '08:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6356, 17, 100035, 27, '2026-03-24', 'Tuesday', 96, '07:30:00', '08:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6357, 17, 100037, 27, '2026-03-25', 'Wednesday', 96, '07:30:00', '08:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6358, 17, 100035, 27, '2026-03-26', 'Thursday', 96, '07:30:00', '08:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6359, 17, 100035, 27, '2026-03-27', 'Friday', 96, '07:30:00', '08:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6360, 17, 100044, 29, '2026-03-23', 'Monday', 97, '08:30:00', '09:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6361, 17, 100040, 29, '2026-03-24', 'Tuesday', 97, '08:30:00', '09:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6362, 17, 100044, 29, '2026-03-25', 'Wednesday', 97, '08:30:00', '09:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6363, 17, 100040, 29, '2026-03-26', 'Thursday', 97, '08:30:00', '09:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6364, 17, 100040, 29, '2026-03-27', 'Friday', 97, '08:30:00', '09:30:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6365, 17, 100041, 28, '2026-03-23', 'Monday', 99, '09:45:00', '10:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6366, 17, 100041, 28, '2026-03-24', 'Tuesday', 99, '09:45:00', '10:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6367, 17, 100039, 28, '2026-03-25', 'Wednesday', 99, '09:45:00', '10:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6368, 17, 100039, 28, '2026-03-26', 'Thursday', 99, '09:45:00', '10:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6369, 17, 100039, 28, '2026-03-27', 'Friday', 99, '09:45:00', '10:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6370, 17, 100039, 33, '2026-03-23', 'Monday', 100, '10:45:00', '11:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6371, 17, 100039, 33, '2026-03-24', 'Tuesday', 100, '10:45:00', '11:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6372, 17, 100047, 33, '2026-03-25', 'Wednesday', 100, '10:45:00', '11:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6373, 17, 100039, 33, '2026-03-26', 'Thursday', 100, '10:45:00', '11:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6374, 17, 100047, 33, '2026-03-27', 'Friday', 100, '10:45:00', '11:45:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6375, 17, 100065, 36, '2026-03-23', 'Monday', 102, '13:00:00', '14:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6376, 17, 100065, 36, '2026-03-24', 'Tuesday', 102, '13:00:00', '14:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6377, 17, 100065, 36, '2026-03-25', 'Wednesday', 102, '13:00:00', '14:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6378, 17, 100065, 36, '2026-03-26', 'Thursday', 102, '13:00:00', '14:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6379, 17, 100065, 36, '2026-03-27', 'Friday', 102, '13:00:00', '14:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6380, 17, 100054, 35, '2026-03-23', 'Monday', 103, '14:00:00', '15:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6381, 17, 100054, 35, '2026-03-24', 'Tuesday', 103, '14:00:00', '15:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6382, 17, 100054, 35, '2026-03-25', 'Wednesday', 103, '14:00:00', '15:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6383, 17, 100033, 35, '2026-03-26', 'Thursday', 103, '14:00:00', '15:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6384, 17, 100054, 35, '2026-03-27', 'Friday', 103, '14:00:00', '15:00:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6385, 17, 100043, 30, '2026-03-23', 'Monday', 105, '15:15:00', '16:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6386, 17, 100043, 30, '2026-03-24', 'Tuesday', 105, '15:15:00', '16:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6387, 17, 100038, 30, '2026-03-25', 'Wednesday', 105, '15:15:00', '16:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6388, 17, 100043, 30, '2026-03-26', 'Thursday', 105, '15:15:00', '16:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6389, 17, 100038, 30, '2026-03-27', 'Friday', 105, '15:15:00', '16:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6390, 17, 100036, 25, '2026-03-23', 'Monday', 106, '16:15:00', '17:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6391, 17, 100036, 25, '2026-03-24', 'Tuesday', 106, '16:15:00', '17:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6392, 17, 100032, 25, '2026-03-25', 'Wednesday', 106, '16:15:00', '17:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6393, 17, 100036, 25, '2026-03-26', 'Thursday', 106, '16:15:00', '17:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12'),
+(6394, 17, 100032, 25, '2026-03-27', 'Friday', 106, '16:15:00', '17:15:00', NULL, NULL, 'Quick auto-generated', 1, '2026-03-27 14:33:12', '2026-03-27 14:33:12');
 
 -- --------------------------------------------------------
 
@@ -790,11 +842,11 @@ INSERT INTO `schedule_patterns` (`pattern_id`, `requirement_id`, `day_of_week`, 
 (202, 48, 'Wednesday', 83, '2026-03-17 16:37:01'),
 (203, 48, 'Thursday', 83, '2026-03-17 16:37:01'),
 (204, 48, 'Friday', 83, '2026-03-17 16:37:01'),
-(210, 49, 'Monday', 85, '2026-03-17 16:41:00'),
-(211, 49, 'Tuesday', 85, '2026-03-17 16:41:00'),
-(212, 49, 'Wednesday', 85, '2026-03-17 16:41:00'),
-(213, 49, 'Thursday', 85, '2026-03-17 16:41:00'),
-(214, 49, 'Friday', 85, '2026-03-17 16:41:00');
+(220, 51, 'Monday', 85, '2026-03-18 03:54:26'),
+(221, 51, 'Tuesday', 85, '2026-03-18 03:54:26'),
+(222, 51, 'Wednesday', 85, '2026-03-18 03:54:26'),
+(223, 51, 'Thursday', 85, '2026-03-18 03:54:26'),
+(224, 51, 'Friday', 85, '2026-03-18 03:54:26');
 
 -- --------------------------------------------------------
 
@@ -837,7 +889,7 @@ CREATE TABLE `sections` (
 --
 
 INSERT INTO `sections` (`section_id`, `section_name`, `grade_level`, `track`, `school_year`, `semester`, `adviser_id`, `created_at`, `updated_at`) VALUES
-(13, 'MARS', 'Grade 11', 'STEM', '', '', NULL, '2026-03-17 16:30:43', '2026-03-17 16:32:40'),
+(13, 'MARS', 'Grade 11', 'STEM', '', '', NULL, '2026-03-17 16:30:43', '2026-03-18 01:44:14'),
 (14, 'VENUS', 'Grade 11', 'STEM', '', '', NULL, '2026-03-17 16:30:43', '2026-03-17 16:31:37'),
 (15, 'SATURN', 'Grade 12', 'ABM', '', '', NULL, '2026-03-17 16:30:43', '2026-03-17 16:32:14'),
 (16, 'JUPITER', 'Grade 12', 'ABM', '', '', NULL, '2026-03-17 16:30:43', '2026-03-17 16:32:50'),
@@ -868,13 +920,14 @@ INSERT INTO `subjects` (`subject_id`, `subject_name`, `special`, `grade_level`, 
 (26, 'Entrepreneurship', 'Garcia, Cruz', 11, ''),
 (27, 'Reading and Writing', 'Lopez, Villanueva', 11, ''),
 (28, 'Practical Research 1', 'Diaz, Torres, Navarro', 11, ''),
-(29, 'Practical Research 2', 'Torres, Perez', 12, ''),
+(29, 'Practical Research 2', 'Perez, Torres', 12, ''),
 (30, 'Media and Information Literacy', 'Ramos, Domingo', 11, ''),
 (31, 'Applied Economics', 'Mendoza, Serrano', 12, ''),
 (32, 'DRRM', 'Cruz, Santos', 11, ''),
 (33, 'Physical Education', 'Diaz, Flores', 11, ''),
 (34, 'Contemporary Philippine Arts', 'Lopez, Villanueva', 12, ''),
-(35, 'Oral Communication', 'Garcia, Padilla', 11, '');
+(35, 'Oral Communication', 'Garcia, Padilla', 11, ''),
+(36, 'Personal Development', 'Yu', 12, '');
 
 -- --------------------------------------------------------
 
@@ -886,7 +939,7 @@ CREATE TABLE `subject_requirements` (
   `requirement_id` int(11) NOT NULL,
   `section_id` int(11) NOT NULL,
   `subject_id` int(11) NOT NULL,
-  `faculty_id` int(11) NOT NULL,
+  `faculty_id` int(11) DEFAULT NULL,
   `hours_per_week` int(11) NOT NULL DEFAULT 1,
   `preferred_days` varchar(50) DEFAULT NULL,
   `notes` text DEFAULT NULL,
@@ -906,7 +959,15 @@ INSERT INTO `subject_requirements` (`requirement_id`, `section_id`, `subject_id`
 (46, 13, 26, 100048, 5, NULL, NULL, '2026-03-17 16:33:39', '2026-03-17 16:33:39', NULL),
 (47, 13, 24, 100078, 5, NULL, NULL, '2026-03-17 16:33:45', '2026-03-17 16:33:45', NULL),
 (48, 13, 25, 100051, 5, NULL, NULL, '2026-03-17 16:33:51', '2026-03-17 16:33:51', NULL),
-(49, 13, 30, 100066, 5, NULL, NULL, '2026-03-17 16:34:00', '2026-03-17 16:34:00', NULL);
+(51, 13, 36, 100074, 90, NULL, NULL, '2026-03-18 03:44:37', '2026-03-18 03:44:37', NULL),
+(60, 17, 27, NULL, 60, NULL, NULL, '2026-03-27 13:16:41', '2026-03-27 13:16:41', NULL),
+(61, 17, 29, NULL, 60, NULL, NULL, '2026-03-27 13:16:44', '2026-03-27 13:16:44', NULL),
+(62, 17, 28, NULL, 60, NULL, NULL, '2026-03-27 13:16:46', '2026-03-27 13:16:46', NULL),
+(63, 17, 33, NULL, 60, NULL, NULL, '2026-03-27 13:16:48', '2026-03-27 13:16:48', NULL),
+(64, 17, 36, NULL, 60, NULL, NULL, '2026-03-27 13:16:52', '2026-03-27 13:16:52', NULL),
+(65, 17, 35, NULL, 60, NULL, NULL, '2026-03-27 13:16:55', '2026-03-27 13:16:55', NULL),
+(66, 17, 30, NULL, 60, NULL, NULL, '2026-03-27 13:16:57', '2026-03-27 13:16:57', NULL),
+(67, 17, 25, NULL, 60, NULL, NULL, '2026-03-27 13:20:14', '2026-03-27 13:20:14', NULL);
 
 -- --------------------------------------------------------
 
@@ -939,7 +1000,18 @@ INSERT INTO `time_slots` (`time_slot_id`, `start_time`, `end_time`, `is_break`, 
 (82, '13:00:00', '14:00:00', 0, '0', 7, '2026-03-17 16:35:20', 13),
 (83, '14:00:00', '15:00:00', 0, '0', 8, '2026-03-17 16:35:23', 13),
 (84, '15:00:00', '15:15:00', 1, 'RECESS', 9, '2026-03-17 16:35:32', 13),
-(85, '15:15:00', '16:15:00', 0, '', 10, '2026-03-17 16:35:43', 13);
+(85, '15:15:00', '16:15:00', 0, '', 10, '2026-03-17 16:35:43', 13),
+(96, '07:30:00', '08:30:00', 0, '', 1, '2026-03-27 13:19:46', 17),
+(97, '08:30:00', '09:30:00', 0, '', 2, '2026-03-27 13:19:46', 17),
+(98, '09:30:00', '09:45:00', 1, 'RECESS', 3, '2026-03-27 13:19:46', 17),
+(99, '09:45:00', '10:45:00', 0, '', 4, '2026-03-27 13:19:46', 17),
+(100, '10:45:00', '11:45:00', 0, '', 5, '2026-03-27 13:19:46', 17),
+(101, '11:45:00', '13:00:00', 1, 'LUNCH BREAK', 6, '2026-03-27 13:19:46', 17),
+(102, '13:00:00', '14:00:00', 0, '', 7, '2026-03-27 13:19:46', 17),
+(103, '14:00:00', '15:00:00', 0, '', 8, '2026-03-27 13:19:46', 17),
+(104, '15:00:00', '15:15:00', 1, 'RECESS', 9, '2026-03-27 13:19:46', 17),
+(105, '15:15:00', '16:15:00', 0, '', 10, '2026-03-27 13:19:46', 17),
+(106, '16:15:00', '17:15:00', 0, '', 11, '2026-03-27 14:33:12', 17);
 
 -- --------------------------------------------------------
 
@@ -1050,6 +1122,22 @@ ALTER TABLE `faculty_availability`
   ADD KEY `idx_day` (`day_of_week`);
 
 --
+-- Indexes for table `relieve_assignments`
+--
+ALTER TABLE `relieve_assignments`
+  ADD PRIMARY KEY (`assignment_id`),
+  ADD UNIQUE KEY `uniq_relieve_assignment` (`relieve_id`),
+  ADD KEY `idx_relieve_replacement` (`replacement_faculty_id`);
+
+--
+-- Indexes for table `relieve_requests`
+--
+ALTER TABLE `relieve_requests`
+  ADD PRIMARY KEY (`relieve_id`),
+  ADD KEY `idx_relieve_faculty` (`faculty_id`),
+  ADD KEY `idx_relieve_date` (`request_date`);
+
+--
 -- Indexes for table `rooms`
 --
 ALTER TABLE `rooms`
@@ -1144,13 +1232,25 @@ ALTER TABLE `events`
 -- AUTO_INCREMENT for table `faculty`
 --
 ALTER TABLE `faculty`
-  MODIFY `faculty_id` int(6) NOT NULL AUTO_INCREMENT COMMENT 'needs to be 6 characters', AUTO_INCREMENT=100080;
+  MODIFY `faculty_id` int(6) NOT NULL AUTO_INCREMENT COMMENT 'needs to be 6 characters', AUTO_INCREMENT=100081;
 
 --
 -- AUTO_INCREMENT for table `faculty_availability`
 --
 ALTER TABLE `faculty_availability`
   MODIFY `availability_id` int(11) NOT NULL AUTO_INCREMENT;
+
+--
+-- AUTO_INCREMENT for table `relieve_assignments`
+--
+ALTER TABLE `relieve_assignments`
+  MODIFY `assignment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
+
+--
+-- AUTO_INCREMENT for table `relieve_requests`
+--
+ALTER TABLE `relieve_requests`
+  MODIFY `relieve_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
 
 --
 -- AUTO_INCREMENT for table `rooms`
@@ -1162,7 +1262,7 @@ ALTER TABLE `rooms`
 -- AUTO_INCREMENT for table `schedules`
 --
 ALTER TABLE `schedules`
-  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5970;
+  MODIFY `schedule_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6395;
 
 --
 -- AUTO_INCREMENT for table `schedule_generation_logs`
@@ -1174,7 +1274,7 @@ ALTER TABLE `schedule_generation_logs`
 -- AUTO_INCREMENT for table `schedule_patterns`
 --
 ALTER TABLE `schedule_patterns`
-  MODIFY `pattern_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=215;
+  MODIFY `pattern_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=225;
 
 --
 -- AUTO_INCREMENT for table `schedule_templates`
@@ -1186,25 +1286,25 @@ ALTER TABLE `schedule_templates`
 -- AUTO_INCREMENT for table `sections`
 --
 ALTER TABLE `sections`
-  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `section_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `subjects`
 --
 ALTER TABLE `subjects`
-  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
+  MODIFY `subject_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=37;
 
 --
 -- AUTO_INCREMENT for table `subject_requirements`
 --
 ALTER TABLE `subject_requirements`
-  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=50;
+  MODIFY `requirement_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
 
 --
 -- AUTO_INCREMENT for table `time_slots`
 --
 ALTER TABLE `time_slots`
-  MODIFY `time_slot_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=86;
+  MODIFY `time_slot_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=107;
 
 --
 -- Constraints for dumped tables

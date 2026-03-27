@@ -21,6 +21,7 @@ try {
         throw new Exception('Database connection file missing.');
     }
     require_once $dbPath;
+    require_once __DIR__ . '/../../lib/scheduler_staff_helpers.php';
 
     // Basic input extraction
     $action = isset($_POST['action']) ? trim($_POST['action']) : 'update';
@@ -87,6 +88,10 @@ try {
     if (isset($_POST['adviser_id']) && $_POST['adviser_id'] !== '') {
         $adviser_id = intval($_POST['adviser_id']);
         if ($adviser_id <= 0) $adviser_id = null;
+    }
+
+    if ($adviser_id !== null && faculty_on_leave_today($conn, $adviser_id)) {
+        throw new Exception('Selected advisor is currently on leave and cannot be assigned.');
     }
 
     // If adviser_id provided, verify it exists

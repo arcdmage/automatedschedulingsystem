@@ -1,12 +1,10 @@
 <?php
 require_once(__DIR__ . '/../../db_connect.php');
+require_once __DIR__ . '/../../lib/scheduler_staff_helpers.php';
 header('Content-Type: application/json');
 
-$query = "SELECT faculty_id, fname, lname, mname FROM faculty ORDER BY lname, fname";
-$result = $conn->query($query);
-
 $data = [];
-while ($row = $result->fetch_assoc()) {
+foreach (available_faculty_rows($conn) as $row) {
     $data[] = $row;
 }
 

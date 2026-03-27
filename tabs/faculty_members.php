@@ -57,6 +57,20 @@ require_once __DIR__ . "/../db_connect.php"; ?>
   </form>
 </div>
 
+
+
+<div id="faculty-schedule-modal" class="modal">
+  <div class="modal-content animate" style="max-width:900px; width:92%;">
+    <div class="imgcontainer">
+      <span onclick="closeFacultyScheduleModal()" class="close" title="Close">&times;</span>
+      <h2>Faculty Schedule</h2>
+    </div>
+    <div class="container">
+      <div id="faculty-schedule-content" style="min-height:160px; color:#475569;">Loading...</div>
+    </div>
+  </div>
+</div>
+
 <script>
 const tableContent = document.getElementById('faculty-table-content');
 const defaultLimit = 5;
@@ -234,6 +248,122 @@ async function deleteRow(btn) {
   }
 }
 
+
+async function openFacultyScheduleModal(facultyId) {
+  const modal = document.getElementById('faculty-schedule-modal');
+  const content = document.getElementById('faculty-schedule-content');
+  if (!modal || !content) return;
+
+  modal.style.display = 'block';
+  content.innerHTML = '<p style="text-align:center;padding:20px;color:#64748b;">Loading schedule...</p>';
+
+  try {
+    const response = await fetch(`/mainscheduler/tabs/actions/faculty_schedule_view.php?faculty_id=${encodeURIComponent(facultyId)}`);
+    const html = await response.text();
+    content.innerHTML = html;
+    bindRelieveForms();
+    bindRelieveDeleteButtons();
+  } catch (error) {
+    console.error(error);
+    content.innerHTML = '<p style="color:#b91c1c;">Failed to load faculty schedule.</p>';
+  }
+}
+
+function closeFacultyScheduleModal() {
+  const modal = document.getElementById('faculty-schedule-modal');
+  const content = document.getElementById('faculty-schedule-content');
+  if (modal) modal.style.display = 'none';
+  if (content) content.innerHTML = 'Loading...';
+}
+
+function toggleSectionRelieveModal(modalId, shouldOpen) {
+  const modal = document.getElementById(modalId);
+  if (!modal) return;
+  modal.style.display = shouldOpen ? 'block' : 'none';
+}
+
+window.toggleSectionRelieveModal = toggleSectionRelieveModal;
+
+function bindRelieveDeleteButtons() {
+  document.querySelectorAll('.relieve-delete-btn').forEach(button => {
+    if (button.dataset.bound === '1') return;
+    button.dataset.bound = '1';
+    button.addEventListener('click', async function() {
+      const relieveId = button.getAttribute('data-relieve-id');
+      const facultyId = button.getAttribute('data-faculty-id');
+      if (!relieveId || !facultyId) return;
+      if (!confirm('Delete this relieve request?')) return;
+
+      const originalLabel = button.textContent;
+      button.disabled = true;
+      button.textContent = 'Deleting...';
+
+      try {
+        const formData = new FormData();
+        formData.append('relieve_id', relieveId);
+        formData.append('faculty_id', facultyId);
+
+        const response = await fetch('/mainscheduler/tabs/actions/relieve_request_delete.php', {
+          method: 'POST',
+          body: formData
+        });
+        const json = await response.json();
+        if (!json.success) {
+          throw new Error(json.message || 'Failed to delete relieve request.');
+        }
+        alert(json.message || 'Relieve request deleted.');
+        openFacultyScheduleModal(facultyId);
+      } catch (error) {
+        console.error(error);
+        alert(error.message || 'Failed to delete relieve request.');
+        button.disabled = false;
+        button.textContent = originalLabel;
+      }
+    });
+  });
+}
+
+function bindRelieveForms() {
+  document.querySelectorAll('.relieve-form').forEach(form => {
+    if (form.dataset.bound === '1') return;
+    form.dataset.bound = '1';
+    form.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const button = form.querySelector('button[type="submit"]');
+      const originalLabel = button ? button.textContent : '';
+      if (button) {
+        button.disabled = true;
+        button.textContent = 'Saving...';
+      }
+
+      try {
+        const response = await fetch('/mainscheduler/tabs/actions/relieve_request_save.php', {
+          method: 'POST',
+          body: formData
+        });
+        const json = await response.json();
+        if (!json.success) {
+          throw new Error(json.message || 'Failed to save relieve request.');
+        }
+        alert(json.message || 'Relieve request saved.');
+        const facultyId = formData.get('faculty_id');
+        if (facultyId) {
+          openFacultyScheduleModal(facultyId);
+        }
+      } catch (error) {
+        console.error(error);
+        alert(error.message || 'Failed to save relieve request.');
+      } finally {
+        if (button) {
+          button.disabled = false;
+          button.textContent = originalLabel;
+        }
+      }
+    });
+  });
+}
+
 /* ─────────────────────────────────────────
    ADD FACULTY MODAL
 ───────────────────────────────────────── */
@@ -277,6 +407,7 @@ document.getElementById('add-faculty-form').addEventListener('submit', async fun
 
 window.addEventListener('click', function(e) {
   if (e.target === document.getElementById('id01')) closeAddModal();
+  if (e.target === document.getElementById('faculty-schedule-modal')) closeFacultyScheduleModal();
 });
 
 /* ─────────────────────────────────────────

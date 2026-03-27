@@ -1,5 +1,8 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
+require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
+
+$available_faculty_rows = available_faculty_rows($conn);
 
 // Pagination options
 $limit_options = [5, 10, 25, 50, 100];
@@ -187,24 +190,19 @@ ob_start();
               <option value="">-- Select Advisor --</option>
               <?php
               // Inline adviser options (match modal's population)
-              $fac_options = $conn->query(
-                  "SELECT faculty_id, fname, lname FROM faculty ORDER BY lname, fname",
-              );
-              if ($fac_options && $fac_options->num_rows > 0) {
-                  $currentAdviser = trim($row["adviser_name"] ?? "");
-                  while ($fopt = $fac_options->fetch_assoc()) {
-                      $optText = htmlspecialchars(
-                          $fopt["lname"] . ", " . $fopt["fname"],
-                      );
-                      $sel = $optText === $currentAdviser ? " selected" : "";
-                      echo '<option value="' .
-                          (int) $fopt["faculty_id"] .
-                          '"' .
-                          $sel .
-                          ">" .
-                          $optText .
-                          "</option>";
-                  }
+              $currentAdviser = trim($row["adviser_name"] ?? "");
+              foreach ($available_faculty_rows as $fopt) {
+                  $optText = htmlspecialchars(
+                      $fopt["lname"] . ", " . $fopt["fname"],
+                  );
+                  $sel = $optText === $currentAdviser ? " selected" : "";
+                  echo '<option value="' .
+                      (int) $fopt["faculty_id"] .
+                      '"' .
+                      $sel .
+                      ">" .
+                      $optText .
+                      "</option>";
               }
               ?>
             </select>
@@ -302,17 +300,12 @@ if ($is_fragment) {
         <option value="">-- Select Advisor --</option>
         <?php
         // populate advisors list
-        $fac = $conn->query(
-            "SELECT faculty_id, fname, lname FROM faculty ORDER BY lname, fname",
-        );
-        if ($fac && $fac->num_rows > 0) {
-            while ($f = $fac->fetch_assoc()) {
-                echo '<option value="' .
-                    (int) $f["faculty_id"] .
-                    '">' .
-                    htmlspecialchars($f["lname"] . ", " . $f["fname"]) .
-                    "</option>";
-            }
+        foreach ($available_faculty_rows as $f) {
+            echo '<option value="' .
+                (int) $f["faculty_id"] .
+                '">' .
+                htmlspecialchars($f["lname"] . ", " . $f["fname"]) .
+                "</option>";
         }
         ?>
       </select>
