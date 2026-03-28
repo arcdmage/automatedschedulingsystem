@@ -17,6 +17,14 @@ try {
     $address = trim($_POST["address"] ?? "");
     $status = trim($_POST["status"] ?? "");
 
+    if ($pnumber === "") {
+        $pnumber = "00000000000";
+    }
+
+    if ($status === "") {
+        $status = "Unknown";
+    }
+
     if (!$fname || !$lname) {
         throw new Exception("First name and last name are required");
     }

@@ -1,4 +1,4 @@
-<?php
+﻿<?php
 require_once __DIR__ . "/../db_connect.php"; ?>
 <!DOCTYPE html>
 <html>
@@ -59,6 +59,40 @@ require_once __DIR__ . "/../db_connect.php"; ?>
 
 
 
+<div id="faculty-import-modal" class="modal">
+  <form class="modal-content animate" id="faculty-import-form" enctype="multipart/form-data">
+    <div class="imgcontainer">
+      <span onclick="closeImportModal()" class="close" title="Close">&times;</span>
+      <h2>Import Faculty</h2>
+    </div>
+    <div class="container">
+      <p style="margin-top:0; color:#475569; line-height:1.5;">
+        Upload the faculty CSV template to import multiple faculty members at once.
+      </p>
+
+      <label for="faculty_file"><b>CSV File</b></label>
+      <input type="file" name="faculty_file" accept=".csv,text/csv" required>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 14px;">
+        <a href="/mainscheduler/tabs/actions/faculty_import_template.php" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 14px; border-radius:4px;">
+          Download Template
+        </a>
+      </div>
+
+      <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:6px; padding:12px; color:#475569; font-size:13px; line-height:1.5;">
+        Header order: <code>first_name, middle_name, last_name, gender, phone_number, address, status</code><br>
+        Valid gender values: <code>female</code>, <code>male</code>, <code>other</code><br>
+        Duplicate full names are skipped automatically.
+      </div>
+
+      <button type="submit">Import Faculty</button>
+    </div>
+    <div class="container" style="background-color:#f1f1f1">
+      <button type="button" onclick="closeImportModal()" class="cancelbtn">Cancel</button>
+    </div>
+  </form>
+</div>
+
 <div id="faculty-schedule-modal" class="modal">
   <div class="modal-content animate" style="max-width:900px; width:92%;">
     <div class="imgcontainer">
@@ -78,12 +112,12 @@ let facultySearchTerm = '';
 let facultySearchTimer = null;
 let shouldRestoreFacultySearchFocus = false;
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    TABLE LOADING
-───────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function loadFacultyPage(page = 1, limit = defaultLimit, search = facultySearchTerm) {
   facultySearchTerm = search || '';
-  tableContent.innerHTML = '<p style="text-align:center;padding:20px;color:#9ca3af;">Loading…</p>';
+  tableContent.innerHTML = '<p style="text-align:center;padding:20px;color:#9ca3af;">Loadingâ€¦</p>';
   const params = new URLSearchParams({
     page: String(page),
     limit: String(limit)
@@ -118,10 +152,10 @@ function loadFacultyPage(page = 1, limit = defaultLimit, search = facultySearchT
 // Expose globally so inline onclick handlers in the injected HTML can trigger a reload
 window.loadFacultyPage = loadFacultyPage;
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    PAGINATION & ROWS-PER-PAGE
-   (delegated — works after every reload)
-───────────────────────────────────────── */
+   (delegated â€” works after every reload)
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 tableContent.addEventListener('click', function(e) {
   if (e.target.matches('.page-btn')) {
     const page  = e.target.getAttribute('data-page');
@@ -136,9 +170,9 @@ tableContent.addEventListener('change', function(e) {
   }
 });
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    SEARCH FILTER
-───────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function handleFacultySearch(q) {
   facultySearchTerm = (q || '').trim();
   const limit = document.getElementById('rows-per-page')?.value || defaultLimit;
@@ -161,9 +195,9 @@ function toggleFacultyStatus(btn) {
   status.style.display = status.style.display === 'none' || status.style.display === '' ? 'block' : 'none';
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    INLINE EDIT
-───────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function startEdit(btn) {
   const row = btn.closest('tr');
   row.classList.add('editing');
@@ -192,7 +226,7 @@ async function saveRow(btn) {
   });
 
   const orig = btn.innerHTML;
-  btn.textContent = 'Saving…';
+  btn.textContent = 'Savingâ€¦';
   btn.disabled = true;
 
   try {
@@ -213,9 +247,9 @@ async function saveRow(btn) {
   }
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    DELETE
-───────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 async function deleteRow(btn) {
   if (!confirm('Delete this faculty member? This cannot be undone.')) return;
   const row  = btn.closest('tr');
@@ -224,7 +258,7 @@ async function deleteRow(btn) {
   data.append('faculty_id', id);
 
   const orig = btn.innerHTML;
-  btn.textContent = 'Deleting…';
+  btn.textContent = 'Deletingâ€¦';
   btn.disabled = true;
 
   try {
@@ -364,9 +398,9 @@ function bindRelieveForms() {
   });
 }
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    ADD FACULTY MODAL
-───────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 function openAddModal() {
   document.getElementById('id01').style.display = 'block';
 }
@@ -376,11 +410,19 @@ function closeAddModal() {
   document.getElementById('add-faculty-form').reset();
 }
 
+function openImportModal() {
+  document.getElementById('faculty-import-modal').style.display = 'block';
+}
+function closeImportModal() {
+  document.getElementById('faculty-import-modal').style.display = 'none';
+  document.getElementById('faculty-import-form').reset();
+}
+
 document.getElementById('add-faculty-form').addEventListener('submit', async function(e) {
   e.preventDefault();
   const formData = new FormData(this);
   const submitBtn = this.querySelector('[type="submit"]');
-  submitBtn.textContent = 'Creating…';
+  submitBtn.textContent = 'Creatingâ€¦';
   submitBtn.disabled = true;
 
   try {
@@ -405,16 +447,49 @@ document.getElementById('add-faculty-form').addEventListener('submit', async fun
   }
 });
 
+document.getElementById('faculty-import-form').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const formData = new FormData(this);
+  const submitBtn = this.querySelector('[type="submit"]');
+  submitBtn.textContent = 'Importing...';
+  submitBtn.disabled = true;
+  try {
+    const res = await fetch('/mainscheduler/tabs/actions/faculty_import.php', { method: 'POST', body: formData });
+    const json = await res.json();
+    if (!json.success) {
+      throw new Error(json.message || 'Faculty import failed.');
+    }
+    let message = json.message || 'Faculty imported successfully.';
+    if (Array.isArray(json.errors) && json.errors.length > 0) {
+      message += "\n\nFailed rows:\n- " + json.errors.join("\n- ");
+    }
+    alert(message);
+    closeImportModal();
+    facultySearchTerm = '';
+    const limit = parseInt(document.getElementById('rows-per-page')?.value || defaultLimit, 10);
+    const totalRecords = parseInt(json.total_records || 0, 10);
+    const targetPage = totalRecords > 0 ? Math.ceil(totalRecords / limit) : 1;
+    loadFacultyPage(targetPage, limit, '');
+  } catch (e) {
+    console.error(e);
+    alert(e.message || 'Faculty import failed.');
+  } finally {
+    submitBtn.textContent = 'Import Faculty';
+    submitBtn.disabled = false;
+  }
+});
 window.addEventListener('click', function(e) {
   if (e.target === document.getElementById('id01')) closeAddModal();
+  if (e.target === document.getElementById('faculty-import-modal')) closeImportModal();
   if (e.target === document.getElementById('faculty-schedule-modal')) closeFacultyScheduleModal();
 });
 
-/* ─────────────────────────────────────────
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
    INIT
-───────────────────────────────────────── */
+â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 loadFacultyPage(1, defaultLimit);
 </script>
 
 </body>
 </html>
+

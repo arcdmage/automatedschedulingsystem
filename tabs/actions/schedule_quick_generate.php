@@ -127,43 +127,54 @@ try {
             $perSubjectMinutes = 60;
         }
 
-        foreach ($weekDates as $weekDay) {
-            $dayName = $weekDay['day'];
-            $scheduleDate = $weekDay['date'];
-
-            $candidateFacultyIds = [];
-            if ($assignedFacultyId > 0) {
-                $candidateFacultyIds[] = $assignedFacultyId;
+        $candidateFacultyIds = [];
+        if ($assignedFacultyId > 0) {
+            $candidateFacultyIds[] = $assignedFacultyId;
+        }
+        foreach (subject_specialist_ids($conn, $subjectId) as $facultyId) {
+            if (!in_array($facultyId, $candidateFacultyIds, true)) {
+                $candidateFacultyIds[] = $facultyId;
             }
-            foreach (subject_specialist_ids($conn, $subjectId) as $facultyId) {
-                if (!in_array($facultyId, $candidateFacultyIds, true)) {
-                    $candidateFacultyIds[] = $facultyId;
-                }
-            }
+        }
 
-            if (empty($candidateFacultyIds)) {
+        if (empty($candidateFacultyIds)) {
+            foreach ($weekDates as $weekDay) {
                 $conflicts[] = [
                     'subject' => $subjectNames[$subjectId] ?? ('Subject #' . $subjectId),
-                    'day' => $dayName,
+                    'day' => $weekDay['day'],
                     'message' => 'No specialist found in Subject List.',
                 ];
-                continue;
             }
+            continue;
+        }
 
+        if ($assignedFacultyId <= 0) {
             shuffle($candidateFacultyIds);
-            $placed = false;
+        }
 
-            foreach ($timeSlots as $slot) {
-                $slotDuration = minutes_between_times($slot['start_time'], $slot['end_time']);
-                if ($slotDuration < $perSubjectMinutes) {
-                    continue;
-                }
+        $placed = false;
+        $selectedFacultyId = 0;
+        $plannedSlots = [];
 
-                if (section_has_schedule($conn, $section_id, $scheduleDate, (int) $slot['time_slot_id'])) {
-                    continue;
-                }
+        foreach ($candidateFacultyIds as $facultyId) {
+            $candidatePlans = [];
+            $candidateValid = true;
 
-                foreach ($candidateFacultyIds as $facultyId) {
+            foreach ($weekDates as $weekDay) {
+                $dayName = $weekDay['day'];
+                $scheduleDate = $weekDay['date'];
+                $slotFound = null;
+
+                foreach ($timeSlots as $slot) {
+                    $slotDuration = minutes_between_times($slot['start_time'], $slot['end_time']);
+                    if ($slotDuration < $perSubjectMinutes) {
+                        continue;
+                    }
+
+                    if (section_has_schedule($conn, $section_id, $scheduleDate, (int) $slot['time_slot_id'])) {
+                        continue;
+                    }
+
                     if (!faculty_available_for_slot(
                         $conn,
                         (int) $facultyId,
@@ -175,36 +186,63 @@ try {
                         continue;
                     }
 
-                    $notes = 'Quick auto-generated';
-                    $insertStmt->bind_param(
-                        "iiississs",
-                        $section_id,
-                        $facultyId,
-                        $subjectId,
-                        $scheduleDate,
-                        $dayName,
-                        $slot['time_slot_id'],
-                        $slot['start_time'],
-                        $slot['end_time'],
-                        $notes
-                    );
-                    if (!$insertStmt->execute()) {
-                        throw new Exception('Failed to save schedule: ' . $insertStmt->error);
-                    }
-
-                    $created++;
-                    $placed = true;
-                    break 2;
+                    $slotFound = [
+                        'day' => $dayName,
+                        'date' => $scheduleDate,
+                        'time_slot_id' => (int) $slot['time_slot_id'],
+                        'start_time' => $slot['start_time'],
+                        'end_time' => $slot['end_time'],
+                    ];
+                    break;
                 }
+
+                if ($slotFound === null) {
+                    $candidateValid = false;
+                    break;
+                }
+
+                $candidatePlans[] = $slotFound;
             }
 
-            if (!$placed) {
+            if (!$candidateValid) {
+                continue;
+            }
+
+            $selectedFacultyId = (int) $facultyId;
+            $plannedSlots = $candidatePlans;
+            $placed = true;
+            break;
+        }
+
+        if (!$placed) {
+            foreach ($weekDates as $weekDay) {
                 $conflicts[] = [
                     'subject' => $subjectNames[$subjectId] ?? ('Subject #' . $subjectId),
-                    'day' => $dayName,
-                    'message' => 'No available 1-hour slot and specialist combination found.',
+                    'day' => $weekDay['day'],
+                    'message' => 'No single specialist could be assigned for the full week with available 1-hour slots.',
                 ];
             }
+            continue;
+        }
+
+        foreach ($plannedSlots as $plannedSlot) {
+            $notes = 'Quick auto-generated';
+            $insertStmt->bind_param(
+                "iiississs",
+                $section_id,
+                $selectedFacultyId,
+                $subjectId,
+                $plannedSlot['date'],
+                $plannedSlot['day'],
+                $plannedSlot['time_slot_id'],
+                $plannedSlot['start_time'],
+                $plannedSlot['end_time'],
+                $notes
+            );
+            if (!$insertStmt->execute()) {
+                throw new Exception('Failed to save schedule: ' . $insertStmt->error);
+            }
+            $created++;
         }
     }
 

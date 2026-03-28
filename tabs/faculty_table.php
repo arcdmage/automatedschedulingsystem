@@ -60,6 +60,7 @@ $page = min($page, $total_pages);
     <input type="text" id="faculty-search-input" class="search-input" placeholder="Search faculty…" value="<?= htmlspecialchars(
         $search,
     ) ?>" oninput="handleFacultySearch(this.value)" style="width:200px;">
+    <button class="add-faculty-btn" style="background:#2563eb;" onclick="openImportModal()">Import Faculty</button>
     <button class="add-faculty-btn" onclick="openAddModal()">+ Add Faculty</button>
   </div>
 </div>
