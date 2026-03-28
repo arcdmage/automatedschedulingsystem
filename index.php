@@ -21,19 +21,19 @@
 
         <div class="tab-content">
             <div id="home" data-tab-content class="active"> <!--this tab will always be opened when website starts-->
-                <?php include "tabs\home.php"; ?>
+                <?php include __DIR__ . "/tabs/home.php"; ?>
             </div>
             <div id="faculty_members" data-tab-content>
-                <?php include 'tabs\faculty_members.php'; ?>
+                <?php include __DIR__ . "/tabs/faculty_members.php"; ?>
             </div>
             <div id="subject_list" data-tab-content>
-                <?php include "tabs\subject_list.php"; ?>
+                <?php include __DIR__ . "/tabs/subject_list.php"; ?>
             </div>
             <div id="sections_list" data-tab-content>
-                <?php include "tabs\sections_list.php"; ?>
+                <?php include __DIR__ . "/tabs/sections_list.php"; ?>
             </div>
             <div id="schedule" data-tab-content>
-                <?php include "tabs\schedule.php"; ?>
+                <?php include __DIR__ . "/tabs/schedule.php"; ?>
             </div>
         </div>
     </body>
