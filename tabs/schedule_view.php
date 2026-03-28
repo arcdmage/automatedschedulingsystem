@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/schedule_helpers.php";
 require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
+$appBase = app_url();
 ensure_relieve_tables($conn);
 
 $sections_query = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.school_year, s.semester,
@@ -79,7 +80,9 @@ foreach ($all_time_slots as $slot) {
     $slotOrderByTimeId[$tid] = $so;
     $timeIdBySlotOrder[$so] = $tid;
     $timeLabelBySlotOrder[$so] =
-        formatTime12Hour($slot["start_time"]) . " - " . formatTime12Hour($slot["end_time"]);
+        formatTime12Hour($slot["start_time"]) .
+        " - " .
+        formatTime12Hour($slot["end_time"]);
 }
 
 // Build list of week dates and map DayName => date (Monday..Friday)
@@ -140,8 +143,16 @@ if ($selected_section) {
         $slotOrder = $slotOrderByTimeId[$tid] ?? null;
         if ($slotOrder !== null) {
             $teachers[$date][$slotOrder] = [
-                'teacher' => trim(($r["lname"] ?? "") . ", " . ($r["fname"] ?? ""), ', '),
-                'replacement' => trim(($r["replacement_lname"] ?? "") . ", " . ($r["replacement_fname"] ?? ""), ', '),
+                "teacher" => trim(
+                    ($r["lname"] ?? "") . ", " . ($r["fname"] ?? ""),
+                    ", ",
+                ),
+                "replacement" => trim(
+                    ($r["replacement_lname"] ?? "") .
+                        ", " .
+                        ($r["replacement_fname"] ?? ""),
+                    ", ",
+                ),
             ];
         }
     }
@@ -280,9 +291,12 @@ function formatTime12Hour($time24)
                   $sname =
                       $subjects[$cell["subject_id"]] ??
                       "Subject #" . ($cell["subject_id"] ?? "");
-                  $teacherData = $teachers[$date][$slot] ?? ['teacher' => '', 'replacement' => ''];
-                  $teacher = $teacherData['teacher'] ?? '';
-                  $replacement = $teacherData['replacement'] ?? '';
+                  $teacherData = $teachers[$date][$slot] ?? [
+                      "teacher" => "",
+                      "replacement" => "",
+                  ];
+                  $teacher = $teacherData["teacher"] ?? "";
+                  $replacement = $teacherData["replacement"] ?? "";
                   ?>
                 <td class="subject-cell">
                   <?php if ($isExplicit): ?>
@@ -290,10 +304,14 @@ function formatTime12Hour($time24)
                         $sname,
                     ); ?></div>
                     <?php if ($teacher): ?>
-                      <div class="teacher-name"><?php echo htmlspecialchars($teacher); ?></div>
+                      <div class="teacher-name"><?php echo htmlspecialchars(
+                          $teacher,
+                      ); ?></div>
                     <?php endif; ?>
                     <?php if ($replacement): ?>
-                      <div class="teacher-name" style="color:#0f766e;font-weight:700;">Relieved by: <?php echo htmlspecialchars($replacement); ?></div>
+                      <div class="teacher-name" style="color:#0f766e;font-weight:700;">Relieved by: <?php echo htmlspecialchars(
+                          $replacement,
+                      ); ?></div>
                     <?php endif; ?>
                   <?php endif; ?>
                 </td>
@@ -331,6 +349,7 @@ function formatTime12Hour($time24)
 <?php endif; ?>
 
 <script>
+const APP_BASE = <?= json_encode($appBase) ?>;
 function loadSchedule() {
   const sec = document.getElementById('section-select').value;
   const week = document.getElementById('week-select').value;
@@ -349,7 +368,7 @@ function deleteSchedules() {
     formData.append('end_date', endDate);
     if (force) formData.append('force', '1');
 
-    fetch('/mainscheduler/tabs/actions/schedule_delete_auto.php', {
+    fetch(`${APP_BASE}/tabs/actions/schedule_delete_auto.php`, {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       body: formData

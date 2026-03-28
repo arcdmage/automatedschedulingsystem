@@ -2,6 +2,7 @@
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/subject_duration_helpers.php";
 require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
+$appBase = app_url();
 
 // Get selected section from URL parameter - MUST BE DEFINED FIRST
 $selected_section = isset($_GET["section_id"])
@@ -60,8 +61,16 @@ function subject_duration_value(int $storedValue): array
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/schedule_setup.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/schedule.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/schedule_setup.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
 </head>
 <body>
 
@@ -129,13 +138,11 @@ function subject_duration_value(int $storedValue): array
         <label>Teacher</label>
         <select name="faculty_id">
           <option value="0">Auto-assign in Quick Generate</option>
-          <?php
-          foreach ($faculty_rows as $f): ?>
+          <?php foreach ($faculty_rows as $f): ?>
             <option value="<?php echo $f["faculty_id"]; ?>">
               <?php echo htmlspecialchars($f["lname"] . ", " . $f["fname"]); ?>
             </option>
-          <?php endforeach;
-          ?>
+          <?php endforeach; ?>
         </select>
       </div>
 
@@ -174,8 +181,12 @@ function subject_duration_value(int $storedValue): array
               (int) $req["hours_per_week"],
           ); ?>
           <tr>
-            <td><?php echo htmlspecialchars($req["subject_name"] ?? "Unknown subject"); ?></td>
-            <td><?php echo htmlspecialchars($req["teacher_name"] ?? "Auto-assign in Quick Generate"); ?></td>
+            <td><?php echo htmlspecialchars(
+                $req["subject_name"] ?? "Unknown subject",
+            ); ?></td>
+            <td><?php echo htmlspecialchars(
+                $req["teacher_name"] ?? "Auto-assign in Quick Generate",
+            ); ?></td>
                 <td><?php echo htmlspecialchars(
                     format_subject_duration_minutes(
                         $req_duration["total_minutes"],
@@ -261,15 +272,13 @@ function subject_duration_value(int $storedValue): array
             <label>Advisor</label>
             <select name="adviser_id" id="adviser_id">
               <option value="">-- Select Advisor --</option>
-              <?php
-              foreach ($faculty_rows as $f): ?>
+              <?php foreach ($faculty_rows as $f): ?>
                 <option value="<?php echo $f["faculty_id"]; ?>">
                   <?php echo htmlspecialchars(
                       $f["lname"] . ", " . $f["fname"],
                   ); ?>
                 </option>
-              <?php endforeach;
-              ?>
+              <?php endforeach; ?>
             </select>
           </div>
 
@@ -277,15 +286,13 @@ function subject_duration_value(int $storedValue): array
             <label>Co-Advisor</label>
             <select name="co_adviser_id" id="co_adviser_id">
               <option value="">-- Select Co-Advisor --</option>
-              <?php
-              foreach ($faculty_rows as $f2): ?>
+              <?php foreach ($faculty_rows as $f2): ?>
                 <option value="<?php echo $f2["faculty_id"]; ?>">
                   <?php echo htmlspecialchars(
                       $f2["lname"] . ", " . $f2["fname"],
                   ); ?>
                 </option>
-              <?php endforeach;
-              ?>
+              <?php endforeach; ?>
             </select>
           </div>
         </div>
@@ -338,15 +345,13 @@ function subject_duration_value(int $storedValue): array
             <label>Teacher</label>
             <select name="faculty_id" id="update_faculty_id">
               <option value="0">Auto-assign in Quick Generate</option>
-              <?php
-              foreach ($faculty_rows as $f): ?>
+              <?php foreach ($faculty_rows as $f): ?>
                 <option value="<?php echo $f["faculty_id"]; ?>">
                   <?php echo htmlspecialchars(
                       $f["lname"] . ", " . $f["fname"],
                   ); ?>
                 </option>
-              <?php endforeach;
-              ?>
+              <?php endforeach; ?>
             </select>
           </div>
           <div class="form-group">
@@ -366,6 +371,7 @@ function subject_duration_value(int $storedValue): array
 </div>
 
 <script>
+const APP_BASE = <?= json_encode($appBase) ?>;
 let currentRequirementId = null;
 let currentRequiredMinutes = 0;
 let currentPerSubjectMinutes = 0;
@@ -464,7 +470,7 @@ document.getElementById('quick-add-form')?.addEventListener('submit', async func
   const formData = new FormData(this);
 
   try {
-    const response = await fetch('/mainscheduler/tabs/actions/requirement_save.php', {
+    const response = await fetch(`${APP_BASE}/tabs/actions/requirement_save.php`, {
       method: 'POST',
       body: formData
     });
@@ -497,7 +503,7 @@ document.getElementById('create-section-form').addEventListener('submit', async 
   }
 
   try {
-    const response = await fetch('/mainscheduler/tabs/actions/section_create.php', {
+    const response = await fetch(`${APP_BASE}/tabs/actions/section_create.php`, {
       method: 'POST',
       body: formData
     });
@@ -531,7 +537,7 @@ function deleteRequirement(id) {
   const formData = new FormData();
   formData.append('requirement_id', id);
 
-  fetch('/mainscheduler/tabs/actions/requirement_delete.php', {
+  fetch(`${APP_BASE}/tabs/actions/requirement_delete.php`, {
     method: 'POST',
     body: formData
   })
@@ -570,7 +576,7 @@ async function openPatternModal(requirementId, subjectName, hoursPerWeek, facult
 
   // Load existing pattern
   try {
-    const response = await fetch(`/mainscheduler/tabs/actions/api_get_pattern.php?requirement_id=${requirementId}`);
+    const response = await fetch(`${APP_BASE}/tabs/actions/api_get_pattern.php?requirement_id=${requirementId}`);
     const existingPattern = await response.json();
 
     existingPattern.forEach(p => {
@@ -595,7 +601,13 @@ function renderPatternGrid() {
       <div class="alert alert-warning" style="margin:20px;">
         <strong>⚠️ No time slots configured!</strong>
         <p>This section doesn't have any time slots configured yet. You need to set up time slots before you can create schedule patterns.</p>
-        <p><a href="/mainscheduler/tabs/manage_timeslots.php?section_id=<?php echo $selected_section; ?>"
+        <p><a href="<?= htmlspecialchars(
+            app_url("tabs/manage_timeslots.php") .
+                "?section_id=" .
+                $selected_section,
+            ENT_QUOTES,
+            "UTF-8",
+        ) ?>"
            style="color:#856404; text-decoration:underline; font-weight:bold;">
           Go to Time Slot Manager →
         </a></p>
@@ -690,7 +702,7 @@ async function savePattern() {
   });
 
   try {
-    const response = await fetch('/mainscheduler/tabs/actions/pattern_save.php', {
+    const response = await fetch(`${APP_BASE}/tabs/actions/pattern_save.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -734,7 +746,7 @@ document.getElementById('update-form')?.addEventListener('submit', async functio
   const formData = new FormData(this);
 
   try {
-    const response = await fetch('/mainscheduler/tabs/actions/requirement_update.php', {
+    const response = await fetch(`${APP_BASE}/tabs/actions/requirement_update.php`, {
       method: 'POST',
       body: formData
     });
@@ -778,7 +790,7 @@ function openPatternModal(requirementId, subjectName, hoursPerSubject, facultyId
   document.getElementById('update_minutes').value = hoursPerSubject % 60;
   syncDurationInput('update_hours', 'update_minutes', 'update_duration_total');
 
-  fetch(`/mainscheduler/tabs/actions/api_get_pattern.php?requirement_id=${requirementId}`)
+  fetch(`${APP_BASE}/tabs/actions/api_get_pattern.php?requirement_id=${requirementId}`)
     .then(response => response.json())
     .then(existingPattern => {
       existingPattern.forEach(p => {
@@ -828,7 +840,7 @@ async function savePattern() {
   });
 
   try {
-    const response = await fetch('/mainscheduler/tabs/actions/pattern_save.php', {
+    const response = await fetch(`${APP_BASE}/tabs/actions/pattern_save.php`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -869,4 +881,3 @@ syncDurationInput('quick_duration_hours', 'quick_duration_minutes', 'quick_durat
 
 </body>
 </html>
-

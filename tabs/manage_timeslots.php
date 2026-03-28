@@ -1,5 +1,6 @@
 ﻿<?php
 require_once __DIR__ . "/../db_connect.php";
+$appBase = app_url();
 
 // Fetch all sections
 $sections_query =
@@ -32,9 +33,12 @@ if ($selected_section) {
 
 <!-- Top bar with back button -->
 <div class="ts-topbar">
-  <a href="/mainscheduler/tabs/schedule_setup.php<?php echo $selected_section
-      ? "?section_id=" . $selected_section
-      : ""; ?>" class="btn-back">
+  <a href="<?= htmlspecialchars(
+      app_url("tabs/schedule_setup.php") .
+          ($selected_section ? "?section_id=" . $selected_section : ""),
+      ENT_QUOTES,
+      "UTF-8",
+  ) ?>" class="btn-back">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 18 9 12 15 6"></polyline>
     </svg>
@@ -265,6 +269,7 @@ if ($selected_section) {
 </div>
 
 <script>
+const APP_BASE = <?= json_encode($appBase) ?>;
 const currentSectionId = <?php echo $selected_section
     ? $selected_section
     : "null"; ?>;
@@ -293,7 +298,7 @@ async function copyTimeSlots() {
   formData.append('from_section_id', fromSectionId);
   formData.append('to_section_id', currentSectionId);
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_copy.php', { method: 'POST', body: formData });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/timeslot_copy.php`, { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) { alert(`Copied ${data.slots_copied} time slot(s).`); window.location.reload(); }
     else alert('Error: ' + data.message);
@@ -305,7 +310,7 @@ document.getElementById('add-timeslot-form').addEventListener('submit', async fu
   const formData = new FormData(this);
   formData.set('is_break', document.getElementById('is_break_toggle').checked ? '1' : '0');
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_create.php', {
+    const res  = await fetch(`${APP_BASE}/tabs/actions/timeslot_create.php`, {
       method: 'POST',
       body: formData,
       headers: { 'X-Requested-With': 'XMLHttpRequest' }
@@ -335,7 +340,7 @@ document.getElementById('edit-timeslot-form').addEventListener('submit', async f
   const formData = new FormData(this);
   formData.set('is_break', document.getElementById('edit_is_break').checked ? '1' : '0');
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_update.php', { method: 'POST', body: formData });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/timeslot_update.php`, { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) { window.location.reload(); }
     else alert('Error: ' + data.message);
@@ -348,7 +353,7 @@ async function deleteTimeslot(id) {
   formData.append('time_slot_id', id);
   formData.append('section_id', currentSectionId);
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_delete.php', { method: 'POST', body: formData });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/timeslot_delete.php`, { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) { window.location.reload(); }
     else alert('Error: ' + data.message);
@@ -361,7 +366,7 @@ async function moveSlot(id, direction) {
   formData.append('direction', direction);
   formData.append('section_id', currentSectionId);
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_reorder.php', { method: 'POST', body: formData });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/timeslot_reorder.php`, { method: 'POST', body: formData });
     const data = await res.json();
     if (data.success) { window.location.reload(); }
     else alert('Error: ' + data.message);

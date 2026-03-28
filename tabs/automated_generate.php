@@ -1,13 +1,22 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
-$sections_result = $conn->query("SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name");
-$selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : 0;
+$appBase = app_url();
+$sections_result = $conn->query(
+    "SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name",
+);
+$selected_section = isset($_GET["section_id"])
+    ? intval($_GET["section_id"])
+    : 0;
 ?>
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/schedule.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
 </head>
 <body>
 <div class="page-header">
@@ -22,8 +31,19 @@ $selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : 0
       <select id="section-select" name="section_id" required>
         <option value="">-- Choose a Section --</option>
         <?php while ($section = $sections_result->fetch_assoc()): ?>
-          <option value="<?php echo $section['section_id']; ?>" <?php echo $selected_section === (int) $section['section_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($section['grade_level'] . ' - ' . $section['section_name'] . ' (' . $section['track'] . ')'); ?>
+          <option value="<?php echo $section[
+              "section_id"
+          ]; ?>" <?php echo $selected_section === (int) $section["section_id"]
+    ? "selected"
+    : ""; ?>>
+            <?php echo htmlspecialchars(
+                $section["grade_level"] .
+                    " - " .
+                    $section["section_name"] .
+                    " (" .
+                    $section["track"] .
+                    ")",
+            ); ?>
           </option>
         <?php endwhile; ?>
       </select>
@@ -40,6 +60,7 @@ $selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : 0
 </div>
 
 <script>
+const APP_BASE = <?= json_encode($appBase) ?>;
 function addLog(message, type) {
   const log = document.getElementById('progress-log');
   if (!log) return;
@@ -75,7 +96,7 @@ document.getElementById('automated-generate-form').addEventListener('submit', as
   addLog('Preparing automated schedule generation...', 'info');
 
   try {
-    const response = await fetch('/mainscheduler/tabs/actions/schedule_quick_generate.php', {
+    const response = await fetch(`${APP_BASE}/tabs/actions/schedule_quick_generate.php`, {
       method: 'POST',
       body: new FormData(this)
     });
@@ -121,7 +142,7 @@ function openView(sectionId) {
   } catch (error) {
     console.error(error);
   }
-  window.location.href = '/mainscheduler/tabs/schedule_view.php?section_id=' + encodeURIComponent(sectionId || '');
+  window.location.href = `${APP_BASE}/tabs/schedule_view.php?section_id=` + encodeURIComponent(sectionId || '');
   return false;
 }
 </script>
