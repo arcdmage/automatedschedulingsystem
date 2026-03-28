@@ -1,7 +1,12 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
+$appBase = app_url();
 ?>
-<link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/schedule.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
 
 <style>
 .schedule-shell {
@@ -196,31 +201,59 @@ require_once __DIR__ . "/../db_connect.php";
   <div id="pane-manual-setup" class="schedule-pane">
     <iframe
       id="manual-setup-iframe"
-      data-src-subject="/mainscheduler/tabs/schedule_setup.php"
-      data-src-timeslots="/mainscheduler/tabs/manage_timeslots.php"
+      data-src-subject="<?= htmlspecialchars(
+          app_url("tabs/schedule_setup.php"),
+          ENT_QUOTES,
+          "UTF-8",
+      ) ?>"
+      data-src-timeslots="<?= htmlspecialchars(
+          app_url("tabs/manage_timeslots.php"),
+          ENT_QUOTES,
+          "UTF-8",
+      ) ?>"
       src="about:blank"
       loading="lazy"
       title="Manual Setup"></iframe>
   </div>
 
   <div id="pane-manual-generate" class="schedule-pane">
-    <iframe id="manual-generate-iframe" data-src="/mainscheduler/tabs/schedule_generate.php" src="about:blank" loading="lazy" title="Manual Generate"></iframe>
+    <iframe id="manual-generate-iframe" data-src="<?= htmlspecialchars(
+        app_url("tabs/schedule_generate.php"),
+        ENT_QUOTES,
+        "UTF-8",
+    ) ?>" src="about:blank" loading="lazy" title="Manual Generate"></iframe>
   </div>
 
   <div id="pane-manual-view" class="schedule-pane">
-    <iframe id="manual-view-iframe" data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Manual Schedule View"></iframe>
+    <iframe id="manual-view-iframe" data-src="<?= htmlspecialchars(
+        app_url("tabs/schedule_view.php"),
+        ENT_QUOTES,
+        "UTF-8",
+    ) ?>" src="about:blank" loading="lazy" title="Manual Schedule View"></iframe>
   </div>
 
   <div id="pane-automated-setup" class="schedule-pane">
-    <iframe id="automated-setup-iframe" data-src="/mainscheduler/tabs/automated_setup.php" src="about:blank" loading="lazy" title="Automated Setup"></iframe>
+    <iframe id="automated-setup-iframe" data-src="<?= htmlspecialchars(
+        app_url("tabs/automated_setup.php"),
+        ENT_QUOTES,
+        "UTF-8",
+    ) ?>" src="about:blank" loading="lazy" title="Automated Setup"></iframe>
   </div>
 
   <div id="pane-automated-generate" class="schedule-pane">
-    <iframe id="automated-generate-iframe" data-src="/mainscheduler/tabs/automated_generate.php" src="about:blank" loading="lazy" title="Automated Generate"></iframe>
+    <iframe id="automated-generate-iframe" data-src="<?= htmlspecialchars(
+        app_url("tabs/automated_generate.php"),
+        ENT_QUOTES,
+        "UTF-8",
+    ) ?>" src="about:blank" loading="lazy" title="Automated Generate"></iframe>
   </div>
 
   <div id="pane-automated-view" class="schedule-pane">
-    <iframe id="automated-view-iframe" data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Automated Schedule View"></iframe>
+    <iframe id="automated-view-iframe" data-src="<?= htmlspecialchars(
+        app_url("tabs/schedule_view.php"),
+        ENT_QUOTES,
+        "UTF-8",
+    ) ?>" src="about:blank" loading="lazy" title="Automated Schedule View"></iframe>
   </div>
 </div>
 
@@ -271,6 +304,7 @@ require_once __DIR__ . "/../db_connect.php";
 
 <script>
 (function () {
+  const APP_BASE = <?= json_encode($appBase) ?>;
   var currentPrimaryMode = 'manual';
   var currentManualSecondary = 'calendar';
   var currentAutomatedSecondary = 'setup';
@@ -433,7 +467,7 @@ require_once __DIR__ . "/../db_connect.php";
     switchPrimaryMode(primary);
     const iframe = getIframe(primary, 'view');
     if (!iframe) return;
-    const baseSrc = iframe.getAttribute('data-src') || '/mainscheduler/tabs/schedule_view.php';
+    const baseSrc = iframe.getAttribute('data-src') || `${APP_BASE}/tabs/schedule_view.php`;
     const url = new URL(baseSrc, window.location.origin);
     if (sectionId) url.searchParams.set('section_id', sectionId);
     activatePane(primary, 'view', { forceUrl: url.pathname + url.search });
@@ -442,7 +476,7 @@ require_once __DIR__ . "/../db_connect.php";
   window.loadCalendar = function () {
     var now = new Date();
     var month = now.toISOString().slice(0, 7);
-    fetch('/mainscheduler/tabs/calendar_view.php?month=' + encodeURIComponent(month), { credentials: 'same-origin' })
+    fetch(`${APP_BASE}/tabs/calendar_view.php?month=` + encodeURIComponent(month), { credentials: 'same-origin' })
       .then(function (response) {
         if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
         return response.text();
@@ -502,7 +536,7 @@ require_once __DIR__ . "/../db_connect.php";
     if (!eventId || !eventId.value || !window.confirm('Delete this event?')) return;
     var formData = new FormData();
     formData.append('event_id', eventId.value);
-    fetch('/mainscheduler/tabs/actions/event_delete.php', { method: 'POST', body: formData, credentials: 'same-origin' })
+    fetch(`${APP_BASE}/tabs/actions/event_delete.php`, { method: 'POST', body: formData, credentials: 'same-origin' })
       .then(function (response) { return response.json(); })
       .then(function (json) {
         if (!json || !json.success) throw new Error(json && json.message ? json.message : 'Delete failed');
@@ -518,7 +552,7 @@ require_once __DIR__ . "/../db_connect.php";
     if (eventForm) {
       eventForm.addEventListener('submit', function (ev) {
         ev.preventDefault();
-        fetch('/mainscheduler/tabs/actions/event_create.php', { method: 'POST', body: new FormData(eventForm), credentials: 'same-origin' })
+        fetch(`${APP_BASE}/tabs/actions/event_create.php`, { method: 'POST', body: new FormData(eventForm), credentials: 'same-origin' })
           .then(function (response) { return response.json(); })
           .then(function (json) {
             if (!json || !json.success) throw new Error(json && json.message ? json.message : 'Save failed');

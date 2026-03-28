@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . "/lib/app_path.php";
+
 $servername = "db.fr-pari1.bengt.wasmernet.com"; // db address or host
 $database = "db8WqMRmz97PJdi4SJsjGmVZ"; // database name
 $username = "843b3d48797a800056eef0c5fc31"; // database username

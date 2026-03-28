@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
+$appBase = app_url();
 
 $available_faculty_rows = available_faculty_rows($conn);
 
@@ -276,7 +277,11 @@ if ($is_fragment) {
 
 <!-- Create / Edit Section Modal -->
 <div id="id03" class="modal">
-  <form id="create-section-form" class="modal-content animate" action="/mainscheduler/tabs/actions/section_create.php" method="post">
+  <form id="create-section-form" class="modal-content animate" action="<?= htmlspecialchars(
+      app_url("tabs/actions/section_create.php"),
+      ENT_QUOTES,
+      "UTF-8",
+  ) ?>" method="post">
     <input type="hidden" id="section_id" name="section_id" value="">
     <div class="imgcontainer">
       <span onclick="closeCreateSectionModal()" class="close" title="Close">&times;</span>
@@ -298,16 +303,14 @@ if ($is_fragment) {
       <label for="adviser_id"><b>Advisor</b></label>
       <select name="adviser_id" id="adviser_id">
         <option value="">-- Select Advisor --</option>
-        <?php
-        // populate advisors list
+        <?php // populate advisors list
         foreach ($available_faculty_rows as $f) {
             echo '<option value="' .
                 (int) $f["faculty_id"] .
                 '">' .
                 htmlspecialchars($f["lname"] . ", " . $f["fname"]) .
                 "</option>";
-        }
-        ?>
+        } ?>
       </select>
 
       <br><br>
@@ -322,6 +325,7 @@ if ($is_fragment) {
 
 <script>
 // Client-side behaviors for Sections List page
+const APP_BASE = <?= json_encode($appBase) ?>;
 let sectionsSearchTerm = <?= json_encode($search) ?>;
 let sectionsSearchTimer = null;
 let shouldRestoreSectionsSearchFocus = false;
@@ -348,7 +352,7 @@ function loadSectionsPage(page = 1, limit = <?= $default_limit ?>, search = sect
   const host = document.getElementById('sections_list');
   if (!host) return;
 
-  fetch(`/mainscheduler/tabs/sections_list.php?${params.toString()}`)
+  fetch(`${APP_BASE}/tabs/sections_list.php?${params.toString()}`)
     .then(r => {
       if (!r.ok) throw new Error('Status ' + r.status);
       return r.text();
@@ -423,7 +427,7 @@ function openCreateSectionModal() {
   const form = document.getElementById('create-section-form');
   form.reset();
   document.getElementById('section_id').value = '';
-  form.setAttribute('action', '/mainscheduler/tabs/actions/section_create.php');
+  form.setAttribute('action', `${APP_BASE}/tabs/actions/section_create.php`);
   document.getElementById('create-section-title').textContent = 'Create Section';
   document.getElementById('section-form-submit').textContent = 'Create';
   document.getElementById('id03').style.display = 'block';
@@ -449,7 +453,7 @@ document.getElementById('create-section-form').addEventListener('submit', functi
   const formData = new FormData(form);
   // If editing, send to update endpoint
   const isEdit = !!formData.get('section_id');
-  const endpoint = isEdit ? '/mainscheduler/tabs/actions/section_update.php' : '/mainscheduler/tabs/actions/section_create.php';
+  const endpoint = isEdit ? `${APP_BASE}/tabs/actions/section_update.php` : `${APP_BASE}/tabs/actions/section_create.php`;
 
   fetch(endpoint, { method: 'POST', body: formData })
     .then(r => r.json())
@@ -519,7 +523,7 @@ function startEditSection(btn) {
 
   // switch to update endpoint
   const form = document.getElementById('create-section-form');
-  form.setAttribute('action', '/mainscheduler/tabs/actions/section_update.php');
+  form.setAttribute('action', `${APP_BASE}/tabs/actions/section_update.php`);
   document.getElementById('create-section-title').textContent = 'Edit Section';
   document.getElementById('section-form-submit').textContent = 'Save Changes';
   document.getElementById('id03').style.display = 'block';
@@ -533,7 +537,7 @@ function deleteSection(btn) {
   const data = new FormData();
   data.append('section_id', sectionId);
 
-  fetch('/mainscheduler/tabs/actions/section_delete.php', { method: 'POST', body: data })
+  fetch(`${APP_BASE}/tabs/actions/section_delete.php`, { method: 'POST', body: data })
     .then(r => r.json())
     .then(json => {
       if (json && json.success) {
@@ -593,7 +597,7 @@ async function saveSection(btn) {
 
   try {
     // Use section_update.php to perform update
-    const res = await fetch('/mainscheduler/tabs/actions/section_update.php', { method: 'POST', body: data });
+    const res = await fetch(`${APP_BASE}/tabs/actions/section_update.php`, { method: 'POST', body: data });
     const json = await res.json();
     if (json && json.success) {
       // refresh row listing using location reload or global loader if present

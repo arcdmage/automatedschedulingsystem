@@ -11,13 +11,22 @@ if ($faculty_query) {
     }
 }
 ?>
+<?php $appBase = app_url(); ?>
 <!--copied from faculty_member.php just re-configured.-->
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/subject_table.css">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/subject_modal.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/subject_table.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/subject_modal.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
 </head>
 
 <body>
@@ -34,7 +43,11 @@ if ($faculty_query) {
 
 <!-- Modal -->
 <div id="id02" class="modal">
-  <form id="subject-form" class="modal-content animate" action="/mainscheduler/tabs/actions/subject_create.php" method="post">
+  <form id="subject-form" class="modal-content animate" action="<?= htmlspecialchars(
+      app_url("tabs/actions/subject_create.php"),
+      ENT_QUOTES,
+      "UTF-8",
+  ) ?>" method="post">
     <div class="imgcontainer">
       <span onclick="closeSubjectModal()" class="close" title="Close">&times;</span>
       <h2 id="subject-modal-title">Add Subject</h2>
@@ -74,6 +87,7 @@ if ($faculty_query) {
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
+  const APP_BASE = <?= json_encode($appBase) ?>;
   const tableContent = document.getElementById("subject-table-content");
   const defaultLimit = 5;
   let subjectSearchTerm = '';
@@ -249,7 +263,7 @@ document.addEventListener("DOMContentLoaded", function() {
     if (subjectSearchTerm) {
       params.set('search', subjectSearchTerm);
     }
-    const url = `/mainscheduler/tabs/subject_table.php?${params.toString()}`;
+    const url = `${APP_BASE}/tabs/subject_table.php?${params.toString()}`;
 
     fetch(url)
       .then(response => {
@@ -350,7 +364,7 @@ document.addEventListener("DOMContentLoaded", function() {
     btn.disabled = true;
 
     try {
-      const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+      const res = await fetch(`${APP_BASE}/tabs/actions/subject_update.php`, { method: 'POST', body: data });
       const json = await res.json();
       if (json && json.success) {
         // reload listing (use rows-per-page selector or fallback)
@@ -386,7 +400,7 @@ document.addEventListener("DOMContentLoaded", function() {
     btn.disabled = true;
 
     try {
-      const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+      const res = await fetch(`${APP_BASE}/tabs/actions/subject_update.php`, { method: 'POST', body: data });
       const json = await res.json();
       if (json && json.success) {
         row.style.transition = 'opacity .2s, transform .2s';
@@ -446,8 +460,8 @@ document.addEventListener("DOMContentLoaded", function() {
       const isEdit = subjectId && subjectId !== '';
 
       const endpoint = isEdit
-        ? '/mainscheduler/tabs/actions/subject_update.php'
-        : '/mainscheduler/tabs/actions/subject_create.php';
+        ? `${APP_BASE}/tabs/actions/subject_update.php`
+        : `${APP_BASE}/tabs/actions/subject_create.php`;
 
       // Provide user feedback
       const submitBtn = document.getElementById('subject-form-submit');

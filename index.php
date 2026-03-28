@@ -1,13 +1,29 @@
 <?php
 // index.php
-?>
+require_once __DIR__ . "/lib/app_path.php"; ?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script src="script.js" defer></script>
-        <link href="styles.css" rel="stylesheet">
-        <link rel="stylesheet" href="tabs/css/subject_table.css">
-        <link rel="stylesheet" href="tabs/css/subject_modal.css">
+        <script src="<?= htmlspecialchars(
+            app_url("script.js"),
+            ENT_QUOTES,
+            "UTF-8",
+        ) ?>" defer></script>
+        <link href="<?= htmlspecialchars(
+            app_url("styles.css"),
+            ENT_QUOTES,
+            "UTF-8",
+        ) ?>" rel="stylesheet">
+        <link rel="stylesheet" href="<?= htmlspecialchars(
+            app_url("tabs/css/subject_table.css"),
+            ENT_QUOTES,
+            "UTF-8",
+        ) ?>">
+        <link rel="stylesheet" href="<?= htmlspecialchars(
+            app_url("tabs/css/subject_modal.css"),
+            ENT_QUOTES,
+            "UTF-8",
+        ) ?>">
         <title>SJNHS Faculty Panel</title>
     </head>
     <body>

@@ -1,11 +1,20 @@
 ﻿<?php
 require_once __DIR__ . "/../db_connect.php"; ?>
+<?php $appBase = app_url(); ?>
 <!DOCTYPE html>
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_table.css">
-<link rel="stylesheet" href="/mainscheduler/tabs/css/faculty_modal.css">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/faculty_table.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
+<link rel="stylesheet" href="<?= htmlspecialchars(
+    app_url("tabs/css/faculty_modal.css"),
+    ENT_QUOTES,
+    "UTF-8",
+) ?>">
 </head>
 <body>
 
@@ -74,7 +83,11 @@ require_once __DIR__ . "/../db_connect.php"; ?>
       <input type="file" name="faculty_file" accept=".csv,text/csv" required>
 
       <div style="display:flex; gap:10px; flex-wrap:wrap; margin:8px 0 14px;">
-        <a href="/mainscheduler/tabs/actions/faculty_import_template.php" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 14px; border-radius:4px;">
+        <a href="<?= htmlspecialchars(
+            app_url("tabs/actions/faculty_import_template.php"),
+            ENT_QUOTES,
+            "UTF-8",
+        ) ?>" style="display:inline-block; background:#2563eb; color:#fff; text-decoration:none; padding:10px 14px; border-radius:4px;">
           Download Template
         </a>
       </div>
@@ -106,6 +119,7 @@ require_once __DIR__ . "/../db_connect.php"; ?>
 </div>
 
 <script>
+const APP_BASE = <?= json_encode($appBase) ?>;
 const tableContent = document.getElementById('faculty-table-content');
 const defaultLimit = 5;
 let facultySearchTerm = '';
@@ -126,7 +140,7 @@ function loadFacultyPage(page = 1, limit = defaultLimit, search = facultySearchT
     params.set('search', facultySearchTerm);
   }
 
-  fetch(`/mainscheduler/tabs/faculty_table.php?${params.toString()}`)
+  fetch(`${APP_BASE}/tabs/faculty_table.php?${params.toString()}`)
     .then(r => { if (!r.ok) throw new Error('Status ' + r.status); return r.text(); })
     .then(html => {
       tableContent.innerHTML = html;
@@ -230,7 +244,7 @@ async function saveRow(btn) {
   btn.disabled = true;
 
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/faculty_update.php', { method: 'POST', body: data });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/faculty_update.php`, { method: 'POST', body: data });
     const json = await res.json();
     if (json.success) {
       loadFacultyPage(1, document.getElementById('rows-per-page')?.value || defaultLimit);
@@ -262,7 +276,7 @@ async function deleteRow(btn) {
   btn.disabled = true;
 
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/faculty_delete.php', { method: 'POST', body: data });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/faculty_delete.php`, { method: 'POST', body: data });
     const json = await res.json();
     if (json.success) {
       row.style.transition = 'opacity .2s, transform .2s';
@@ -292,7 +306,7 @@ async function openFacultyScheduleModal(facultyId) {
   content.innerHTML = '<p style="text-align:center;padding:20px;color:#64748b;">Loading schedule...</p>';
 
   try {
-    const response = await fetch(`/mainscheduler/tabs/actions/faculty_schedule_view.php?faculty_id=${encodeURIComponent(facultyId)}`);
+    const response = await fetch(`${APP_BASE}/tabs/actions/faculty_schedule_view.php?faculty_id=${encodeURIComponent(facultyId)}`);
     const html = await response.text();
     content.innerHTML = html;
     bindRelieveForms();
@@ -337,7 +351,7 @@ function bindRelieveDeleteButtons() {
         formData.append('relieve_id', relieveId);
         formData.append('faculty_id', facultyId);
 
-        const response = await fetch('/mainscheduler/tabs/actions/relieve_request_delete.php', {
+        const response = await fetch(`${APP_BASE}/tabs/actions/relieve_request_delete.php`, {
           method: 'POST',
           body: formData
         });
@@ -372,7 +386,7 @@ function bindRelieveForms() {
       }
 
       try {
-        const response = await fetch('/mainscheduler/tabs/actions/relieve_request_save.php', {
+        const response = await fetch(`${APP_BASE}/tabs/actions/relieve_request_save.php`, {
           method: 'POST',
           body: formData
         });
@@ -426,7 +440,7 @@ document.getElementById('add-faculty-form').addEventListener('submit', async fun
   submitBtn.disabled = true;
 
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/faculty_create.php', { method: 'POST', body: formData });
+    const res  = await fetch(`${APP_BASE}/tabs/actions/faculty_create.php`, { method: 'POST', body: formData });
     const json = await res.json();
     if (json.success) {
       closeAddModal();
@@ -454,7 +468,7 @@ document.getElementById('faculty-import-form').addEventListener('submit', async 
   submitBtn.textContent = 'Importing...';
   submitBtn.disabled = true;
   try {
-    const res = await fetch('/mainscheduler/tabs/actions/faculty_import.php', { method: 'POST', body: formData });
+    const res = await fetch(`${APP_BASE}/tabs/actions/faculty_import.php`, { method: 'POST', body: formData });
     const json = await res.json();
     if (!json.success) {
       throw new Error(json.message || 'Faculty import failed.');
@@ -492,4 +506,3 @@ loadFacultyPage(1, defaultLimit);
 
 </body>
 </html>
-
