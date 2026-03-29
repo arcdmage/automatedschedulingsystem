@@ -1,29 +1,13 @@
 <?php
 // index.php
-require_once __DIR__ . "/lib/app_path.php"; ?>
+?>
 <!DOCTYPE html>
 <html lang="en">
     <head>
-        <script src="<?= htmlspecialchars(
-            app_url("script.js"),
-            ENT_QUOTES,
-            "UTF-8",
-        ) ?>" defer></script>
-        <link href="<?= htmlspecialchars(
-            app_url("styles.css"),
-            ENT_QUOTES,
-            "UTF-8",
-        ) ?>" rel="stylesheet">
-        <link rel="stylesheet" href="<?= htmlspecialchars(
-            app_url("tabs/css/subject_table.css"),
-            ENT_QUOTES,
-            "UTF-8",
-        ) ?>">
-        <link rel="stylesheet" href="<?= htmlspecialchars(
-            app_url("tabs/css/subject_modal.css"),
-            ENT_QUOTES,
-            "UTF-8",
-        ) ?>">
+        <script src="script.js" defer></script>
+        <link href="styles.css" rel="stylesheet">
+        <link rel="stylesheet" href="tabs/css/subject_table.css">
+        <link rel="stylesheet" href="tabs/css/subject_modal.css">
         <title>SJNHS Faculty Panel</title>
     </head>
     <body>
@@ -37,19 +21,19 @@ require_once __DIR__ . "/lib/app_path.php"; ?>
 
         <div class="tab-content">
             <div id="home" data-tab-content class="active"> <!--this tab will always be opened when website starts-->
-                <?php include __DIR__ . "/tabs/home.php"; ?>
+                <?php include "tabs\home.php"; ?>
             </div>
             <div id="faculty_members" data-tab-content>
-                <?php include __DIR__ . "/tabs/faculty_members.php"; ?>
+                <?php include 'tabs\faculty_members.php'; ?>
             </div>
             <div id="subject_list" data-tab-content>
-                <?php include __DIR__ . "/tabs/subject_list.php"; ?>
+                <?php include "tabs\subject_list.php"; ?>
             </div>
             <div id="sections_list" data-tab-content>
-                <?php include __DIR__ . "/tabs/sections_list.php"; ?>
+                <?php include "tabs\sections_list.php"; ?>
             </div>
             <div id="schedule" data-tab-content>
-                <?php include __DIR__ . "/tabs/schedule.php"; ?>
+                <?php include "tabs\schedule.php"; ?>
             </div>
         </div>
     </body>

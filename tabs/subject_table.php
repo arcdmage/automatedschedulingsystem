@@ -319,7 +319,7 @@ async function saveSubject(btn) {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`${window.APP_BASE || ''}/tabs/actions/subject_update.php`, { method: 'POST', body: data });
+    const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
     const json = await res.json();
     if (json && json.success) {
       // reload listing (use rows-per-page selector or fallback)
@@ -355,7 +355,7 @@ async function deleteSubject(btn) {
   btn.disabled = true;
 
   try {
-    const res = await fetch(`${window.APP_BASE || ''}/tabs/actions/subject_update.php`, { method: 'POST', body: data });
+    const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
     const json = await res.json();
     if (json && json.success) {
       row.style.transition = 'opacity .2s, transform .2s';

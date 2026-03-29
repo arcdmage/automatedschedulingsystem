@@ -1,9 +1,5 @@
 
-<link rel="stylesheet" href="<?= htmlspecialchars(
-    app_url("styles.css"),
-    ENT_QUOTES,
-    "UTF-8",
-) ?>">
+<link rel="stylesheet" href="/mainscheduler/styles.css">
 
 <h1 id="home-title" class="home-title">SJNHS Administrative Panel</h1>
 

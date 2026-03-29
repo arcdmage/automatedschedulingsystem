@@ -2,30 +2,24 @@
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/schedule_helpers.php";
 require_once __DIR__ . "/../lib/subject_duration_helpers.php";
-$appBase = app_url();
 $sections_query = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.school_year, s.semester,
                    CONCAT(f.lname, ', ', f.fname) AS adviser_name
                    FROM sections s
                    LEFT JOIN faculty f ON s.adviser_id = f.faculty_id
                    ORDER BY s.grade_level, s.section_name";
 $sections_result = $conn->query($sections_query);
-$selected_section = isset($_GET["section_id"])
-    ? intval($_GET["section_id"])
-    : null;
+$selected_section = isset($_GET["section_id"]) ? intval($_GET["section_id"]) : null;
 $requirements_count = 0;
 $total_minutes = 0;
 if ($selected_section) {
-    $count_query =
-        "SELECT hours_per_week FROM subject_requirements WHERE section_id = ?";
+    $count_query = "SELECT hours_per_week FROM subject_requirements WHERE section_id = ?";
     $stmt = $conn->prepare($count_query);
     $stmt->bind_param("i", $selected_section);
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
         $requirements_count++;
-        $total_minutes += weekly_subject_duration_minutes(
-            $row["hours_per_week"] ?? 0,
-        );
+        $total_minutes += weekly_subject_duration_minutes($row["hours_per_week"] ?? 0);
     }
     $stmt->close();
 }
@@ -46,11 +40,7 @@ if ($selected_section) {
   <select id="section-select" onchange="loadSection()">
     <option value="">-- Choose a Section --</option>
     <?php while ($section = $sections_result->fetch_assoc()): ?>
-      <option value="<?php echo $section[
-          "section_id"
-      ]; ?>" <?php echo $selected_section == $section["section_id"]
-    ? "selected"
-    : ""; ?>>
+      <option value="<?php echo $section["section_id"]; ?>" <?php echo $selected_section == $section["section_id"] ? "selected" : ""; ?>>
         <?php echo htmlspecialchars(
             $section["grade_level"] .
                 " - " .
@@ -82,9 +72,7 @@ if ($selected_section) {
     </div>
     <div class="info-card">
       <h3>Total Time/Week</h3>
-      <div class="big-number"><?php echo htmlspecialchars(
-          format_subject_duration_minutes($total_minutes),
-      ); ?></div>
+      <div class="big-number"><?php echo htmlspecialchars(format_subject_duration_minutes($total_minutes)); ?></div>
       <p>time to schedule</p>
     </div>
     <div class="info-card warning">
@@ -125,11 +113,7 @@ if ($selected_section) {
 <div class="alert alert-warning">
   <strong>No subjects configured.</strong>
   <p>You need to configure subject requirements before generating schedules.</p>
-  <p><a href="<?= htmlspecialchars(
-      app_url("tabs/schedule_setup.php") . "?section_id=" . $selected_section,
-      ENT_QUOTES,
-      "UTF-8",
-  ) ?>" style="color: #856404; text-decoration: underline; font-weight: bold;">Go to Subject Setup</a></p>
+  <p><a href="/mainscheduler/tabs/schedule_setup.php?section_id=<?php echo $selected_section; ?>" style="color: #856404; text-decoration: underline; font-weight: bold;">Go to Subject Setup</a></p>
 </div>
   <?php endif; ?>
 <?php else: ?>
@@ -147,11 +131,6 @@ if ($selected_section) {
     </div>
   </div>
 </div>
-<script>window.APP_BASE = <?= json_encode($appBase) ?>;</script>
-<script src="<?= htmlspecialchars(
-    app_url("tabs/js/schedule_generate_conflicts.js"),
-    ENT_QUOTES,
-    "UTF-8",
-) ?>"></script>
+<script src="js/schedule_generate_conflicts.js"></script>
 </body>
 </html>

@@ -2,7 +2,6 @@
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/schedule_helpers.php";
 require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
-$appBase = app_url();
 ensure_relieve_tables($conn);
 
 $sections_query = "SELECT s.section_id, s.section_name, s.grade_level, s.track, s.school_year, s.semester,
@@ -349,7 +348,6 @@ function formatTime12Hour($time24)
 <?php endif; ?>
 
 <script>
-const APP_BASE = <?= json_encode($appBase) ?>;
 function loadSchedule() {
   const sec = document.getElementById('section-select').value;
   const week = document.getElementById('week-select').value;
@@ -368,7 +366,7 @@ function deleteSchedules() {
     formData.append('end_date', endDate);
     if (force) formData.append('force', '1');
 
-    fetch(`${APP_BASE}/tabs/actions/schedule_delete_auto.php`, {
+    fetch('/mainscheduler/tabs/actions/schedule_delete_auto.php', {
       method: 'POST',
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
       body: formData

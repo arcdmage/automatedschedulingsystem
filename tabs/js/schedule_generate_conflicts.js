@@ -1,5 +1,4 @@
 (function () {
-  const APP_BASE = window.APP_BASE || "";
   window.openGeneratedSchedules = function (sectionId) {
     try {
       if (
@@ -15,8 +14,7 @@
     }
 
     window.location.href =
-      APP_BASE +
-      "/tabs/schedule_view.php?section_id=" +
+      "/mainscheduler/tabs/schedule_view.php?section_id=" +
       encodeURIComponent(sectionId || "");
     return false;
   };
@@ -37,18 +35,16 @@
   const modalCancelBtn = $id("modalCancelBtn");
   const modalConfirmBtn = $id("modalConfirmBtn");
 
-  window.loadSection =
-    window.loadSection ||
-    function () {
-      const el = $id("section-select");
-      if (el) {
-        const sectionId = el.value;
-        if (sectionId) {
-          window.location.href =
-            APP_BASE + "/tabs/schedule_generate.php?section_id=" + sectionId;
-        }
+  window.loadSection = window.loadSection || function () {
+    const el = $id("section-select");
+    if (el) {
+      const sectionId = el.value;
+      if (sectionId) {
+        window.location.href =
+          "/mainscheduler/tabs/schedule_generate.php?section_id=" + sectionId;
       }
-    };
+    }
+  };
 
   function addLog(message, type = "info") {
     if (!progressLog) return;
@@ -142,8 +138,8 @@
 
     const isRandom = randomToggle ? randomToggle.checked : false;
     const endpoint = isRandom
-      ? APP_BASE + "/tabs/actions/schedule_random_generate.php"
-      : APP_BASE + "/tabs/actions/schedule_auto_generate.php";
+      ? "/mainscheduler/tabs/actions/schedule_random_generate.php"
+      : "/mainscheduler/tabs/actions/schedule_auto_generate.php";
 
     const fd = new FormData(form);
     if (confirmForce) fd.set("confirm_force", "1");
@@ -165,27 +161,18 @@
       setProgress(30, "Checking conflicts...");
       addLog("Sending generation request to server...", "info");
 
-      const resp = await fetch(endpoint, {
-        method: "POST",
-        body: fd,
-        credentials: "same-origin",
-      });
+      const resp = await fetch(endpoint, { method: "POST", body: fd, credentials: "same-origin" });
       const text = await resp.text();
-      if (!text || text.trim() === "")
-        throw new Error("Empty response from server.");
+      if (!text || text.trim() === "") throw new Error("Empty response from server.");
       const json = JSON.parse(text);
 
       if (json && json.needs_confirmation) {
         addLog("Conflicts detected - awaiting user confirmation...", "warning");
         setProgress(45, "Conflicts detected");
-        showConflictModal(
-          json.conflict_details || [],
-          json.internal_conflicts_count || 0,
-          function () {
-            addLog("User confirmed overwrite; proceeding...", "info");
-            callGenerator(1);
-          },
-        );
+        showConflictModal(json.conflict_details || [], json.internal_conflicts_count || 0, function () {
+          addLog("User confirmed overwrite; proceeding...", "info");
+          callGenerator(1);
+        });
         return json;
       }
 
@@ -197,10 +184,7 @@
       if (json.success) {
         setProgress(100, "Completed");
         addLog("Generation completed successfully.", "success");
-        addLog(
-          `Created ${json.schedules_created || 0} schedule entries`,
-          "success",
-        );
+        addLog(`Created ${json.schedules_created || 0} schedule entries`, "success");
         if (resultMessage) {
           const sectionId = new FormData(form).get("section_id") || "";
           resultMessage.innerHTML = `
@@ -230,10 +214,7 @@
     } finally {
       if (generateBtn) {
         generateBtn.disabled = false;
-        generateBtn.textContent =
-          randomToggle && randomToggle.checked
-            ? "Generate Random Schedule"
-            : "Generate Weekly Template";
+        generateBtn.textContent = randomToggle && randomToggle.checked ? "Generate Random Schedule" : "Generate Weekly Template";
       }
     }
   }
@@ -242,9 +223,7 @@
     if (randomToggle) {
       randomToggle.addEventListener("change", function () {
         if (generateBtn) {
-          generateBtn.textContent = this.checked
-            ? "Generate Random Schedule"
-            : "Generate Weekly Template";
+          generateBtn.textContent = this.checked ? "Generate Random Schedule" : "Generate Weekly Template";
         }
       });
     }

@@ -6,8 +6,6 @@
  * - respond JSON or redirect
  */
 
-require_once __DIR__ . "/../../lib/app_path.php";
-
 function is_ajax_request(): bool
 {
     return !empty($_SERVER["HTTP_X_REQUESTED_WITH"]) &&
@@ -20,7 +18,8 @@ function get_return_url(): string
     $candidate =
         $_POST["return_url"] ??
         ($_GET["return_url"] ??
-            ($_SERVER["HTTP_REFERER"] ?? app_url("tabs/schedule_view.php")));
+            ($_SERVER["HTTP_REFERER"] ??
+                "/mainscheduler/tabs/schedule_view.php"));
     // basic sanitize: allow only internal paths (no protocol/host)
     if (filter_var($candidate, FILTER_VALIDATE_URL)) {
         // convert to path-only if host matches or fallback to home
