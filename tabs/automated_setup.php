@@ -2,9 +2,15 @@
 require_once __DIR__ . "/../db_connect.php";
 require_once __DIR__ . "/../lib/scheduler_staff_helpers.php";
 
-$selected_section = isset($_GET["section_id"]) ? intval($_GET["section_id"]) : null;
-$sections_result = $conn->query("SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name");
-$subjects_result = $conn->query("SELECT subject_id, subject_name FROM subjects ORDER BY subject_name");
+$selected_section = isset($_GET["section_id"])
+    ? intval($_GET["section_id"])
+    : null;
+$sections_result = $conn->query(
+    "SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name",
+);
+$subjects_result = $conn->query(
+    "SELECT subject_id, subject_name FROM subjects ORDER BY subject_name",
+);
 $faculty_rows = available_faculty_rows($conn);
 
 $requirements = [];
@@ -16,7 +22,7 @@ if ($selected_section) {
          JOIN subjects s ON sr.subject_id = s.subject_id
          LEFT JOIN faculty f ON sr.faculty_id = f.faculty_id
          WHERE sr.section_id = ?
-         ORDER BY s.subject_name"
+         ORDER BY s.subject_name",
     );
     $stmt->bind_param("i", $selected_section);
     $stmt->execute();
@@ -44,8 +50,19 @@ if ($selected_section) {
   <select id="section-select" onchange="handleSectionChange(this.value)">
     <option value="">-- Choose a Section --</option>
     <?php while ($section = $sections_result->fetch_assoc()): ?>
-      <option value="<?php echo $section['section_id']; ?>" <?php echo $selected_section == $section['section_id'] ? 'selected' : ''; ?>>
-        <?php echo htmlspecialchars($section['grade_level'] . ' - ' . $section['section_name'] . ' (' . $section['track'] . ')'); ?>
+      <option value="<?php echo $section[
+          "section_id"
+      ]; ?>" <?php echo $selected_section == $section["section_id"]
+    ? "selected"
+    : ""; ?>>
+        <?php echo htmlspecialchars(
+            $section["grade_level"] .
+                " - " .
+                $section["section_name"] .
+                " (" .
+                $section["track"] .
+                ")",
+        ); ?>
       </option>
     <?php endwhile; ?>
   </select>
@@ -63,9 +80,16 @@ if ($selected_section) {
         <label>Subject <span style="color:red">*</span></label>
         <select name="subject_id" required>
           <option value="">-- Select Subject --</option>
-          <?php $subjects_result->data_seek(0); while ($subject = $subjects_result->fetch_assoc()): ?>
-            <option value="<?php echo $subject['subject_id']; ?>"><?php echo htmlspecialchars($subject['subject_name']); ?></option>
-          <?php endwhile; ?>
+          <?php
+          $subjects_result->data_seek(0);
+          while ($subject = $subjects_result->fetch_assoc()): ?>
+            <option value="<?php echo $subject[
+                "subject_id"
+            ]; ?>"><?php echo htmlspecialchars(
+    $subject["subject_name"],
+); ?></option>
+          <?php endwhile;
+          ?>
         </select>
       </div>
       <div class="form-group">
@@ -73,7 +97,11 @@ if ($selected_section) {
         <select name="faculty_id">
           <option value="0">Auto-assign in Automated Generate</option>
           <?php foreach ($faculty_rows as $faculty): ?>
-            <option value="<?php echo $faculty['faculty_id']; ?>"><?php echo htmlspecialchars($faculty['lname'] . ', ' . $faculty['fname']); ?></option>
+            <option value="<?php echo $faculty[
+                "faculty_id"
+            ]; ?>"><?php echo htmlspecialchars(
+    $faculty["lname"] . ", " . $faculty["fname"],
+); ?></option>
           <?php endforeach; ?>
         </select>
       </div>
@@ -96,10 +124,16 @@ if ($selected_section) {
       <tbody>
         <?php foreach ($requirements as $req): ?>
           <tr>
-            <td><?php echo htmlspecialchars($req['subject_name'] ?? 'Unknown subject'); ?></td>
-            <td><?php echo htmlspecialchars($req['teacher_name'] ?? 'Auto-assign in Automated Generate'); ?></td>
+            <td><?php echo htmlspecialchars(
+                $req["subject_name"] ?? "Unknown subject",
+            ); ?></td>
+            <td><?php echo htmlspecialchars(
+                $req["teacher_name"] ?? "Auto-assign in Automated Generate",
+            ); ?></td>
             <td>
-              <button class="btn btn-danger" style="padding:5px 10px; font-size:12px;" onclick="deleteRequirement(<?php echo (int) $req['requirement_id']; ?>)">Delete</button>
+              <button class="btn btn-danger" style="padding:5px 10px; font-size:12px;" onclick="deleteRequirement(<?php echo (int) $req[
+                  "requirement_id"
+              ]; ?>)">Delete</button>
             </td>
           </tr>
         <?php endforeach; ?>
@@ -114,8 +148,18 @@ if ($selected_section) {
 <?php endif; ?>
 
 <script>
+function notifyParent(payload) {
+  try {
+    if (window.parent && window.parent !== window && typeof window.parent.notifyAutomatedStateChange === 'function') {
+      window.parent.notifyAutomatedStateChange(payload);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function handleSectionChange(value) {
-  if (!value) return;
+  notifyParent({ type: 'section-change', source: 'setup', sectionId: value || '' });
   window.location.href = '?section_id=' + encodeURIComponent(value);
 }
 
@@ -135,6 +179,7 @@ document.getElementById('automated-add-form')?.addEventListener('submit', async 
     if (json.default_time_slots_created) {
       alert('Subject added. Default time slots were created automatically for this section.');
     }
+    notifyParent({ type: 'requirements-updated', source: 'setup', sectionId: this.elements.section_id.value || '' });
     window.location.reload();
   } catch (error) {
     console.error(error);
@@ -155,6 +200,7 @@ async function deleteRequirement(id) {
     alert(json.message || 'Failed to delete subject.');
     return;
   }
+  notifyParent({ type: 'requirements-updated', source: 'setup', sectionId: document.getElementById('section-select')?.value || '' });
   window.location.reload();
 }
 </script>

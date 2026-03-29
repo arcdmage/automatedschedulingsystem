@@ -348,9 +348,20 @@ function formatTime12Hour($time24)
 <?php endif; ?>
 
 <script>
+function notifyParent(payload) {
+  try {
+    if (window.parent && window.parent !== window && typeof window.parent.notifyAutomatedStateChange === 'function') {
+      window.parent.notifyAutomatedStateChange(payload);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function loadSchedule() {
   const sec = document.getElementById('section-select').value;
   const week = document.getElementById('week-select').value;
+  notifyParent({ type: 'section-change', source: 'view', sectionId: sec || '' });
   if(sec) window.location.href = `?section_id=${sec}&week=${week}`;
 }
 

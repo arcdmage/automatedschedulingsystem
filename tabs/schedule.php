@@ -1,6 +1,5 @@
 <?php
-require_once __DIR__ . "/../db_connect.php";
-?>
+require_once __DIR__ . "/../db_connect.php"; ?>
 <link rel="stylesheet" href="/mainscheduler/tabs/css/schedule.css">
 
 <style>
@@ -103,6 +102,7 @@ require_once __DIR__ . "/../db_connect.php";
 }
 .schedule-pane {
   display: none;
+  position: relative;
 }
 .schedule-pane.active {
   display: block;
@@ -113,6 +113,52 @@ require_once __DIR__ . "/../db_connect.php";
   border: 0;
   border-radius: 10px;
   background: #ffffff;
+}
+.pane-loader {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border-radius: 10px;
+  background: rgba(248, 250, 252, 0.96);
+  color: #334155;
+  text-align: center;
+}
+.pane-loader.active {
+  display: flex;
+}
+.pane-loader-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  max-width: 280px;
+}
+.pane-loader-spinner {
+  width: 36px;
+  height: 36px;
+  border: 4px solid #dbeafe;
+  border-top-color: #16a34a;
+  border-radius: 50%;
+  animation: pane-spin 0.8s linear infinite;
+}
+.pane-loader-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.pane-loader-text {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+}
+@keyframes pane-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .card-section {
   background: white;
@@ -212,14 +258,35 @@ require_once __DIR__ . "/../db_connect.php";
   </div>
 
   <div id="pane-automated-setup" class="schedule-pane">
+    <div class="pane-loader" id="loader-automated-setup">
+      <div class="pane-loader-card">
+        <div class="pane-loader-spinner"></div>
+        <div class="pane-loader-title">Loading Automated Setup</div>
+        <div class="pane-loader-text">Fetching section subjects and automated scheduling options.</div>
+      </div>
+    </div>
     <iframe id="automated-setup-iframe" data-src="/mainscheduler/tabs/automated_setup.php" src="about:blank" loading="lazy" title="Automated Setup"></iframe>
   </div>
 
   <div id="pane-automated-generate" class="schedule-pane">
+    <div class="pane-loader" id="loader-automated-generate">
+      <div class="pane-loader-card">
+        <div class="pane-loader-spinner"></div>
+        <div class="pane-loader-title">Loading Automated Generate</div>
+        <div class="pane-loader-text">Preparing automated scheduling tools for this section.</div>
+      </div>
+    </div>
     <iframe id="automated-generate-iframe" data-src="/mainscheduler/tabs/automated_generate.php" src="about:blank" loading="lazy" title="Automated Generate"></iframe>
   </div>
 
   <div id="pane-automated-view" class="schedule-pane">
+    <div class="pane-loader" id="loader-automated-view">
+      <div class="pane-loader-card">
+        <div class="pane-loader-spinner"></div>
+        <div class="pane-loader-title">Loading Automated Schedules</div>
+        <div class="pane-loader-text">Retrieving the generated schedule view.</div>
+      </div>
+    </div>
     <iframe id="automated-view-iframe" data-src="/mainscheduler/tabs/schedule_view.php" src="about:blank" loading="lazy" title="Automated Schedule View"></iframe>
   </div>
 </div>
@@ -276,6 +343,7 @@ require_once __DIR__ . "/../db_connect.php";
   var currentAutomatedSecondary = 'setup';
   var currentManualSetupView = 'subject';
   var lastManualSetupSectionId = '';
+  var currentAutomatedSectionId = '';
 
   function paneId(primary, secondary) {
     return 'pane-' + primary + '-' + secondary;
@@ -289,8 +357,52 @@ require_once __DIR__ . "/../db_connect.php";
     return document.getElementById(iframeId(primary, secondary));
   }
 
+  function getPaneLoader(primary, secondary) {
+    return document.getElementById('loader-' + primary + '-' + secondary);
+  }
+
+  function setPaneLoading(primary, secondary, isLoading) {
+    const loader = getPaneLoader(primary, secondary);
+    if (!loader) return;
+    loader.classList.toggle('active', !!isLoading);
+  }
+
   function getActiveSecondary(primary) {
     return primary === 'manual' ? currentManualSecondary : currentAutomatedSecondary;
+  }
+
+  function getAutomatedSectionId() {
+    if (currentAutomatedSectionId) {
+      return currentAutomatedSectionId;
+    }
+    ['setup', 'generate', 'view'].some(function (secondary) {
+      const iframe = getIframe('automated', secondary);
+      if (!iframe || !iframe.src || iframe.src === 'about:blank') return false;
+      try {
+        const url = new URL(iframe.src, window.location.origin);
+        const sectionId = url.searchParams.get('section_id') || '';
+        if (sectionId) {
+          currentAutomatedSectionId = sectionId;
+          return true;
+        }
+      } catch (err) {
+        return false;
+      }
+      return false;
+    });
+    return currentAutomatedSectionId;
+  }
+
+  function buildAutomatedSrc(src) {
+    const automatedSectionId = getAutomatedSectionId();
+    if (!src) return src;
+    const url = new URL(src, window.location.origin);
+    if (automatedSectionId) {
+      url.searchParams.set('section_id', automatedSectionId);
+    } else {
+      url.searchParams.delete('section_id');
+    }
+    return url.pathname + url.search;
   }
 
   function getManualSetupSectionId() {
@@ -323,13 +435,20 @@ require_once __DIR__ . "/../db_connect.php";
         url.searchParams.set('section_id', sectionId);
         src = url.pathname + url.search;
       }
+    } else if (primary === 'automated') {
+      src = buildAutomatedSrc(src);
     }
 
     if (!src) return;
+    if (primary === 'automated') {
+      setPaneLoading(primary, secondary, true);
+    }
     if (!iframe.src || iframe.src === 'about:blank') {
       iframe.src = src;
     } else if (iframe.src !== new URL(src, window.location.origin).href) {
       iframe.src = src;
+    } else if (primary === 'automated') {
+      setPaneLoading(primary, secondary, false);
     }
   }
 
@@ -339,7 +458,29 @@ require_once __DIR__ . "/../db_connect.php";
     if (primary === 'manual' && secondary === 'setup') {
       getManualSetupSectionId();
     }
+    if (primary === 'automated') {
+      setPaneLoading(primary, secondary, false);
+    }
     iframe.src = 'about:blank';
+  }
+
+  function refreshAutomatedPane(secondary, options) {
+    const isActive = currentPrimaryMode === 'automated' && currentAutomatedSecondary === secondary;
+    unloadIframe('automated', secondary);
+    if (isActive && !(options && options.unloadOnly)) {
+      loadIframe('automated', secondary, options && options.forceUrl ? options.forceUrl : null);
+    }
+  }
+
+  function resetAutomatedDependents(source) {
+    if (source === 'setup') {
+      refreshAutomatedPane('generate');
+      refreshAutomatedPane('view');
+      return;
+    }
+    if (source === 'generate') {
+      refreshAutomatedPane('view');
+    }
   }
 
   function refreshSecondaryButtons(primary, secondary) {
@@ -430,6 +571,9 @@ require_once __DIR__ . "/../db_connect.php";
 
   window.openScheduleViewForSection = function (sectionId, preferredMode) {
     const primary = preferredMode === 'manual' ? 'manual' : 'automated';
+    if (primary === 'automated') {
+      currentAutomatedSectionId = sectionId ? String(sectionId) : '';
+    }
     switchPrimaryMode(primary);
     const iframe = getIframe(primary, 'view');
     if (!iframe) return;
@@ -437,6 +581,32 @@ require_once __DIR__ . "/../db_connect.php";
     const url = new URL(baseSrc, window.location.origin);
     if (sectionId) url.searchParams.set('section_id', sectionId);
     activatePane(primary, 'view', { forceUrl: url.pathname + url.search });
+  };
+
+  window.notifyAutomatedStateChange = function (payload) {
+    payload = payload || {};
+    const changeType = payload.type || '';
+    const sectionId = payload.sectionId ? String(payload.sectionId) : '';
+    const source = payload.source || '';
+
+    if (changeType === 'section-change') {
+      currentAutomatedSectionId = sectionId;
+      if (source !== 'setup') refreshAutomatedPane('setup');
+      if (source !== 'generate') refreshAutomatedPane('generate');
+      if (source !== 'view') refreshAutomatedPane('view');
+      return;
+    }
+
+    if (changeType === 'requirements-updated') {
+      if (sectionId) currentAutomatedSectionId = sectionId;
+      resetAutomatedDependents('setup');
+      return;
+    }
+
+    if (changeType === 'schedules-generated') {
+      if (sectionId) currentAutomatedSectionId = sectionId;
+      resetAutomatedDependents('generate');
+    }
   };
 
   window.loadCalendar = function () {
@@ -532,6 +702,13 @@ require_once __DIR__ . "/../db_connect.php";
     if (manualSetupIframe) {
       manualSetupIframe.addEventListener('load', function () { getManualSetupSectionId(); });
     }
+    ['setup', 'generate', 'view'].forEach(function (secondary) {
+      const iframe = getIframe('automated', secondary);
+      if (!iframe) return;
+      iframe.addEventListener('load', function () {
+        setPaneLoading('automated', secondary, false);
+      });
+    });
     switchPrimaryMode('manual');
   });
 

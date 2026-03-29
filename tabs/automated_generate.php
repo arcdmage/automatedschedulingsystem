@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . "/../db_connect.php";
-$sections_result = $conn->query("SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name");
-$selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : 0;
+$sections_result = $conn->query(
+    "SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name",
+);
+$selected_section = isset($_GET["section_id"])
+    ? intval($_GET["section_id"])
+    : 0;
 ?>
 <!DOCTYPE html>
 <html>
@@ -22,8 +26,19 @@ $selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : 0
       <select id="section-select" name="section_id" required>
         <option value="">-- Choose a Section --</option>
         <?php while ($section = $sections_result->fetch_assoc()): ?>
-          <option value="<?php echo $section['section_id']; ?>" <?php echo $selected_section === (int) $section['section_id'] ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($section['grade_level'] . ' - ' . $section['section_name'] . ' (' . $section['track'] . ')'); ?>
+          <option value="<?php echo $section[
+              "section_id"
+          ]; ?>" <?php echo $selected_section === (int) $section["section_id"]
+    ? "selected"
+    : ""; ?>>
+            <?php echo htmlspecialchars(
+                $section["grade_level"] .
+                    " - " .
+                    $section["section_name"] .
+                    " (" .
+                    $section["track"] .
+                    ")",
+            ); ?>
           </option>
         <?php endwhile; ?>
       </select>
@@ -40,6 +55,16 @@ $selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : 0
 </div>
 
 <script>
+function notifyParent(payload) {
+  try {
+    if (window.parent && window.parent !== window && typeof window.parent.notifyAutomatedStateChange === 'function') {
+      window.parent.notifyAutomatedStateChange(payload);
+    }
+  } catch (error) {
+    console.error(error);
+  }
+}
+
 function addLog(message, type) {
   const log = document.getElementById('progress-log');
   if (!log) return;
@@ -87,6 +112,7 @@ document.getElementById('automated-generate-form').addEventListener('submit', as
     setProgress(100, 'Completed');
     addLog('Automation completed.', 'success');
     addLog((json.schedules_created || 0) + ' schedules created.', 'success');
+    notifyParent({ type: 'schedules-generated', source: 'generate', sectionId: sectionId });
     if (Array.isArray(json.conflict_details) && json.conflict_details.length > 0) {
       json.conflict_details.forEach(item => {
         addLog((item.subject ? item.subject + ' - ' : '') + (item.day ? item.day + ': ' : '') + (item.message || 'Conflict'), 'warning');
@@ -124,6 +150,10 @@ function openView(sectionId) {
   window.location.href = '/mainscheduler/tabs/schedule_view.php?section_id=' + encodeURIComponent(sectionId || '');
   return false;
 }
+
+document.getElementById('section-select')?.addEventListener('change', function () {
+  notifyParent({ type: 'section-change', source: 'generate', sectionId: this.value || '' });
+});
 </script>
 </body>
 </html>
