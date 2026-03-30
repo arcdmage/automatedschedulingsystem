@@ -12,17 +12,17 @@
 <body>
   <header>
     <img src="images/schoollogo.png" alt="School Logo" class="school-logo">
-    
+
     <video class="bg-video" autoplay muted loop playsinline aria-hidden="true" poster="images/67529a37-f451-4bdd-b57b-73397f3121e2.jpg">
       <source src="images/1224.mp4" type="video/mp4">
     </video>
-    
+
     <h1 class="site-title">San Jose National Highschool Calendar</h1>
   </header>
   <main>
     <nav class="fptabstoenter">
       <ul>
-        <li><a href="index.php">Home</a></li> | <li><a href="frontpage.php">Front Page</a></li>
+        <li><a href="index.php">Enter</a></li> | <li><a href="frontpage.php">Front Page</a></li>
       </ul>
     </nav>
 

@@ -1,4 +1,4 @@
- <?php
+<?php
 $servername = "localhost"; // db address or host
 $database = "main"; // database name
 $username = "root"; // database username
@@ -9,6 +9,6 @@ $conn = new mysqli($servername, $username, $password, $database); // Create conn
 
 // Check connection
 if ($conn->connect_error) {
-  die("Connection failed: " . $conn->connect_error); // terminate script if connection fails
+    die("Connection failed: " . $conn->connect_error); // terminate script if connection fails
 }
-?> 
+?>

@@ -1,98 +1,527 @@
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/*body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: #f5f6fa;
+  color: #1e293b;
+  margin: 0;
+  padding: 0 0 48px;
+  font-size: 14px;
+}*/
+
+h1 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #111827;
+    margin: 24px 24px 4px;
+}
+
+h1 + p {
+    margin: 0 24px 20px;
+    color: #6b7280;
+    font-size: 13px;
+}
+
+.faculty-page {
+    max-width: auto;
+    margin: 40px auto 120px;
+    padding: 0 20px;
+    width: 100%;
+}
+
 .faculty-table-container {
-  margin-top: 20px;
-  background: #fff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: visible;
+    margin: 24px 0 16px;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    padding: 20px;
+}
+
+.table-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    border-bottom: 1px solid #f3f4f6;
+    gap: 16px;
+    flex-wrap: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box; /* ensure padding included in width calculations */
+    width: calc(
+        100% - 40px
+    ); /* match container inner width so toolbar aligns inside */
+    margin: 0 20px; /* align toolbar to the same inner padding as the container */
+}
+
+.table-toolbar-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 auto;
+}
+
+.toolbar-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #374151;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.search-input {
+    padding: 8px 12px 8px 32px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #111827;
+    background: #f9fafb
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")
+        no-repeat 10px center;
+    outline: none;
+    width: 200px;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+.search-input:focus {
+    border-color: #6b7280;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+    background-color: #fff;
 }
 
 .table-wrapper {
-  overflow-x: auto;
+    overflow-x: auto;
 }
 
 .faculty-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 16px;
+    min-width: 640px;
 }
 
-.faculty-table th, .faculty-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
+.faculty-table thead th {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    padding: 11px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    background: #fafafa;
+    white-space: nowrap;
 }
 
-.faculty-table th {
-  background-color: #4a90e2;
-  color: white;
+.faculty-table thead th:last-child {
+    text-align: right;
 }
 
-.faculty-table tr:nth-child(even) {
-  background-color: #f9f9f9;
+.faculty-table tbody tr {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background 0.1s;
 }
 
-.faculty-table tr:hover {
-  background-color: #f1f1f1;
+.faculty-table tbody tr:last-child {
+    border-bottom: none;
 }
 
-/* Pagination Styling */
-.pagination {
-  margin-top: 15px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px; /* Space between buttons */
+.faculty-table tbody tr:hover {
+    background: #fafafa;
 }
 
-.pagination button {
-  /* Adjust padding to make buttons smaller */
-  padding: 6px 12px; /* Vertical and horizontal padding */
-
-  /* Reduce font size for a more compact look */
-  font-size: 14px;
-
-  border: 1px solid #ddd; /* A subtle border */
-  background-color: #fff; /* A clean white background */
-  color: #4a90e2; /* Text color */
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  line-height: 1.2; /* Ensures text is vertically centered properly */
+.faculty-table td {
+    padding: 13px 16px;
+    color: #374151;
+    vertical-align: middle;
 }
 
-.pagination button:hover {
-  background-color: #f1f1f1; /* A slight hover effect */
-  border-color: #ccc;
+.faculty-table td:last-child {
+    text-align: right;
+    white-space: nowrap;
 }
 
-.pagination .active {
-  background-color: #4a90e2; /* Active page background color */
-  color: white; /* Active page text color */
-  border-color: #4a90e2;
+.id-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    color: #6b7280;
+    background: #f3f4f6;
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-family: monospace;
+}
+
+.name-cell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.name-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #e0f2fe;
+    color: #0369a1;
+    font-weight: 700;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.name-primary {
+    font-weight: 600;
+    color: #111827;
+    font-size: 13px;
+}
+
+.name-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
+}
+
+.name-toggle:hover {
+    text-decoration: underline;
+}
+
+.name-status {
+    margin-top: 6px;
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.name-meta-line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 4px;
+}
+
+.name-meta-line:first-child {
+    margin-top: 0;
+}
+
+.name-status .status-label {
+    margin-right: 6px;
+    font-weight: 600;
+}
+
+.edit-extra {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.name-secondary {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.gender-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.gender-female {
+    background: #fdf2f8;
+    color: #9d174d;
+}
+.gender-male {
+    background: #eff6ff;
+    color: #1e40af;
+}
+.gender-other {
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 3px 9px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.status-badge.empty {
+    background: #f9fafb;
+    color: #9ca3af;
+    font-style: italic;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background 0.12s;
+    white-space: nowrap;
+}
+
+.action-btn-edit {
+    background: #fff;
+    color: #374151;
+    border-color: #d1d5db;
+}
+.action-btn-edit:hover {
+    background: #f9fafb;
+}
+
+.action-btn-save {
+    background: #22c55e;
+    color: #fff;
+}
+.action-btn-save:hover {
+    background: #16a34a;
+}
+
+.action-btn-cancel {
+    background: #fff;
+    color: #6b7280;
+    border-color: #e5e7eb;
+}
+.action-btn-cancel:hover {
+    background: #f9fafb;
+}
+
+.action-btn-delete {
+    background: #fff;
+    color: #dc2626;
+    border-color: #fca5a5;
+}
+.action-btn-delete:hover {
+    background: #fef2f2;
+}
+
+.action-group {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.edit-input {
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #111827;
+    background: #fff;
+    outline: none;
+    width: 100%;
+    min-width: 80px;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+.edit-input:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.12);
+}
+
+.edit-select {
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #111827;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.15s;
+}
+.edit-select:focus {
+    border-color: #22c55e;
+}
+
+.faculty-table tbody tr.editing {
+    background: #f0fdf4;
 }
 
 .pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  flex-wrap: wrap; /* Allows items to wrap on smaller screens */
-  gap: 15px;      /* Adds space between items if they wrap */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0px 20px;
+    border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 50px;
+    padding-bottom: 0px;
 }
 
 .rows-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Space between the label and the dropdown */
-  font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #6b7280;
 }
 
-#rows-per-page {
-  padding: 5px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
+.rows-selector select {
+    padding: 5px 8px;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    font-size: 12px;
+    background: #fff;
+    color: #374151;
+    outline: none;
 }
 
-/* Adjust the pagination margin since the parent container now has it */
 .pagination {
-  margin-top: 0;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition:
+        background 0.12s,
+        border-color 0.12s,
+        color 0.12s;
+}
+
+.page-btn:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+}
+
+.page-btn.active {
+    background: #22c55e;
+    color: #fff;
+    border-color: #22c55e;
+    font-weight: 700;
+}
+
+/* right-side group inside toolbar */
+.table-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 0 0 auto;
+}
+
+/* Add Faculty button */
+.add-faculty-btn {
+    margin-top: -2px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 12px;
+    background: #22c55e;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        background 0.15s,
+        transform 0.12s;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    box-sizing: border-box;
+}
+
+.add-faculty-btn:hover {
+    background: #16a34a;
+    transform: scale(1.02);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #9ca3af;
+    font-size: 13px;
+}
+
+.faculty-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.faculty-search-input {
+    flex: 1;
+    padding: 7px 12px 7px 32px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #111827;
+    background: #f9fafb
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E")
+        no-repeat 10px center;
+    outline: none;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
+}
+
+.faculty-search-input:focus {
+    border-color: #6b7280;
+    box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+    background-color: #fff;
+}
+
+@media (max-width: 900px) {
+    .table-toolbar {
+        flex-wrap: wrap;
+    }
+    .table-toolbar-right {
+        width: 100%;
+        justify-content: flex-end;
+    }
+    .search-input {
+        width: 100%;
+    }
 }

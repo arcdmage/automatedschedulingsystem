@@ -1,139 +1,147 @@
 .pattern-config {
-  margin-top: 20px;
-  padding: 20px;
-  background: #f8f9fa;
-  border-radius: 8px;
+    margin-top: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
 }
 
 .pattern-grid {
-  display: grid;
-  grid-template-columns: auto repeat(5, 1fr);
-  gap: 5px;
-  margin-top: 15px;
-  background: white;
-  padding: 15px;
-  border-radius: 8px;
+    display: grid;
+    grid-template-columns: auto repeat(5, 1fr);
+    gap: 5px;
+    margin-top: 15px;
+    background: white;
+    padding: 15px;
+    border-radius: 8px;
 }
 
 .pattern-header {
-  font-weight: bold;
-  text-align: center;
-  padding: 10px;
-  background: #4CAF50;
-  color: white;
-  border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+    padding: 10px;
+    background: #4caf50;
+    color: white;
+    border-radius: 4px;
 }
 
 .pattern-time {
-  font-weight: bold;
-  padding: 10px;
-  background: #e8f5e9;
-  border-radius: 4px;
-  text-align: center;
-  font-size: 11px;
+    font-weight: bold;
+    padding: 10px;
+    background: #e8f5e9;
+    border-radius: 4px;
+    text-align: center;
+    font-size: 11px;
 }
 
 .pattern-cell {
-  position: relative;
+    position: relative;
 }
 
 .pattern-checkbox {
-  width: 100%;
-  height: 50px;
-  border: 2px dashed #ddd;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s;
+    width: 100%;
+    height: 50px;
+    border: 2px dashed #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
 }
 
 .pattern-checkbox:hover {
-  border-color: #4CAF50;
-  background: #f1f8f4;
+    border-color: #4caf50;
+    background: #f1f8f4;
 }
 
 .pattern-checkbox.selected {
-  background: #4CAF50;
-  border-color: #4CAF50;
-  color: white;
-  font-weight: bold;
+    background: #4caf50;
+    border-color: #4caf50;
+    color: white;
+    font-weight: bold;
 }
 
 .pattern-checkbox.break-time {
-  background: #f5f5f5;
-  border-style: solid;
-  cursor: not-allowed;
-  color: #999;
+    background: #f5f5f5;
+    border-style: solid;
+    cursor: not-allowed;
+    color: #999;
 }
 
 .hours-summary {
-  background: #fff3cd;
-  padding: 10px 15px;
-  border-radius: 6px;
-  margin-top: 10px;
-  font-weight: bold;
+    background: #fff3cd;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+    font-weight: bold;
 }
 
 .modal {
-  display: none;
-  position: fixed;
-  z-index: 1000;
-  left: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-  overflow: auto;
-  background-color: rgba(0,0,0,0.4);
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto; 
 }
 
 .modal-content-large {
-  background-color: #fefefe;
-  margin: 2% auto;
-  padding: 0;
-  border: 1px solid #888;
-  width: 95%;
-  max-width: 1200px;
-  border-radius: 8px;
-  max-height: 90vh;
-  overflow-y: auto;
+    background-color: #fefefe;
+    margin: 2% auto;
+    padding: 0;
+    border: 1px solid #888;
+    width: 95%;
+    max-width: 1200px;
+    border-radius: 8px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .tab-buttons {
-  display: flex;
-  border-bottom: 2px solid #ddd;
-  background: #f8f9fa;
-  border-radius: 8px 8px 0 0;
-  overflow: hidden;
+    display: flex;
+    border-bottom: 2px solid #ddd;
+    background: #f8f9fa;
+    border-radius: 8px 8px 0 0;
+    overflow: hidden;
 }
 
 .tab-btn {
-  flex: 1;
-  padding: 15px;
-  border: none;
-  background: transparent;
-  cursor: pointer;
-  font-weight: bold;
-  color: #666;
-  transition: all 0.2s;
+    flex: 1;
+    padding: 15px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    font-weight: bold;
+    color: #666;
+    transition: all 0.2s;
 }
 
 .tab-btn:hover {
-  background: #e9ecef;
+    background: #e9ecef;
 }
 
 .tab-btn.active {
-  background: white;
-  color: #4CAF50;
-  border-bottom: 3px solid #4CAF50;
+    background: white;
+    color: #4caf50;
+    border-bottom: 3px solid #4caf50;
 }
 
 .tab-content {
-  display: none;
-  padding: 20px;
+    display: none;
+    padding: 20px;
 }
 
 .tab-content.active {
-  display: block;
+    display: block;
+}
+
+/* The top-level Schedule nav now owns the time-slot entry point. */
+.page-header > div[style*="justify-content:space-between"] {
+    display: block !important;
+}
+
+.page-header > div[style*="justify-content:space-between"] > a.btn-secondary {
+    display: none !important;
 }

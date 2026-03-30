@@ -1,5 +1,15 @@
 <?php
-require_once(__DIR__ . '/../db_connect.php');
+require_once __DIR__ . "/../db_connect.php";
+
+$faculty_options = [];
+$faculty_query = $conn->query(
+    "SELECT DISTINCT lname AS name FROM faculty WHERE lname <> '' ORDER BY lname",
+);
+if ($faculty_query) {
+    while ($faculty = $faculty_query->fetch_assoc()) {
+        $faculty_options[] = $faculty["name"];
+    }
+}
 ?>
 <!--copied from faculty_member.php just re-configured.-->
 <!DOCTYPE html>
@@ -12,8 +22,6 @@ require_once(__DIR__ . '/../db_connect.php');
 
 <body>
 
-<h1>List of Subjects</h1>
-<p>Shows the list of subjects, categorized by grade level and STRAND.</p>
 
 <!-- Subject Table Section -->
 <div class="subject-table-container">
@@ -22,40 +30,44 @@ require_once(__DIR__ . '/../db_connect.php');
   </div>
 </div>
 
-<!-- Add Subject Button -->
-<button onclick="document.getElementById('id02').style.display='block'" class="add-subject-btn">Add Subject</button>
+
 
 <!-- Modal -->
 <div id="id02" class="modal">
   <form id="subject-form" class="modal-content animate" action="/mainscheduler/tabs/actions/subject_create.php" method="post">
     <div class="imgcontainer">
-      <span onclick="document.getElementById('id02').style.display='none'" class="close" title="Close">&times;</span>
-      <h2>Add Subject</h2>
+      <span onclick="closeSubjectModal()" class="close" title="Close">&times;</span>
+      <h2 id="subject-modal-title">Add Subject</h2>
     </div>
 
     <div class="container">
-      <label for="subject_name"><b>Subject Name</b></label>
-      <input type="text" placeholder="Subject Name" name="subject_name" required>
+      <!-- Hidden ID for edit operations -->
+      <input type="hidden" name="subject_id" id="subject_id" value="">
 
-      <label for="special"><b>In Specialization</b></label> <!--Make this a drop down outputting the choices as the list of teachers in the main faculty database.-->
-      <input type="text" placeholder="In Specialization" name="special" required>
+      <label for="subject_name"><b>Subject Name</b></label>
+      <input type="text" placeholder="Subject Name" name="subject_name" id="subject_name" required>
+
+      <label for="special"><b>Faculty</b></label>
+      <select name="special" id="special" class="faculty-multi" multiple required>
+        <option value="">-- Select Faculty --</option>
+        <?php foreach ($faculty_options as $faculty_name): ?>
+          <option value="<?= htmlspecialchars(
+              $faculty_name,
+          ) ?>"><?= htmlspecialchars($faculty_name) ?></option>
+        <?php endforeach; ?>
+      </select>
+      <small style="display:block;color:#6b7280;margin-top:6px;">Hold Ctrl (Windows) or Command (Mac) to select multiple.</small>
 
       <label><b>Grade Level</b></label><br>
-      <label><input type="radio" name="grade_level" value="11" required> Grade 11</label>
-      <label><input type="radio" name="grade_level" value="12"> Grade 12</label>
-      <br><br>
-      <label><b>Strand</b></label><br>
-      <label><input type="radio" name="strand" value="HUMMS" required> HUMMS</label>
-      <label><input type="radio" name="strand" value="STEM"> STEM</label>
-      <label><input type="radio" name="strand" value="ABM"> ABM</label>
-      <label><input type="radio" name="strand" value="GAS"> GAS</label> 
+      <label><input type="radio" name="grade_level" value="11" id="grade_level_11" required> Grade 11</label>
+      <label><input type="radio" name="grade_level" value="12" id="grade_level_12"> Grade 12</label>
       <br><br>
 
-      <button type="submit">Create</button>
+      <button type="submit" id="subject-form-submit">Create</button>
     </div>
 
     <div class="container" style="background-color:#f1f1f1">
-      <button type="button" onclick="document.getElementById('id02').style.display='none'" class="cancelbtn">Cancel</button>
+      <button type="button" onclick="closeSubjectModal()" class="cancelbtn">Cancel</button>
     </div>
   </form>
 </div>
@@ -64,9 +76,180 @@ require_once(__DIR__ . '/../db_connect.php');
 document.addEventListener("DOMContentLoaded", function() {
   const tableContent = document.getElementById("subject-table-content");
   const defaultLimit = 5;
+  let subjectSearchTerm = '';
+  let subjectSearchTimer = null;
+  let shouldRestoreSubjectSearchFocus = false;
 
-  function loadSubjectPage(page = 1, limit = defaultLimit) {
-    const url = `/mainscheduler/tabs/subject_table.php?page=${page}&limit=${limit}`;
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function closeFacultyPickerPopup(wrapper) {
+    if (!wrapper) return;
+    wrapper.classList.remove('open');
+  }
+
+  function closeAllFacultyPickerPopups(exceptWrapper = null) {
+    document.querySelectorAll('.faculty-picker.open').forEach(wrapper => {
+      if (wrapper !== exceptWrapper) {
+        closeFacultyPickerPopup(wrapper);
+      }
+    });
+  }
+
+  function syncFacultyPickerSummary(wrapper, count) {
+    const summary = wrapper.querySelector('.faculty-picker-summary');
+    const triggerText = wrapper.querySelector('.faculty-picker-trigger-text');
+    if (!summary) return;
+    const text = count > 0
+      ? `${count} faculty selected`
+      : 'No faculty selected';
+    summary.textContent = text;
+    if (triggerText) {
+      triggerText.textContent = text;
+    }
+  }
+
+  function buildSearchableFacultyPicker(select) {
+    if (!select || select.dataset.searchablePickerReady === '1') {
+      return;
+    }
+
+    const options = Array.from(select.options)
+      .filter(option => option.value !== '')
+      .map(option => ({
+        value: option.value,
+        label: option.textContent.trim()
+      }));
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'faculty-picker';
+    if (select.classList.contains('e-field')) {
+      wrapper.classList.add('e-field');
+      wrapper.style.display = 'none';
+    }
+    wrapper.innerHTML = `
+      <button type="button" class="faculty-picker-trigger">
+        <span class="faculty-picker-trigger-text"></span>
+        <span class="faculty-picker-trigger-caret">v</span>
+      </button>
+      <div class="faculty-picker-popup">
+        <input type="text" class="faculty-picker-search" placeholder="Search faculty...">
+        <div class="faculty-picker-summary"></div>
+        <div class="faculty-picker-list"></div>
+      </div>
+    `;
+
+    const list = wrapper.querySelector('.faculty-picker-list');
+    list.innerHTML = options.map(option => `
+      <label class="faculty-picker-item" data-label="${escapeHtml(option.label.toLowerCase())}">
+        <input type="checkbox" value="${escapeHtml(option.value)}">
+        <span>${escapeHtml(option.label)}</span>
+      </label>
+    `).join('');
+
+    const syncFromSelect = () => {
+      const selectedValues = new Set(
+        Array.from(select.selectedOptions)
+          .map(option => option.value)
+          .filter(Boolean)
+      );
+
+      wrapper.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = selectedValues.has(checkbox.value);
+      });
+
+      syncFacultyPickerSummary(wrapper, selectedValues.size);
+    };
+
+    wrapper.addEventListener('change', event => {
+      if (event.target.matches('input[type="checkbox"]')) {
+        const selectedValues = new Set(
+          Array.from(wrapper.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(checkbox => checkbox.value)
+        );
+
+        Array.from(select.options).forEach(option => {
+          option.selected = option.value !== '' && selectedValues.has(option.value);
+        });
+
+        syncFacultyPickerSummary(wrapper, selectedValues.size);
+      }
+    });
+
+    const trigger = wrapper.querySelector('.faculty-picker-trigger');
+    const searchInput = wrapper.querySelector('.faculty-picker-search');
+
+    trigger.addEventListener('click', event => {
+      event.preventDefault();
+      event.stopPropagation();
+      const willOpen = !wrapper.classList.contains('open');
+      closeAllFacultyPickerPopups(wrapper);
+      wrapper.classList.toggle('open', willOpen);
+      if (willOpen && searchInput) {
+        searchInput.focus();
+      }
+    });
+
+    searchInput.addEventListener('input', event => {
+      const query = event.target.value.trim().toLowerCase();
+      wrapper.querySelectorAll('.faculty-picker-item').forEach(item => {
+        const haystack = item.getAttribute('data-label') || '';
+        item.style.display = query !== '' && !haystack.includes(query) ? 'none' : 'flex';
+      });
+    });
+
+    select.classList.add('faculty-multi-enhanced');
+    select.style.display = 'none';
+    select.insertAdjacentElement('afterend', wrapper);
+    select.dataset.searchablePickerReady = '1';
+    select._syncFacultyPicker = syncFromSelect;
+    syncFromSelect();
+  }
+
+  function initSearchableFacultyPickers(scope = document) {
+    scope.querySelectorAll('select[multiple].faculty-multi').forEach(buildSearchableFacultyPicker);
+  }
+
+  function refreshSearchableFacultyPickers(scope = document) {
+    scope.querySelectorAll('select[multiple].faculty-multi').forEach(select => {
+      if (typeof select._syncFacultyPicker === 'function') {
+        select._syncFacultyPicker();
+      }
+      const search = select.parentElement?.querySelector('.faculty-picker-search')
+        || select.nextElementSibling?.querySelector?.('.faculty-picker-search');
+      if (search) {
+        search.value = '';
+      }
+      const picker = select.nextElementSibling;
+      if (picker && picker.classList.contains('faculty-picker')) {
+        picker.querySelectorAll('.faculty-picker-item').forEach(item => {
+          item.style.display = 'flex';
+        });
+        closeFacultyPickerPopup(picker);
+      }
+    });
+  }
+
+  window.initSearchableFacultyPickers = initSearchableFacultyPickers;
+  window.refreshSearchableFacultyPickers = refreshSearchableFacultyPickers;
+  window.closeAllFacultyPickerPopups = closeAllFacultyPickerPopups;
+
+  function loadSubjectPage(page = 1, limit = defaultLimit, search = subjectSearchTerm) {
+    subjectSearchTerm = search || '';
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit)
+    });
+    if (subjectSearchTerm) {
+      params.set('search', subjectSearchTerm);
+    }
+    const url = `/mainscheduler/tabs/subject_table.php?${params.toString()}`;
 
     fetch(url)
       .then(response => {
@@ -77,43 +260,237 @@ document.addEventListener("DOMContentLoaded", function() {
       })
       .then(data => {
         tableContent.innerHTML = data;
+        initSearchableFacultyPickers(tableContent);
+        if (shouldRestoreSubjectSearchFocus) {
+          const searchInput = document.getElementById('subject-search-input');
+          if (searchInput) {
+            const cursorPos = searchInput.value.length;
+            searchInput.focus();
+            searchInput.setSelectionRange(cursorPos, cursorPos);
+          }
+        }
       })
       .catch(error => {
         console.error("Error loading data:", error);
         tableContent.innerHTML = "<p style='color:red; text-align:center;'>Error loading subject data. Please try again later.</p>";
+      })
+      .finally(() => {
+        shouldRestoreSubjectSearchFocus = false;
       });
   }
 
-  // Handle form submission with AJAX
+  // Expose global loader so other code and inline actions can refresh the subject list.
+  // Mirrors the pattern used in the Faculty list.
+  // Expose globally so inline onclick handlers in the injected HTML can trigger a reload
+  window.loadSubjectPage = loadSubjectPage;
+
+  // Move inline edit handlers to the wrapper so they exist before the fragment is injected.
+  // These mirror the handlers previously defined inside the injected fragment so that
+  // inline Edit/Save/Delete work immediately after the fragment HTML is inserted.
+  window.handleSubjectSearch = function(q) {
+    subjectSearchTerm = (q || '').trim();
+    const limit = document.getElementById('rows-per-page')?.value || defaultLimit;
+    if (subjectSearchTimer) {
+      clearTimeout(subjectSearchTimer);
+    }
+    subjectSearchTimer = setTimeout(() => {
+      shouldRestoreSubjectSearchFocus = true;
+      loadSubjectPage(1, limit, subjectSearchTerm);
+    }, 300);
+  };
+
+  window.toggleSubjectFaculty = function(btn) {
+    const wrapper = btn.closest('td');
+    if (!wrapper) return;
+    const full = wrapper.querySelector('.faculty-full');
+    if (!full) return;
+    full.style.display = full.style.display === 'none' || full.style.display === '' ? 'block' : 'none';
+  };
+
+  /* Inline edit behavior for subjects (mirrors faculty inline editing) */
+  window.startEditSubject = function(btn) {
+    const row = btn.closest('tr');
+    row.classList.add('editing');
+    // hide view elements, show edit inputs/actions
+    row.querySelectorAll('.v-field, .v-name, .v-actions').forEach(el => el.style.display = 'none');
+    row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = '');
+    const nameDiv = row.querySelector('.e-name');
+    if (nameDiv) nameDiv.style.display = 'block';
+    refreshSearchableFacultyPickers(row);
+  };
+
+  window.cancelEditSubject = function(btn) {
+    const row = btn.closest('tr');
+    row.classList.remove('editing');
+    row.querySelectorAll('.v-field, .v-name, .v-actions').forEach(el => el.style.display = '');
+    row.querySelectorAll('.e-field, .e-name, .e-actions').forEach(el => el.style.display = 'none');
+    const nameDiv = row.querySelector('.e-name');
+    if (nameDiv) nameDiv.style.display = 'none';
+  };
+
+  window.saveSubject = async function(btn) {
+    const row = btn.closest('tr');
+    const id = row.getAttribute('data-id');
+    const data = new FormData();
+    data.append('subject_id', id);
+
+    // collect editable inputs from the row
+    row.querySelectorAll('.e-field, .e-name input, .e-name select').forEach(el => {
+      if (!el.name) return;
+      if (el.tagName === 'SELECT' && el.multiple) {
+        const values = Array.from(el.selectedOptions).map(opt => opt.value).filter(v => v);
+        data.append('special', values.join(', '));
+        return;
+      }
+      data.append(el.name, el.value);
+    });
+
+    const orig = btn.innerHTML;
+    btn.textContent = 'Saving…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+      const json = await res.json();
+      if (json && json.success) {
+        // reload listing (use rows-per-page selector or fallback)
+        if (typeof loadSubjectPage === 'function') {
+          const limit = document.getElementById('rows-per-page')?.value || 5;
+          loadSubjectPage(1, limit);
+        } else {
+          window.location.reload();
+        }
+      } else {
+        alert('Error: ' + (json && json.message ? json.message : 'Unknown error'));
+        btn.innerHTML = orig;
+        btn.disabled = false;
+      }
+    } catch (e) {
+      console.error('Save error:', e);
+      alert('Error saving subject.');
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  };
+
+  window.deleteSubject = async function(btn) {
+    if (!confirm('Delete this subject? This cannot be undone.')) return;
+    const row = btn.closest('tr');
+    const subjectId = row.getAttribute('data-id');
+    const data = new FormData();
+    data.append('subject_id', subjectId);
+    data.append('action', 'delete');
+
+    const orig = btn.innerHTML;
+    btn.textContent = 'Deleting…';
+    btn.disabled = true;
+
+    try {
+      const res = await fetch('/mainscheduler/tabs/actions/subject_update.php', { method: 'POST', body: data });
+      const json = await res.json();
+      if (json && json.success) {
+        row.style.transition = 'opacity .2s, transform .2s';
+        row.style.opacity = '0';
+        row.style.transform = 'translateX(8px)';
+        setTimeout(() => {
+          if (typeof loadSubjectPage === 'function') {
+            const limit = document.getElementById('rows-per-page')?.value || 5;
+            loadSubjectPage(1, limit);
+          } else {
+            window.location.reload();
+          }
+        }, 220);
+      } else {
+        alert('Delete failed: ' + (json && json.message ? json.message : 'Unknown'));
+        btn.innerHTML = orig;
+        btn.disabled = false;
+      }
+    } catch (err) {
+      console.error('Delete error', err);
+      alert('Error deleting subject');
+      btn.innerHTML = orig;
+      btn.disabled = false;
+    }
+  };
+
+  // Handle form submission with AJAX (supports both create and update)
   const form = document.getElementById('subject-form');
-  
+
+  function closeSubjectModal() {
+    document.getElementById('id02').style.display = 'none';
+    form.reset();
+    refreshSearchableFacultyPickers(form);
+    document.getElementById('subject_id').value = '';
+    document.getElementById('subject-modal-title').textContent = 'Add Subject';
+    document.getElementById('subject-form-submit').textContent = 'Create';
+  }
+
+  window.closeSubjectModal = closeSubjectModal;
+
   if (form) {
     form.addEventListener("submit", function(e) {
       e.preventDefault(); // Prevent page reload
-      e.stopPropagation(); // Stop event bubbling
-      
-      console.log("Form submitted via AJAX");
-      
+      e.stopPropagation();
+
       const formData = new FormData(form);
-      
-      fetch("/mainscheduler/tabs/actions/subject_create.php", {
-        method: "POST",
+      const specialSelect = form.querySelector('#special');
+      if (specialSelect && specialSelect.multiple) {
+        const values = Array.from(specialSelect.selectedOptions).map(opt => opt.value).filter(v => v);
+        if (values.length === 0) {
+          alert('Please select at least one faculty.');
+          return;
+        }
+        formData.set('special', values.join(', '));
+      }
+      const subjectId = formData.get('subject_id');
+      const isEdit = subjectId && subjectId !== '';
+
+      const endpoint = isEdit
+        ? '/mainscheduler/tabs/actions/subject_update.php'
+        : '/mainscheduler/tabs/actions/subject_create.php';
+
+      // Provide user feedback
+      const submitBtn = document.getElementById('subject-form-submit');
+      const origText = submitBtn ? submitBtn.textContent : null;
+      if (submitBtn) { submitBtn.textContent = isEdit ? 'Saving…' : 'Creating…'; submitBtn.disabled = true; }
+
+      fetch(endpoint, {
+        method: 'POST',
         body: formData
       })
-      .then(response => response.text())
-      .then(data => {
-        console.log("Subject added successfully:", data);
-        alert("Subject added successfully!");
-        document.getElementById('id02').style.display = 'none';
-        form.reset();
-        loadSubjectPage(1, defaultLimit);
+      .then(res => {
+        // prefer json response; if server returns text, try to parse
+        return res.json ? res.json() : res.text();
+      })
+      .then(resp => {
+        // If server returned plain text (legacy), consider it success
+        const success = resp && (resp.success === true || typeof resp === 'string');
+        if (success) {
+          alert(isEdit ? 'Subject updated successfully!' : 'Subject added successfully!');
+          closeSubjectModal();
+          const limit = parseInt(document.getElementById('rows-per-page')?.value || defaultLimit, 10);
+          if (!isEdit && resp && typeof resp === 'object') {
+            subjectSearchTerm = '';
+            const subjectPosition = parseInt(resp.subject_position || 1, 10);
+            const targetPage = subjectPosition > 0 ? Math.ceil(subjectPosition / limit) : 1;
+            loadSubjectPage(targetPage, limit, '');
+          } else {
+            loadSubjectPage(1, limit, subjectSearchTerm);
+          }
+        } else {
+          const msg = (resp && resp.message) ? resp.message : 'Unknown error';
+          alert('Error: ' + msg);
+        }
       })
       .catch(error => {
-        console.error("Error adding subject:", error);
-        alert("Error adding subject. Please try again.");
+        console.error('Error saving subject:', error);
+        alert('Error saving subject. Please try again.');
+      })
+      .finally(() => {
+        if (submitBtn) { submitBtn.textContent = origText; submitBtn.disabled = false; }
       });
-      
-      return false; // Extra prevention
+
+      return false;
     });
   }
 
@@ -122,7 +499,7 @@ document.addEventListener("DOMContentLoaded", function() {
       const pageNum = event.target.getAttribute("data-page");
       const limit = document.getElementById('rows-per-page').value;
       if (pageNum) {
-        loadSubjectPage(pageNum, limit);
+        loadSubjectPage(pageNum, limit, subjectSearchTerm);
       }
     }
   });
@@ -130,11 +507,18 @@ document.addEventListener("DOMContentLoaded", function() {
   tableContent.addEventListener('change', function(event) {
     if (event.target.matches('#rows-per-page')) {
       const newLimit = event.target.value;
-      loadSubjectPage(1, newLimit);
+      loadSubjectPage(1, newLimit, subjectSearchTerm);
     }
   });
 
   loadSubjectPage(1, defaultLimit);
+  initSearchableFacultyPickers(document);
+
+  document.addEventListener('click', function(event) {
+    if (!event.target.closest('.faculty-picker')) {
+      closeAllFacultyPickerPopups();
+    }
+  });
 });
 
 window.onclick = function(event) {

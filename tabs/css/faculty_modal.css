@@ -22,15 +22,20 @@
   border-radius: 6px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.2);
   overflow: hidden;
+  z-index: 15  ;
+  animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  transform-origin: top center;
+  will-change: transform, opacity;
 }
 
 /* header Bar */
 .imgcontainer {
-  background: #04AA6D;
+  background: #fafafa;
   color: white;
   padding: 12px 20px;
   position: relative;
   text-align: center;
+  z-index: 1000;
 }
 
 .imgcontainer h2 {
@@ -56,6 +61,14 @@
 /* Modal form content */
 .container {
   padding: 16px;
+}
+
+.container b {
+  font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
 }
 
 input[type=text],
@@ -98,4 +111,12 @@ button:hover {
 
 @media screen and (max-width: 420px) {
   .modal-content { width: 95%; }
+}
+
+
+@keyframes popIn {
+  0%   { opacity: 0; transform: scale(0.4) rotate(-2deg); }
+  60%  { opacity: 1; transform: scale(1.08) rotate(1deg); }
+  80%  { transform: scale(0.97) rotate(0deg); }
+  100% { opacity: 1; transform: scale(1) rotate(0deg); }
 }

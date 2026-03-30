@@ -1,105 +1,121 @@
 <?php
-// mainscheduler/tabs/actions/schedule_delete_auto.php
+/**
+ * schedule_delete_auto.php
+ *
+ * Deletes auto-generated schedule rows for a section.
+ *
+ * POST params:
+ *   section_id  (required)
+ *   start_date  (optional) - if provided, restricts deletion to date range
+ *   end_date    (optional) - if provided, restricts deletion to date range
+ *   force       (optional, '1') - delete ALL rows in range, not just auto-generated
+ */
+
+ini_set('display_errors', '0');
+ini_set('html_errors',    '0');
+ob_start();
+
+register_shutdown_function(function() {
+    $err = error_get_last();
+    if ($err && in_array($err['type'], [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR])) {
+        ob_end_clean();
+        if (!headers_sent()) header('Content-Type: application/json');
+        echo json_encode(['success' => false,
+            'message' => 'Fatal: ' . $err['message'] . ' (line ' . $err['line'] . ')']);
+    } else {
+        ob_end_flush();
+    }
+});
+
 session_start();
 require_once(__DIR__ . '/../../db_connect.php');
-require_once(__DIR__ . '/action_helper.php');
-
-header('Content-Type: application/json');
+ob_clean();
+if (!headers_sent()) header('Content-Type: application/json');
 
 try {
-    $section_id = isset($_POST['section_id']) ? intval($_POST['section_id']) : 0;
-    $start_date = $_POST['start_date'] ?? '';
-    $end_date   = $_POST['end_date'] ?? '';
+    $section_id = intval($_POST['section_id'] ?? 0);
+    $start_date = trim($_POST['start_date'] ?? '');
+    $end_date   = trim($_POST['end_date']   ?? '');
     $force      = isset($_POST['force']) && $_POST['force'] === '1';
 
-    if (!$section_id || !$start_date || !$end_date) {
-        throw new Exception('Missing parameters: section_id, start_date and end_date are required.');
+    if (!$section_id) {
+        throw new Exception('Missing required parameter: section_id');
     }
 
-    // Fetch schedules in range for this section
-    $selSql = "SELECT schedule_id, schedule_date, time_slot_id, subject_id, COALESCE(is_auto_generated,0) AS is_auto_generated
-               FROM schedules
-               WHERE section_id = ? AND schedule_date BETWEEN ? AND ?
-               ORDER BY schedule_date, time_slot_id";
-    $selStmt = $conn->prepare($selSql);
-    if (!$selStmt) throw new Exception('Prepare failed (select): ' . $conn->error);
-    $selStmt->bind_param("iss", $section_id, $start_date, $end_date);
+    // ── Check which columns exist ─────────────────────────────────────────────
+    $cr = $conn->query("SHOW COLUMNS FROM schedules");
+    $cols = [];
+    while ($c = $cr->fetch_assoc()) $cols[] = $c['Field'];
+    $has_auto    = in_array('is_auto_generated', $cols);
+    $has_day_col = in_array('day_of_week',        $cols);
+
+    // ── Build SELECT to find candidate rows ───────────────────────────────────
+    // Auto-generated rows are identified by ANY of:
+    //   • is_auto_generated = 1  (if column exists)
+    //   • notes = 'Auto-generated'
+    //   • notes LIKE 'Auto-generated|%'  (old pipe format)
+    // If force=1, we take everything in the section (optionally within date range).
+
+    if ($force) {
+        // Delete everything for this section (optionally date-bounded)
+        if ($start_date && $end_date) {
+            $selSql = "SELECT schedule_id FROM schedules
+                       WHERE section_id = ?
+                         AND schedule_date BETWEEN ? AND ?";
+            $selStmt = $conn->prepare($selSql);
+            if (!$selStmt) throw new Exception('Prepare failed: ' . $conn->error);
+            $selStmt->bind_param('iss', $section_id, $start_date, $end_date);
+        } else {
+            $selSql = "SELECT schedule_id FROM schedules WHERE section_id = ?";
+            $selStmt = $conn->prepare($selSql);
+            if (!$selStmt) throw new Exception('Prepare failed: ' . $conn->error);
+            $selStmt->bind_param('i', $section_id);
+        }
+    } else {
+        // Delete only auto-generated rows
+        $auto_condition = $has_auto
+            ? "(is_auto_generated = 1 OR notes = 'Auto-generated' OR notes LIKE 'Auto-generated|%')"
+            : "(notes = 'Auto-generated' OR notes LIKE 'Auto-generated|%')";
+
+        if ($start_date && $end_date) {
+            $selSql = "SELECT schedule_id FROM schedules
+                       WHERE section_id = ?
+                         AND schedule_date BETWEEN ? AND ?
+                         AND $auto_condition";
+            $selStmt = $conn->prepare($selSql);
+            if (!$selStmt) throw new Exception('Prepare failed: ' . $conn->error);
+            $selStmt->bind_param('iss', $section_id, $start_date, $end_date);
+        } else {
+            // No date range — find all auto rows for this section
+            $selSql = "SELECT schedule_id FROM schedules
+                       WHERE section_id = ? AND $auto_condition";
+            $selStmt = $conn->prepare($selSql);
+            if (!$selStmt) throw new Exception('Prepare failed: ' . $conn->error);
+            $selStmt->bind_param('i', $section_id);
+        }
+    }
+
     $selStmt->execute();
     $res = $selStmt->get_result();
-    $rows = [];
-    while ($r = $res->fetch_assoc()) $rows[] = $r;
+    $ids = [];
+    while ($row = $res->fetch_assoc()) $ids[] = (int)$row['schedule_id'];
     $selStmt->close();
 
-    $matched = count($rows);
-    if ($matched === 0) {
-        finish_action([
-            'success' => true,
-            'message' => 'No schedules found in the given date range for this section.',
-            'matched_count' => 0,
-            'deleted_schedules' => 0
-        ]);
-    }
-
-    // Prepare pattern check: does this schedule correspond to a saved pattern for this section?
-    $patternCheckSql = "
-      SELECT 1
-      FROM schedule_patterns sp
-      JOIN subject_requirements sr ON sp.requirement_id = sr.requirement_id
-      WHERE sr.section_id = ? AND sp.time_slot_id = ? AND sp.day_of_week = ? AND sr.subject_id = ?
-      LIMIT 1
-    ";
-    $patternCheckStmt = $conn->prepare($patternCheckSql);
-    if (!$patternCheckStmt) throw new Exception('Prepare failed (pattern check): ' . $conn->error);
-
-    $toDeleteIds = [];
-    $auto_flagged_ids = [];
-
-    foreach ($rows as $r) {
-        $sid = (int)$r['schedule_id'];
-        $is_auto = (int)$r['is_auto_generated'];
-        if ($is_auto === 1) {
-            $toDeleteIds[] = $sid;
-            $auto_flagged_ids[] = $sid;
-            continue;
-        }
-
-        if ($force) {
-            // if force requested, delete all matched rows (will be handled later)
-            $toDeleteIds[] = $sid;
-            continue;
-        }
-
-        // check if row matches a saved pattern (time_slot + day_of_week + subject)
-        $time_slot_id = (int)$r['time_slot_id'];
-        $subject_id = (int)$r['subject_id'];
-        $day_of_week = (new DateTime($r['schedule_date']))->format('l'); // 'Monday'..'Sunday'
-
-        $patternCheckStmt->bind_param("iisi", $section_id, $time_slot_id, $day_of_week, $subject_id);
-        $patternCheckStmt->execute();
-        $pRes = $patternCheckStmt->get_result();
-        if ($pRes && $pRes->num_rows > 0) {
-            // schedule matches a saved pattern -> consider it generated -> delete it
-            $toDeleteIds[] = $sid;
-        }
-    }
-
-    $patternCheckStmt->close();
-
-    if (empty($toDeleteIds)) {
-        finish_action([
-            'success' => true,
-            'message' => 'Found schedules but none were recognized as generated patterns or flagged as auto-generated. Use force=1 to delete all matched rows.',
-            'matched_count' => $matched,
-            'auto_count' => count($auto_flagged_ids),
+    if (empty($ids)) {
+        echo json_encode([
+            'success'           => true,
+            'message'           => 'No auto-generated schedules found for this section.',
             'deleted_schedules' => 0,
-            'sample_rows' => array_slice($rows, 0, 10)
+            'matched_count'     => 0,
         ]);
+        exit;
     }
 
-    // Perform delete
+    // ── Delete ────────────────────────────────────────────────────────────────
     $conn->begin_transaction();
-    $ids_sql = implode(',', array_map('intval', $toDeleteIds));
-    $delSql = "DELETE FROM schedules WHERE schedule_id IN ($ids_sql)";
+
+    $id_list = implode(',', $ids);
+    $delSql  = "DELETE FROM schedules WHERE schedule_id IN ($id_list)";
     if (!$conn->query($delSql)) {
         $conn->rollback();
         throw new Exception('Delete failed: ' . $conn->error);
@@ -107,16 +123,18 @@ try {
     $deleted = $conn->affected_rows;
     $conn->commit();
 
-    finish_action([
-        'success' => true,
-        'message' => "Deleted {$deleted} schedule(s).",
-        'matched_count' => $matched,
+    ob_clean();
+    echo json_encode([
+        'success'           => true,
+        'message'           => "Deleted $deleted auto-generated schedule(s).",
         'deleted_schedules' => $deleted,
-        'auto_count' => count($auto_flagged_ids)
+        'matched_count'     => count($ids),
     ]);
 
 } catch (Exception $e) {
-    if (isset($conn) && $conn->ping() && $conn->in_transaction) $conn->rollback();
-    finish_action(['success' => false, 'message' => $e->getMessage()]);
+    try { if (isset($conn) && $conn) $conn->rollback(); } catch (Exception $re) {}
+    ob_clean();
+    echo json_encode(['success' => false, 'message' => $e->getMessage()]);
 }
-?>
+
+if (isset($conn) && $conn) $conn->close();

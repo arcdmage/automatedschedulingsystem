@@ -1,98 +1,223 @@
+.sections-card {
+    background: rgba(255, 255, 255, 0.96);
+    border-radius: 18px;
+    padding: 32px;
+    max-width: 1160px;
+    margin: 60px auto 36px;
+    box-shadow: 0 20px 48px rgba(15, 23, 42, 0.25);
+}
+
+.sections-card .table-toolbar {
+    margin-bottom: 20px;
+}
+
+.sections-card .pagination-container {
+    margin-bottom: 0;
+}
+
+.sections-card .table-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.sections-card .table-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.sections-card .table-wrapper {
+    margin-bottom: 18px;
+}
+
+.sections-card .search-input {
+    padding: 10px 14px;
+    min-width: 260px;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    box-shadow: inset 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+
+.add-subject-btn {
+    background: #10b981;
+    border: none;
+    border-radius: 999px;
+    color: #fff;
+    font-weight: 600;
+    padding: 10px 24px;
+    cursor: pointer;
+    transition:
+        background 0.2s ease,
+        transform 0.2s ease;
+    box-shadow: 0 10px 20px rgba(16, 185, 129, 0.35);
+}
+
+.add-subject-btn:hover {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
 .subject-table-container {
-  margin-top: 20px;
-  background: #fff;
-  padding: 20px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+    margin-top: 20px;
+    background: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
 }
 
 .subject-table-wrapper {
-  overflow-x: auto;
+    overflow-x: auto;
 }
 
 .subject-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
 }
 
-.subject-table th, .subject-table td {
-  border: 1px solid #ddd;
-  padding: 10px;
+.subject-table th,
+.subject-table td {
+    border: 0px solid #ddd;
+    padding: 16px 16px;
 }
 
 .subject-table th {
-  background-color: #4a90e2;
-  color: white;
+    background-color: #4a90e2;
+    color: white;
 }
-
+.subject-table thead th {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #9ca3af;
+    padding: 11px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    background: #fafafa;
+    white-space: nowrap;
+    border-collapse: collapse;
+    border: 0px solid #ddd;
+}
 .subject-table tr:nth-child(even) {
-  background-color: #f9f9f9;
+    background-color: #f9f9f9;
+}
+.subject-table tr {
+    font-weight: 600;
+    color: #111827;
+    font-size: 15px;
 }
 
 .subject-table tr:hover {
-  background-color: #f1f1f1;
+    background-color: #f1f1f1;
+}
+
+.subject-table select.edit-select {
+    min-width: 140px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5f5;
+    font-size: 14px;
+    width: 100%;
+    max-width: 220px;
+    background: white;
+}
+
+.subject-table select.edit-select.faculty-multi {
+    min-height: 90px;
+    max-width: 260px;
+}
+
+.faculty-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: #2563eb;
+    cursor: pointer;
+    text-align: left;
+}
+
+.faculty-toggle:hover {
+    text-decoration: underline;
+    color: #1d4ed8;
+}
+
+.faculty-full {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.faculty-empty {
+    color: #9ca3af;
+    font-style: italic;
 }
 
 /* Pagination Styling */
 .pagination {
-  margin-top: 15px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 4px; /* Space between buttons */
+    margin-top: 15px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 4px; /* Space between buttons */
 }
 
 .pagination button {
-  /* Adjust padding to make buttons smaller */
-  padding: 6px 12px; /* Vertical and horizontal padding */
+    /* Adjust padding to make buttons smaller */
+    padding: 6px 12px; /* Vertical and horizontal padding */
 
-  /* Reduce font size for a more compact look */
-  font-size: 14px;
+    /* Reduce font size for a more compact look */
+    font-size: 14px;
 
-  border: 1px solid #ddd; /* A subtle border */
-  background-color: #fff; /* A clean white background */
-  color: #4a90e2; /* Text color */
-  cursor: pointer;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-  line-height: 1.2; /* Ensures text is vertically centered properly */
+    border: 1px solid #ddd; /* A subtle border */
+    background-color: #fff; /* A clean white background */
+    color: #4a90e2; /* Text color */
+    cursor: pointer;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    line-height: 1.2; /* Ensures text is vertically centered properly */
 }
 
 .pagination button:hover {
-  background-color: #f1f1f1; /* A slight hover effect */
-  border-color: #ccc;
+    background-color: #f1f1f1; /* A slight hover effect */
+    border-color: #ccc;
 }
 
 .pagination .active {
-  background-color: #4a90e2; /* Active page background color */
-  color: white; /* Active page text color */
-  border-color: #4a90e2;
+    background-color: #4a90e2; /* Active page background color */
+    color: white; /* Active page text color */
+    border-color: #4a90e2;
 }
 
 .pagination-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px;
-  flex-wrap: wrap; /* Allows items to wrap on smaller screens */
-  gap: 15px;      /* Adds space between items if they wrap */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    flex-wrap: wrap; /* Allows items to wrap on smaller screens */
+    gap: 15px; /* Adds space between items if they wrap */
 }
 
 .rows-selector {
-  display: flex;
-  align-items: center;
-  gap: 8px; /* Space between the label and the dropdown */
-  font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between the label and the dropdown */
+    font-size: 14px;
 }
 
 #rows-per-page {
-  padding: 5px;
-  border-radius: 4px;
-  border: 1px solid #ddd;
+    padding: 5px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
 }
 
 /* Adjust the pagination margin since the parent container now has it */
 .pagination {
-  margin-top: 0;
+    margin-top: 0;
 }

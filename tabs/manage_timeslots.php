@@ -1,20 +1,24 @@
 ﻿<?php
-require_once(__DIR__ . '/../db_connect.php');
+require_once __DIR__ . "/../db_connect.php";
 
 // Fetch all sections
-$sections_query = "SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name";
+$sections_query =
+    "SELECT section_id, section_name, grade_level, track FROM sections ORDER BY grade_level, section_name";
 $sections_result = $conn->query($sections_query);
 
-$selected_section = isset($_GET['section_id']) ? intval($_GET['section_id']) : null;
+$selected_section = isset($_GET["section_id"])
+    ? intval($_GET["section_id"])
+    : null;
 
 // Fetch time slots for selected section
 $timeslots_result = null;
 if ($selected_section) {
-  $timeslots_query = "SELECT * FROM time_slots WHERE section_id = ? ORDER BY slot_order";
-  $stmt = $conn->prepare($timeslots_query);
-  $stmt->bind_param("i", $selected_section);
-  $stmt->execute();
-  $timeslots_result = $stmt->get_result();
+    $timeslots_query =
+        "SELECT * FROM time_slots WHERE section_id = ? ORDER BY slot_order";
+    $stmt = $conn->prepare($timeslots_query);
+    $stmt->bind_param("i", $selected_section);
+    $stmt->execute();
+    $timeslots_result = $stmt->get_result();
 }
 ?>
 <!DOCTYPE html>
@@ -28,7 +32,9 @@ if ($selected_section) {
 
 <!-- Top bar with back button -->
 <div class="ts-topbar">
-  <a href="javascript:history.back()" class="btn-back">
+  <a href="/mainscheduler/tabs/schedule_setup.php<?php echo $selected_section
+      ? "?section_id=" . $selected_section
+      : ""; ?>" class="btn-back">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
       <polyline points="15 18 9 12 15 6"></polyline>
     </svg>
@@ -48,15 +54,24 @@ if ($selected_section) {
       <label for="section-select">Section</label>
       <select id="section-select" onchange="window.location.href='?section_id='+this.value" style="max-width:380px;">
         <option value="">-- Choose a Section --</option>
-        <?php 
+        <?php
         $sections_result->data_seek(0);
-        while($section = $sections_result->fetch_assoc()): 
-        ?>
-          <option value="<?php echo $section['section_id']; ?>" 
-                  <?php echo ($selected_section == $section['section_id']) ? 'selected' : ''; ?>>
-            <?php echo htmlspecialchars($section['grade_level'] . ' - ' . $section['section_name'] . ' (' . $section['track'] . ')'); ?>
+        while ($section = $sections_result->fetch_assoc()): ?>
+          <option value="<?php echo $section["section_id"]; ?>"
+                  <?php echo $selected_section == $section["section_id"]
+                      ? "selected"
+                      : ""; ?>>
+            <?php echo htmlspecialchars(
+                $section["grade_level"] .
+                    " - " .
+                    $section["section_name"] .
+                    " (" .
+                    $section["track"] .
+                    ")",
+            ); ?>
           </option>
-        <?php endwhile; ?>
+        <?php endwhile;
+        ?>
       </select>
     </div>
   </div>
@@ -71,17 +86,17 @@ if ($selected_section) {
         <label>Copy from</label>
         <select id="copy-from-section">
           <option value="">-- Select source section --</option>
-          <?php 
+          <?php
           $sections_result->data_seek(0);
-          while($sec = $sections_result->fetch_assoc()): 
-            if ($sec['section_id'] != $selected_section):
-          ?>
-            <option value="<?php echo $sec['section_id']; ?>">
-              <?php echo htmlspecialchars($sec['section_name'] . ' (' . $sec['track'] . ')'); ?>
+          while ($sec = $sections_result->fetch_assoc()):
+              if ($sec["section_id"] != $selected_section): ?>
+            <option value="<?php echo $sec["section_id"]; ?>">
+              <?php echo htmlspecialchars(
+                  $sec["section_name"] . " (" . $sec["track"] . ")",
+              ); ?>
             </option>
-          <?php 
-            endif;
-          endwhile; 
+          <?php endif;
+          endwhile;
           ?>
         </select>
       </div>
@@ -139,38 +154,53 @@ if ($selected_section) {
           </tr>
         </thead>
         <tbody>
-          <?php while($slot = $timeslots_result->fetch_assoc()): ?>
+          <?php while ($slot = $timeslots_result->fetch_assoc()): ?>
             <tr>
               <td>
                 <div class="order-controls">
-                  <button class="order-btn" onclick="moveSlot(<?php echo $slot['time_slot_id']; ?>, 'up')" title="Move Up">▲</button>
-                  <span class="order-num"><?php echo $slot['slot_order']; ?></span>
-                  <button class="order-btn" onclick="moveSlot(<?php echo $slot['time_slot_id']; ?>, 'down')" title="Move Down">▼</button>
+                  <button class="order-btn" onclick="moveSlot(<?php echo $slot[
+                      "time_slot_id"
+                  ]; ?>, 'up')" title="Move Up">▲</button>
+                  <span class="order-num"><?php echo $slot[
+                      "slot_order"
+                  ]; ?></span>
+                  <button class="order-btn" onclick="moveSlot(<?php echo $slot[
+                      "time_slot_id"
+                  ]; ?>, 'down')" title="Move Down">▼</button>
                 </div>
               </td>
               <td>
                 <span class="time-range">
-                  <?php echo date('g:i A', strtotime($slot['start_time'])) . ' – ' . date('g:i A', strtotime($slot['end_time'])); ?>
+                  <?php echo date("g:i A", strtotime($slot["start_time"])) .
+                      " – " .
+                      date("g:i A", strtotime($slot["end_time"])); ?>
                 </span>
               </td>
               <td>
-                <?php if ($slot['is_break']): ?>
+                <?php if ($slot["is_break"]): ?>
                   <span class="badge badge-break">Break</span>
                 <?php else: ?>
                   <span class="badge badge-class">Class</span>
                 <?php endif; ?>
               </td>
               <td style="color:#6b7280;">
-                <?php echo $slot['is_break'] ? htmlspecialchars($slot['break_label']) : '—'; ?>
+                <?php echo $slot["is_break"]
+                    ? htmlspecialchars($slot["break_label"])
+                    : "—"; ?>
               </td>
               <td>
                 <div class="timeslot-actions">
                   <button class="btn btn-ghost btn-sm"
-                          onclick="openEditModal(<?php echo htmlspecialchars(json_encode($slot), ENT_QUOTES); ?>)">
+                          onclick="openEditModal(<?php echo htmlspecialchars(
+                              json_encode($slot),
+                              ENT_QUOTES,
+                          ); ?>)">
                     Edit
                   </button>
                   <button class="btn btn-danger btn-sm"
-                          onclick="deleteTimeslot(<?php echo $slot['time_slot_id']; ?>)">
+                          onclick="deleteTimeslot(<?php echo $slot[
+                              "time_slot_id"
+                          ]; ?>)">
                     Delete
                   </button>
                 </div>
@@ -235,7 +265,9 @@ if ($selected_section) {
 </div>
 
 <script>
-const currentSectionId = <?php echo $selected_section ? $selected_section : 'null'; ?>;
+const currentSectionId = <?php echo $selected_section
+    ? $selected_section
+    : "null"; ?>;
 
 function toggleBreakLabel() {
   const isBreak = document.getElementById('is_break_toggle').checked;
@@ -273,7 +305,11 @@ document.getElementById('add-timeslot-form').addEventListener('submit', async fu
   const formData = new FormData(this);
   formData.set('is_break', document.getElementById('is_break_toggle').checked ? '1' : '0');
   try {
-    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_create.php', { method: 'POST', body: formData });
+    const res  = await fetch('/mainscheduler/tabs/actions/timeslot_create.php', {
+      method: 'POST',
+      body: formData,
+      headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
     const data = await res.json();
     if (data.success) { window.location.reload(); }
     else alert('Error: ' + data.message);
